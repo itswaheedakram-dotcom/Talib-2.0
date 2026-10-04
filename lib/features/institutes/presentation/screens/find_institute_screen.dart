@@ -11,12 +11,12 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
   String _type = 'All', _city = 'All cities', _program = 'All programs';
 
   static const _institutes = [
-    _Item('school-educators', 'The Educators', 'School', 'Lahore', ['Matric', 'Intermediate']),
-    _Item('school-beaconhouse', 'Beaconhouse School System', 'School', 'Lahore', ['Matric', 'Intermediate']),
-    _Item('college-gcl', 'Government College Lahore', 'College', 'Lahore', ['ICS', 'I.Com', 'FA', 'FSc']),
-    _Item('college-gcs', 'Government College of Science', 'College', 'Lahore', ['FSc', 'ICS']),
-    _Item('university-punjab', 'University of the Punjab', 'University', 'Lahore', ['BS', 'MS', 'MPhil', 'PhD']),
-    _Item('university-iub', 'Islamia University Bahawalpur', 'University', 'Bahawalpur', ['BS', 'MS', 'MPhil', 'PhD']),
+    _Item('school-1', 'The Educators', 'School', 'Lahore', ['Matric', 'Intermediate']),
+    _Item('school-2', 'Beaconhouse School System', 'School', 'Lahore', ['Matric', 'Intermediate']),
+    _Item('college-1', 'Government College Lahore', 'College', 'Lahore', ['ICS', 'I.Com', 'FA', 'FSc']),
+    _Item('college-2', 'Government College of Science', 'College', 'Lahore', ['FSc', 'ICS']),
+    _Item('university-1', 'University of the Punjab', 'University', 'Lahore', ['BS', 'MS', 'MPhil', 'PhD']),
+    _Item('university-2', 'Islamia University Bahawalpur', 'University', 'Bahawalpur', ['BS', 'MS', 'MPhil', 'PhD']),
   ];
 
   List<_Item> get _results {
