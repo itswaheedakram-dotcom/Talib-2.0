@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../models/post.dart';
 import '../../../../core/services/database_service.dart';
+import '../../../../core/services/firebase_service.dart';
 
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
@@ -19,6 +20,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!FirebaseService.initialized) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Community')),
+        body: const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('Community is temporarily unavailable because Firebase is not configured yet.', textAlign: TextAlign.center))),
+      );
+    }
     final user = FirebaseAuth.instance.currentUser;
     return Scaffold(
       appBar: AppBar(
