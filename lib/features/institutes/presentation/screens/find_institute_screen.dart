@@ -258,6 +258,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
               ],
             ),
           );
+          );
         },
       ),
     );
