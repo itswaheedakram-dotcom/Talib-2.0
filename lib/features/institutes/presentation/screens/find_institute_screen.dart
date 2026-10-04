@@ -31,28 +31,119 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
   }
   String _label(String type)=>switch(type){'schools'=>'School','colleges'=>'College','universities'=>'University',_=>type};
 
-  void _showFilters(){
-    var education=_education,province=_province,city=_city,sector=_sector,program=_program;
-    _scoreController.text = _scoreController.text;
-    showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,
-      builder:(sheetContext)=>StatefulBuilder(builder:(context,sheetSet)=>Padding(
-        padding:EdgeInsets.fromLTRB(20,8,20,24+MediaQuery.viewInsetsOf(context).bottom),
-        child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          const Text('Find Institute',style:TextStyle(fontSize:22,fontWeight:FontWeight.w800)),const SizedBox(height:16),
-          _Group('Current / Next Education',['All','School','College','University'],education,(v)=>sheetSet(()=>education=v)),
-          _Group('Province',['All provinces','Punjab','Sindh','Khyber Pakhtunkhwa','Balochistan','Islamabad Capital Territory'],province,(v)=>sheetSet(()=>province=v)),
-          _Group('City',['All cities','Lahore','Multan','Bahawalpur','Islamabad','Rawalpindi'],city,(v)=>sheetSet(()=>city=v)),
-          _Group('Sector',['All sectors','Private','Government','Semi-government'],sector,(v)=>sheetSet(()=>sector=v)),
-          _Group('Next Education Program',['All programs','Intermediate','FA','FSc','ICS','I.Com','BS','MS','MPhil','PhD'],program,(v)=>sheetSet(()=>program=v)),
-          TextField(controller:_scoreController,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'Percentage / CGPA obtained',prefixIcon:Icon(Icons.percent)),onChanged:(_)=>sheetSet((){})),
-          const SizedBox(height:8),
-          Row(children:[
-            Expanded(child:OutlinedButton(onPressed:(){setState((){_education='All';_province='All provinces';_city='All cities';_sector='All sectors';_program='All programs';});Navigator.pop(sheetContext);},child:const Text('Clear all'))),
-            const SizedBox(width:12),
-            Expanded(child:FilledButton(onPressed:(){setState((){_education=education;_province=province;_city=city;_sector=sector;_program=program;});Navigator.pop(sheetContext);},child:const Text('Find now'))),
-          ])
-        ]))
-      ))
+  void _showFilters() {
+    var education = _education;
+    var province = _province;
+    var city = _city;
+    var sector = _sector;
+    var program = _program;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, sheetSet) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                8,
+                20,
+                24 + MediaQuery.viewInsetsOf(context).bottom,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Find Institute',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 16),
+                    _Group(
+                      'Current / Next Education',
+                      ['All', 'School', 'College', 'University'],
+                      education,
+                      (v) => sheetSet(() => education = v),
+                    ),
+                    _Group(
+                      'Province',
+                      ['All provinces', 'Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan', 'Islamabad Capital Territory'],
+                      province,
+                      (v) => sheetSet(() => province = v),
+                    ),
+                    _Group(
+                      'City',
+                      ['All cities', 'Lahore', 'Multan', 'Bahawalpur', 'Islamabad', 'Rawalpindi'],
+                      city,
+                      (v) => sheetSet(() => city = v),
+                    ),
+                    _Group(
+                      'Sector',
+                      ['All sectors', 'Private', 'Government', 'Semi-government'],
+                      sector,
+                      (v) => sheetSet(() => sector = v),
+                    ),
+                    _Group(
+                      'Next Education Program',
+                      ['All programs', 'Intermediate', 'FA', 'FSc', 'ICS', 'I.Com', 'BS', 'MS', 'MPhil', 'PhD'],
+                      program,
+                      (v) => sheetSet(() => program = v),
+                    ),
+                    TextField(
+                      controller: _scoreController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Percentage / CGPA obtained',
+                        prefixIcon: Icon(Icons.percent),
+                      ),
+                      onChanged: (_) => sheetSet(() {}),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setState(() {
+                                _education = 'All';
+                                _province = 'All provinces';
+                                _city = 'All cities';
+                                _sector = 'All sectors';
+                                _program = 'All programs';
+                                _scoreController.clear();
+                              });
+                              Navigator.pop(sheetContext);
+                            },
+                            child: const Text('Clear all'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () {
+                              setState(() {
+                                _education = education;
+                                _province = province;
+                                _city = city;
+                                _sector = sector;
+                                _program = program;
+                              });
+                              Navigator.pop(sheetContext);
+                            },
+                            child: const Text('Find now'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
