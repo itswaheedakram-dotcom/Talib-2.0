@@ -15,6 +15,10 @@ import '../features/auth/presentation/screens/sign_in_screen.dart';
 import '../features/auth/presentation/screens/register_screen.dart';
 import '../features/common/presentation/screens/bookmarks_screen.dart';
 import '../features/common/presentation/screens/empty_feature_screen.dart';
+import '../features/seminars/presentation/screens/seminars_screen.dart';
+import '../features/hostels/presentation/screens/hostels_screen.dart';
+import '../features/internships/presentation/screens/internships_screen.dart';
+import '../features/jobs/presentation/screens/jobs_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
