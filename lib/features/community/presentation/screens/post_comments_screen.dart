@@ -30,7 +30,7 @@ class _PostCommentsScreenState extends State<PostCommentsScreen>{
    const SizedBox(height:14),if(post.isQuestion)const Text('QUESTION',style:TextStyle(color:Color(0xFF00A66A),fontWeight:FontWeight.w800,fontSize:11)),const SizedBox(height:6),Text(post.text,style:const TextStyle(fontSize:16,height:1.45)),
    const SizedBox(height:10),Wrap(spacing:4,children:[
     IconButton(onPressed:isDemo?()=>setState(()=>_demoLiked=!_demoLiked):user==null?null:()=>_db!.toggleLike(post,user.uid),icon:Icon(liked?Icons.favorite:Icons.favorite_border,color:Colors.red)),Text(likes.toString()+' likes',style:const TextStyle(height:3)),
-    IconButton(onPressed:()=>setState(()=>_saved=!_saved),icon:Icon(_saved?Icons.bookmark:Icons.bookmark_border,color:const Color(0xFF00A66A))),Text(_saved?'Saved':'Save',style:const TextStyle(height:3)),
+    IconButton(onPressed:user==null?null:()async{setState(()=>_saved=!_saved);await _db!.toggleBookmark(post.id,user.uid,_saved);},icon:Icon(_saved?Icons.bookmark:Icons.bookmark_border,color:const Color(0xFF00A66A))),Text(_saved?'Saved':'Save',style:const TextStyle(height:3)),
     if(user!=null&&user.uid==post.authorId)IconButton(tooltip:'Edit',onPressed:()=>context.push('/community/create',extra:post),icon:const Icon(Icons.edit_outlined)),
     if(user!=null&&user.uid!=post.authorId)IconButton(tooltip:'Report',onPressed:()=>_report(post,user),icon:const Icon(Icons.flag_outlined)),
    ]),
