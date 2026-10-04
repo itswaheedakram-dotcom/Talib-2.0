@@ -14,6 +14,8 @@ class Institute {
   final List<String> programs;
   final String contact;
   final String status;
+  final double minScore;
+  final String nextProgram;
 
   const Institute({
     required this.id,
@@ -31,13 +33,15 @@ class Institute {
     this.programs = const [],
     this.contact = '',
     this.status = 'approved',
+    this.minScore = 0,
+    this.nextProgram = '',
   });
 
   Map<String, dynamic> toMap() => {
     'name': name, 'type': type, 'campus': campus, 'province': province,
     'city': city, 'sector': sector, 'address': address, 'description': description,
     'website': website, 'submissionMode': submissionMode, 'eligibility': eligibility,
-    'programs': programs, 'contact': contact, 'status': status,
+    'programs': programs, 'contact': contact, 'status': status, 'minScore': minScore, 'nextProgram': nextProgram,
   };
 
   factory Institute.fromMap(String id, Map<String, dynamic> map) => Institute(
@@ -56,5 +60,7 @@ class Institute {
     programs: List<String>.from((map['programs'] ?? const []).map((e) => e.toString())),
     contact: (map['contact'] ?? '').toString(),
     status: (map['status'] ?? 'approved').toString(),
+    minScore: double.tryParse((map['minScore'] ?? 0).toString()) ?? 0,
+    nextProgram: (map['nextProgram'] ?? '').toString(),
   );
 }
