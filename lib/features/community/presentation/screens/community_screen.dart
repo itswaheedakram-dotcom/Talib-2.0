@@ -69,6 +69,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       return _PostCard(
                         post: post, saved: saved.contains(post.id), user: user,
                         onOpen: () => context.push('/community/post/' + post.id),
+                        onAuthor: () => context.push('/profile/' + post.authorId),
                         onLike: user == null ? null : () => _db.toggleLike(post, user.uid),
                         onBookmark: user == null ? null : () => _db.toggleBookmark(post.id, user.uid, !saved.contains(post.id)),
                         onDelete: user?.uid == post.authorId ? () => _confirmDelete(post) : null,
@@ -119,9 +120,9 @@ class _PostCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 12, 8, 8),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              CircleAvatar(backgroundColor: const Color(0xFFE8F5E9), child: Text(post.authorName.isEmpty ? '?' : post.authorName[0].toUpperCase(), style: const TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold))),
+              InkWell(onTap: onAuthor, borderRadius: BorderRadius.circular(24), child: CircleAvatar(backgroundColor: const Color(0xFFE8F5E9), child: Text(post.authorName.isEmpty ? '?' : post.authorName[0].toUpperCase(), style: const TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold)))),
               const SizedBox(width: 10),
-              Expanded(child: Text(post.authorName, style: const TextStyle(fontWeight: FontWeight.bold))),
+              Expanded(child: InkWell(onTap: onAuthor, child: Text(post.authorName, style: const TextStyle(fontWeight: FontWeight.bold)))),
               if (onDelete != null) IconButton(icon: const Icon(Icons.delete_outline), onPressed: onDelete),
             ]),
             const SizedBox(height: 10),
