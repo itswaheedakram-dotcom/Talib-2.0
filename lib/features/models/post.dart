@@ -7,6 +7,8 @@ class Post {
   final List<String> likedBy;
   final bool isQuestion;
   final String? bestAnswerId;
+  final List<String> pollOptions;
+  final Map<String,int> pollVotes;
   const Post({required this.id,required this.text,required this.authorId,required this.authorName,required this.createdAt,this.category='General',this.likesCount=0,this.likedBy=const [],this.commentsCount=0,this.isQuestion=false,this.bestAnswerId});
   factory Post.fromDoc(DocumentSnapshot<Map<String,dynamic>> doc){
     final d=doc.data()??{}; final raw=d['createdAt'];
