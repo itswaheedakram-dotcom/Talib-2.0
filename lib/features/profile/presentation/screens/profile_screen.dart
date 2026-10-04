@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/services/firebase_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,7 +13,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   static const green = Color(0xFF00A66A), darkGreen = Color(0xFF00543D), lightGreen = Color(0xFFEAF8F2);
   final name = TextEditingController(), level = TextEditingController(), institute = TextEditingController(), program = TextEditingController(), city = TextEditingController();
   bool loading = false, saving = false;
-  User? get user => FirebaseAuth.instance.currentUser;
+  User? get user => FirebaseService.initialized ? FirebaseAuth.instance.currentUser : null;
 
   @override void initState() { super.initState(); _load(); }
 
