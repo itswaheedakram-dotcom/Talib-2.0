@@ -3,12 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/database_service.dart';
 import '../../../models/post.dart';
+import '../../../../core/services/firebase_service.dart';
 
 class BookmarksScreen extends StatelessWidget {
   const BookmarksScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    if (!FirebaseService.initialized) {
+      return Scaffold(appBar: AppBar(title: const Text('Bookmarks')), body: const _EmptyState(icon: Icons.cloud_off, title: 'Bookmarks unavailable', message: 'Firebase is not configured yet. The navigation is working, but saved items need Firebase.'));
+    }
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return Scaffold(appBar: AppBar(title: const Text('Bookmarks')), body: const _EmptyState(
