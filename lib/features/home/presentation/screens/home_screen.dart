@@ -222,7 +222,7 @@ class _FeatureCard extends StatelessWidget {
                 child: Icon(feature.icon, color: colorScheme.primary),
               ),
               const Spacer(),
-              Text(feature.title, style: const TextStyle(fontWeight: FontWeight.w750, fontSize: 15)),
+              Text(feature.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
               const SizedBox(height: 4),
               Text(
                 feature.subtitle,
