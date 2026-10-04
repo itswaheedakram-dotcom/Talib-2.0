@@ -17,6 +17,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
   String _province = 'All provinces';
   String _city = 'All cities';
   String _sector = 'All sectors';
+  String _instituteId = 'All institutes';
   String _program = 'All programs';
   String _submissionMode = 'All modes';
   String _campus = 'All campuses';
@@ -88,11 +89,18 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
     }
     return dataCities;
   }
-  List<String> get _campuses => _values(_cityItems, (i) => i.campus, 'All campuses');
+  List<String> get _institutes => ['All institutes', ..._sectorItems.map((i) => '${i.name}||${i.id}').toSet().map((v) => v.split('||').last).map((id) => InstituteRepository.instance.byId(id)?.name ?? id)];
+
+  Institute? get _selectedInstitute => _instituteId == 'All institutes' ? null : InstituteRepository.instance.byId(_instituteId);
+
+  List<String> get _campuses => _cityItems.where((i) => _instituteId == 'All institutes' || i.id == _instituteId).isEmpty
+      ? ['All campuses']
+      : _values(_cityItems.where((i) => _instituteId == 'All institutes' || i.id == _instituteId), (i) => i.campus, 'All campuses');
 
   List<String> get _programs {
     final values = <String>{};
-    for (final i in _sectorItems) {
+    final source = _selectedInstitute == null ? _sectorItems : <Institute>[_selectedInstitute!];
+    for (final i in source) {
       values.addAll(i.programs.map((p) => p.trim()).where((p) => p.isNotEmpty));
       if (i.nextProgram.trim().isNotEmpty) values.add(i.nextProgram.trim());
     }
@@ -117,6 +125,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
           (_province == 'All provinces' || i.province == _province) &&
           (_city == 'All cities' || i.city == _city) &&
           (_sector == 'All sectors' || i.sector == _sector) &&
+          (_instituteId == 'All institutes' || i.id == _instituteId) &&
           programMatch &&
           (_submissionMode == 'All modes' || i.submissionMode == _submissionMode) &&
           (_campus == 'All campuses' || i.campus == _campus) &&
@@ -136,6 +145,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
     if (_province != 'All provinces') _province,
     if (_city != 'All cities') _city,
     if (_sector != 'All sectors') _sector,
+    if (_instituteId != 'All institutes') (_selectedInstitute?.name ?? _instituteId),
     if (_program != 'All programs') _program,
     if (_submissionMode != 'All modes') _submissionMode,
     if (_campus != 'All campuses') _campus,
@@ -148,6 +158,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
       _province = 'All provinces';
       _city = 'All cities';
       _sector = 'All sectors';
+      _instituteId = 'All institutes';
       _program = 'All programs';
       _submissionMode = 'All modes';
       _campus = 'All campuses';
@@ -160,6 +171,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
     var province = _province;
     var city = _city;
     var sector = _sector;
+    var instituteId = _instituteId;
     var program = _program;
     var mode = _submissionMode;
     var campus = _campus;
@@ -183,13 +195,18 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
           Iterable<Institute> sectorItems() => sector == 'All sectors'
               ? cityItems()
               : cityItems().where((i) => i.sector == sector);
+          Iterable<Institute> instituteItems() => instituteId == 'All institutes'
+              ? sectorItems()
+              : sectorItems().where((i) => i.id == instituteId);
 
           final provinces = _values(typeItems(), (i) => i.province, 'All provinces');
           final cities = _values(provinceItems(), (i) => i.city, 'All cities');
           final sectors = _values(cityItems(), (i) => i.sector, 'All sectors');
-          final campuses = _values(sectorItems(), (i) => i.campus, 'All campuses');
+          final instituteOptions = ['All institutes', ...sectorItems().map((i) => i.id)];
+          final instituteNames = <String, String>{for (final i in sectorItems()) i.id: i.name};
+          final campuses = _values(instituteItems(), (i) => i.campus, 'All campuses');
           final programSet = <String>{};
-          for (final i in sectorItems()) {
+          for (final i in instituteItems()) {
             programSet.addAll(i.programs.map((p) => p.trim()).where((p) => p.isNotEmpty));
             if (i.nextProgram.trim().isNotEmpty) programSet.add(i.nextProgram.trim());
           }
@@ -205,7 +222,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                   const Expanded(child: Text('Find Institute', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800))),
                   TextButton(onPressed: () {
                     education = 'All'; province = 'All provinces'; city = 'All cities';
-                    sector = 'All sectors'; program = 'All programs';
+                    sector = 'All sectors'; instituteId = 'All institutes'; program = 'All programs';
                     mode = 'All modes'; campus = 'All campuses'; score = '';
                     _scoreController.clear(); sheetSet(() {});
                   }, child: const Text('Clear all')),
@@ -213,20 +230,26 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                 const SizedBox(height: 8),
                 _Group('Institute Type', const ['All','School','College','University'], education, (v) => sheetSet(() {
                   education = v; province = 'All provinces'; city = 'All cities';
-                  sector = 'All sectors'; program = 'All programs'; campus = 'All campuses';
+                  sector = 'All sectors'; instituteId = 'All institutes'; program = 'All programs'; campus = 'All campuses';
                 })),
                 _Group('Province', provinces, province, (v) => sheetSet(() {
-                  province = v; city = 'All cities'; sector = 'All sectors';
+                  province = v; city = 'All cities'; sector = 'All sectors'; instituteId = 'All institutes';
                   program = 'All programs'; campus = 'All campuses';
                 })),
                 _Group('City', cities, city, (v) => sheetSet(() {
-                  city = v; sector = 'All sectors'; program = 'All programs';
+                  city = v; sector = 'All sectors'; instituteId = 'All institutes'; program = 'All programs';
                   campus = 'All campuses';
                 })),
                 _Group('Sector', sectors, sector, (v) => sheetSet(() {
-                  sector = v; program = 'All programs'; campus = 'All campuses';
+                  sector = v; instituteId = 'All institutes'; program = 'All programs'; campus = 'All campuses';
                 })),
-                _Group('Program / Degree', programOptions, program, (v) => sheetSet(() => program = v)),
+                _Group('Institute', instituteOptions.map((id) => instituteNames[id] ?? id).toList(),
+                  instituteId == 'All institutes' ? 'All institutes' : (instituteNames[instituteId] ?? instituteId), (name) => sheetSet(() {
+                    instituteId = instituteOptions.firstWhere((id) => (instituteNames[id] ?? id) == name, orElse: () => 'All institutes');
+                    program = 'All programs'; campus = 'All campuses';
+                  })),
+                _Group('Program / Degree', programSet.isEmpty ? ['All programs'] : programOptions, program, (v) => sheetSet(() => program = v)),
+                if (instituteId != 'All institutes') _AdmissionSummary(instituteItems().firstWhere((i) => i.id == instituteId, orElse: () => InstituteRepository.instance.byId(instituteId)!)),
                 _Group('Application / Submission', const ['All modes','Online','Offline'], mode, (v) => sheetSet(() => mode = v)),
                 _Group('Campus', campuses, campus, (v) => sheetSet(() => campus = v)),
                 const Text('Your Percentage / CGPA', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -249,7 +272,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                   Expanded(child: FilledButton(onPressed: () {
                     setState(() {
                       _education = education; _province = province; _city = city;
-                      _sector = sector; _program = program; _submissionMode = mode;
+                      _sector = sector; _instituteId = instituteId; _program = program; _submissionMode = mode;
                       _campus = campus; _scoreController.text = score;
                     });
                     Navigator.pop(sheetContext);
