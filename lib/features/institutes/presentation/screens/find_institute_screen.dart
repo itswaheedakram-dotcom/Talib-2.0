@@ -209,7 +209,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                   Row(
                     children: [
                       Text(
-                        '\${results.length} institutes found',
+                        '${results.length} institutes found',
                         style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                       ),
                       const Spacer(),
@@ -270,10 +270,10 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                             style: const TextStyle(fontWeight: FontWeight.w800),
                           ),
                           subtitle: Text(
-                            '\${_label(i.type)} • \${i.city}\${i.sector.isEmpty ? '' : ' • \${i.sector}'}',
+                            '${_label(i.type)} • ${i.city}${i.sector.isEmpty ? '' : ' • ${i.sector}'}',
                           ),
                           trailing: const Icon(Icons.chevron_right),
-                          onTap: () => context.push('/institute/\${i.id}'),
+                          onTap: () => context.push('/institute/${i.id}'),
                         ),
                       ),
                     );
