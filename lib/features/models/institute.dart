@@ -16,6 +16,10 @@ class Institute {
   final String status;
   final double minScore;
   final String nextProgram;
+  final String admissionStatus;
+  final String admissionDeadline;
+  final String feeRange;
+  final bool entryTestRequired;
 
   const Institute({
     required this.id,
@@ -35,6 +39,10 @@ class Institute {
     this.status = 'approved',
     this.minScore = 0,
     this.nextProgram = '',
+    this.admissionStatus = 'Open',
+    this.admissionDeadline = '',
+    this.feeRange = '',
+    this.entryTestRequired = false,
   });
 
   Map<String, dynamic> toMap() => {
@@ -42,6 +50,7 @@ class Institute {
     'city': city, 'sector': sector, 'address': address, 'description': description,
     'website': website, 'submissionMode': submissionMode, 'eligibility': eligibility,
     'programs': programs, 'contact': contact, 'status': status, 'minScore': minScore, 'nextProgram': nextProgram,
+    'admissionStatus': admissionStatus, 'admissionDeadline': admissionDeadline, 'feeRange': feeRange, 'entryTestRequired': entryTestRequired,
   };
 
   factory Institute.fromMap(String id, Map<String, dynamic> map) => Institute(
@@ -62,5 +71,9 @@ class Institute {
     status: (map['status'] ?? 'approved').toString(),
     minScore: double.tryParse((map['minScore'] ?? 0).toString()) ?? 0,
     nextProgram: (map['nextProgram'] ?? '').toString(),
+    admissionStatus: (map['admissionStatus'] ?? 'Open').toString(),
+    admissionDeadline: (map['admissionDeadline'] ?? '').toString(),
+    feeRange: (map['feeRange'] ?? '').toString(),
+    entryTestRequired: map['entryTestRequired'] == true,
   );
 }
