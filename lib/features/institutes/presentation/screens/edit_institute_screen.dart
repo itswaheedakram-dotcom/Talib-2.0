@@ -76,9 +76,9 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
       body:Form(key:_formKey,child:ListView(padding:const EdgeInsets.fromLTRB(16,8,16,30),children:[
         Text('Basic Information',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w700,color:dark)),
         const SizedBox(height:12),
-        _field(_name,'Institute Name',Icons.account_balance_outlined,true),
+        _field(_name,'Institute Name',Icons.account_balance_outlined,required:true),
         _field(_campus,'Campus',Icons.location_city_outlined),
-        Row(children:[Expanded(child:_field(_province,'Province',Icons.map_outlined,true)),const SizedBox(width:10),Expanded(child:_field(_city,'City',Icons.location_on_outlined,true))]),
+        Row(children:[Expanded(child:_field(_province,'Province',Icons.map_outlined,required:true)),const SizedBox(width:10),Expanded(child:_field(_city,'City',Icons.location_on_outlined,required:true))]),
         _field(_address,'Full Address',Icons.place_outlined),
         _dropdown('Sector',_sector,['Private','Government','Semi-government'],(v)=>setState(()=>_sector=v)),
         _field(_contact,'Contact',Icons.phone_outlined),
