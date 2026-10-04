@@ -6,7 +6,7 @@ class DatabaseService {
   CollectionReference<Map<String,dynamic>> collection(String name)=>_db.collection(name);
   Stream<List<Post>> postsStream({bool popular=false,String category='All',String query=''})=>_db.collection('posts').orderBy(popular?'likesCount':'createdAt',descending:true).snapshots().map((s)=>s.docs.map(Post.fromDoc).where((p)=>(category=='All'||p.category==category)&&(query.isEmpty||p.text.toLowerCase().contains(query.toLowerCase())||p.authorName.toLowerCase().contains(query.toLowerCase()))).toList());
   Future<String> createPost({required String text,required String authorId,required String authorName,String category='General',bool isQuestion=false})async{
-    final ref=await _db.collection('posts').add({'text':text.trim(),'authorId':authorId,'authorName':authorName,'category':category,'isQuestion':isQuestion,'createdAt':FieldValue.serverTimestamp(),'likesCount':0,'likedBy':<String>[],'commentsCount':0});
+    final ref=await _db.collection('posts').add({'text':text.trim(),'authorId':authorId,'authorName':authorName,'category':category,'isQuestion':isQuestion,'createdAt':FieldValue.serverTimestamp(),'likesCount':0,'likedBy':<String>[],'commentsCount':0,'pollOptions':const <String>[],'pollVotes':<String,int>{}});
     return ref.id;
   }
   Future<void> updatePost({required String postId,required String text,String? category,bool? isQuestion})=>_db.collection('posts').doc(postId).update({'text':text.trim(),if(category!=null)'category':category,if(isQuestion!=null)'isQuestion':isQuestion});
@@ -29,5 +29,10 @@ class DatabaseService {
   Future<void> unblockUser(String uid,String blockedId)=>_db.collection('users').doc(uid).collection('blockedUsers').doc(blockedId).delete();
   Stream<Set<String>> blockedUserIdsStream(String uid)=>_db.collection('users').doc(uid).collection('blockedUsers').snapshots().map((s)=>s.docs.map((d)=>d.id).toSet());
   Stream<QuerySnapshot<Map<String,dynamic>>> notificationsStream(String uid)=>_db.collection('users').doc(uid).collection('notifications').orderBy('createdAt',descending:true).limit(50).snapshots();
+  Future<void> toggleFollow(String uid,String targetId,bool follow)async{final ref=_db.collection('users').doc(uid).collection('following').doc(targetId);if(follow)await ref.set({'userId':targetId,'createdAt':FieldValue.serverTimestamp()});else await ref.delete();}
+  Stream<bool> followingStream(String uid,String targetId)=>_db.collection('users').doc(uid).collection('following').doc(targetId).snapshots().map((s)=>s.exists);
+  Stream<int> followerCountStream(String uid)=>_db.collection('users').doc(uid).collection('followers').snapshots().map((s)=>s.size);
+  Future<void> notifyMention({required String targetId,required String fromId,required String postId})=>_db.collection('users').doc(targetId).collection('notifications').add({'type':'mention','text':'mentioned you in a community post','postId':postId,'fromId':fromId,'createdAt':FieldValue.serverTimestamp(),'read':false});
+  Future<void> votePoll({required String postId,required String uid,required int option})async{final ref=_db.collection('posts').doc(postId);await _db.runTransaction((tx)async{final s=await tx.get(ref);if(!s.exists)return;final d=s.data()??{};final voters=Map<String,dynamic>.from(d['pollVoters']??{});final old=voters[uid];final votes=Map<String,dynamic>.from(d['pollVotes']??{});if(old!=null){final k=old.toString();votes[k]=((votes[k]??0) as num).toInt()-1;}voters[uid]=option;final k=option.toString();votes[k]=((votes[k]??0) as num).toInt()+1;tx.update(ref,{'pollVoters':voters,'pollVotes':votes});});}
   Future<void> markNotificationRead(String uid,String id)=>_db.collection('users').doc(uid).collection('notifications').doc(id).update({'read':true});
 }
