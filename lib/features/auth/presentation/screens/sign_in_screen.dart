@@ -1,74 +1,95 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../../../core/services/auth_service.dart';
 
-class SignInScreen extends StatelessWidget {
+class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
+  @override State<SignInScreen> createState() => _SignInScreenState();
+}
 
-  @override
-  Widget build(BuildContext context) {
+class _SignInScreenState extends State<SignInScreen> {
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _busy = false;
+  bool _obscure = true;
+
+  @override void dispose() { _email.dispose(); _password.dispose(); super.dispose(); }
+
+  Future<void> _signIn() async {
     if (!FirebaseService.initialized) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Sign In')),
-        body: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Text(
-              'Sign in is unavailable until Firebase is configured for this Android app.',
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Firebase is not configured yet.')));
+      return;
     }
+    if (_email.text.trim().isEmpty || _password.text.isEmpty) return;
+    setState(() => _busy = true);
+    try {
+      await AuthService().signIn(_email.text.trim(), _password.text);
+      if (mounted) context.go('/');
+    } on FirebaseAuthException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message ?? 'Sign in failed.')));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sign in failed. Check your email and password.')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
-    final email = TextEditingController();
-    final password = TextEditingController();
-
+  @override Widget build(BuildContext context) {
+    const green = Color(0xFF00A66A);
+    const darkGreen = Color(0xFF00543D);
     return Scaffold(
-      appBar: AppBar(title: const Text('Sign In')),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
           children: [
-            TextField(
-              controller: email,
-              decoration: const InputDecoration(labelText: 'Email'),
+            IconButton(onPressed: () => context.pop(), alignment: Alignment.centerLeft, icon: const Icon(Icons.arrow_back_ios_new, size: 18)),
+            const SizedBox(height: 10),
+            const Text('Sign in', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: darkGreen)),
+            const SizedBox(height: 4),
+            Text('Welcome back!', style: TextStyle(color: Colors.grey.shade600)),
+            const SizedBox(height: 28),
+            Container(
+              height: 150,
+              decoration: BoxDecoration(color: const Color(0xFFEAF8F2), borderRadius: BorderRadius.circular(18)),
+              child: const Icon(Icons.phone_android_rounded, size: 88, color: green),
             ),
+            const SizedBox(height: 22),
+            TextField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email or Username', prefixIcon: Icon(Icons.person_outline))),
             const SizedBox(height: 12),
             TextField(
-              controller: password,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () async {
-                  try {
-                    await AuthService().signIn(email.text.trim(), password.text);
-                    if (context.mounted) context.go('/');
-                  } catch (_) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Sign in failed. Check your email and password.',
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: const Text('Sign In'),
+              controller: _password,
+              obscureText: _obscure,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(onPressed: () => setState(() => _obscure = !_obscure), icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined)),
               ),
             ),
-            TextButton(
-              onPressed: () => context.push('/register'),
-              child: const Text('Create an account'),
-            ),
+            Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () {}, child: const Text('Forgot password?'))),
+            const SizedBox(height: 4),
+            SizedBox(height: 50, child: FilledButton(
+              onPressed: _busy ? null : _signIn,
+              style: FilledButton.styleFrom(backgroundColor: green),
+              child: Text(_busy ? 'Signing in...' : 'Sign in'),
+            )),
+            const SizedBox(height: 12),
+            OutlinedButton(onPressed: () {}, child: const Text('Anonymous sign in')),
+            const SizedBox(height: 14),
+            Row(children: [
+              Expanded(child: Divider(color: Colors.grey.shade300)),
+              const Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('or continue with')),
+              Expanded(child: Divider(color: Colors.grey.shade300)),
+            ]),
+            const SizedBox(height: 12),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              IconButton(onPressed: () {}, icon: const Icon(Icons.g_mobiledata, size: 32)),
+              IconButton(onPressed: () {}, icon: const Icon(Icons.apple, size: 28)),
+              IconButton(onPressed: () {}, icon: const Icon(Icons.facebook, size: 28)),
+            ]),
+            const SizedBox(height: 8),
+            Center(child: TextButton(onPressed: () => context.push('/register'), child: const Text('Don’t have an account? Sign up'))),
           ],
         ),
       ),
