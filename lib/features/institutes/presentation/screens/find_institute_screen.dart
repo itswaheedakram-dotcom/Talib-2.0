@@ -407,3 +407,40 @@ class _Group extends StatelessWidget {
     ]),
   );
 }
+
+
+class _AdmissionSummary extends StatelessWidget {
+  final Institute institute;
+  const _AdmissionSummary(this.institute);
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <String, String>{
+      'Admission status': institute.admissionStatus,
+      if (institute.admissionDeadline.trim().isNotEmpty) 'Deadline': institute.admissionDeadline,
+      if (institute.feeRange.trim().isNotEmpty) 'Fee range': institute.feeRange,
+      'Minimum score': institute.minScore > 0 ? institute.minScore.toString() : 'Not specified',
+      'Entry test': institute.entryTestRequired ? 'Required' : 'Not specified',
+      'Submission': institute.submissionMode,
+      if (institute.eligibility.trim().isNotEmpty) 'Eligibility': institute.eligibility,
+    };
+    return Card(
+      color: const Color(0xFFEAF8F2),
+      margin: const EdgeInsets.only(bottom: 14),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Admission Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          ...rows.entries.map((e) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SizedBox(width: 125, child: Text(e.key, style: const TextStyle(fontWeight: FontWeight.w600))),
+              Expanded(child: Text(e.value)),
+            ]),
+          )),
+        ]),
+      ),
+    );
+  }
+}
