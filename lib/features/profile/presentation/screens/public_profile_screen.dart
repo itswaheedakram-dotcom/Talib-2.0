@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/services/firebase_service.dart';
+import '../../../../core/services/database_service.dart';
 import 'package:flutter/material.dart';
 
 class PublicProfileScreen extends StatefulWidget {
@@ -102,6 +103,14 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   if (verified) const Padding(padding: EdgeInsets.only(left: 6), child: Icon(Icons.verified, size: 20, color: Color(0xFF2E7D32))),
                 ]),
                 if (city.isNotEmpty) Text(city, style: const TextStyle(color: Colors.grey)),
+                if (me != null && me!.uid != widget.id) ...[
+                  const SizedBox(height: 10),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children:[
+                    OutlinedButton.icon(onPressed:()=>_reportUser(name),icon:const Icon(Icons.flag_outlined),label:const Text('Report')),
+                    const SizedBox(width:8),
+                    OutlinedButton.icon(onPressed:()=>_blockUser(name),icon:const Icon(Icons.block_outlined),label:const Text('Block')),
+                  ]),
+                ],
               ])),
               const SizedBox(height: 18),
               Card(child: Padding(padding: const EdgeInsets.all(14), child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
@@ -141,6 +150,16 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   );
   }
 
+  Future<void> _reportUser(String name) async {
+    final u=me;if(u==null)return;
+    final reason=await showDialog<String>(context:context,builder:(_)=>SimpleDialog(title:Text('Report '+name),children:['Spam','Harassment','Fake information','Inappropriate','Scam','Other'].map((x)=>SimpleDialogOption(onPressed:()=>Navigator.pop(context,x),child:Text(x))).toList()));
+    if(reason!=null){await DatabaseService().report(reporterId:u.uid,targetId:widget.id,targetType:'user',reason:reason);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Report submitted.')));}
+  }
+  Future<void> _blockUser(String name) async {
+    final u=me;if(u==null)return;
+    final yes=await showDialog<bool>(context:context,builder:(_)=>AlertDialog(title:Text('Block '+name+'?'),content:const Text('You will no longer see this user in your community feed.'),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Block'))]));
+    if(yes==true){await DatabaseService().blockUser(u.uid,widget.id);if(mounted){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('User blocked.')));context.pop();}}
+  }
   Widget _InfoTile(IconData icon, String label, String value) => ListTile(contentPadding: EdgeInsets.zero, leading: Icon(icon, color: const Color(0xFF4CAF50)), title: Text(value), subtitle: Text(label));
 }
 
