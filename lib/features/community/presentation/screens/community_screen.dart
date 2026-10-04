@@ -7,11 +7,12 @@ import '../../../../core/services/firebase_service.dart';
 
 class CommunityScreen extends StatefulWidget{const CommunityScreen({super.key});@override State<CommunityScreen> createState()=>_CommunityScreenState();}
 class _CommunityScreenState extends State<CommunityScreen>{
-  static const green=Color(0xFF00A66A),darkGreen=Color(0xFF00543D),lightGreen=Color(0xFFEAF8F2);final _db=DatabaseService();final _search=TextEditingController();bool popular=false;String query='';
+  static const green=Color(0xFF00A66A),darkGreen=Color(0xFF00543D),lightGreen=Color(0xFFEAF8F2);DatabaseService? _db;final _search=TextEditingController();bool popular=false;String query='';
   @override void dispose(){_search.dispose();super.dispose();}
   void login(){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Please sign in to create, like or save posts.')));}
   @override Widget build(BuildContext context){
     final firebaseReady = FirebaseService.initialized;
+    if (firebaseReady && _db == null) _db = DatabaseService();
     final user = firebaseReady ? FirebaseAuth.instance.currentUser : null;
     final demoPosts = <Post>[
       Post(id:'demo-1',text:'Welcome to Talib Community! Ask questions, share guidance and help other students.',authorId:'demo',authorName:'Talib Community',createdAt:DateTime.now().subtract(const Duration(minutes:15)),likesCount:12,commentsCount:4),
@@ -21,7 +22,7 @@ class _CommunityScreenState extends State<CommunityScreen>{
     return Scaffold(appBar:AppBar(title:const Text('Community'),actions:[PopupMenuButton<bool>(onSelected:(v)=>setState(()=>popular=v),itemBuilder:(_)=>const[PopupMenuItem(value:false,child:Text('Latest')),PopupMenuItem(value:true,child:Text('Popular'))])]),floatingActionButton:FloatingActionButton.extended(backgroundColor:green,onPressed:user==null?login:()=>context.push('/community/create'),icon:const Icon(Icons.add),label:const Text('Post')),body:Column(children:[
       Container(margin:const EdgeInsets.fromLTRB(12,10,12,6),padding:const EdgeInsets.all(13),decoration:BoxDecoration(color:lightGreen,borderRadius:BorderRadius.circular(12)),child:const Row(children:[Icon(Icons.groups_rounded,color:darkGreen,size:28),SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Need Guidance?',style:TextStyle(color:darkGreen,fontWeight:FontWeight.w700)),Text('Ask students and professionals for guidance.',style:TextStyle(fontSize:12,color:Colors.black54))]))])),
       Padding(padding:const EdgeInsets.fromLTRB(12,4,12,6),child:TextField(controller:_search,onChanged:(v)=>setState(()=>query=v.trim().toLowerCase()),decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:'Search community',filled:true,fillColor:Colors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(10),borderSide:BorderSide.none)))),
-      Expanded(child: firebaseReady ? StreamBuilder<List<Post>>(stream:_db.postsStream(popular:popular),builder:(context,snapshot){if(snapshot.hasError)return _empty('Unable to load community posts.');if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());final posts=(snapshot.data??[]).where((p)=>query.isEmpty||p.text.toLowerCase().contains(query)||p.authorName.toLowerCase().contains(query)).toList();return _postList(posts,user);}) : _postList(demoPosts.where((p)=>query.isEmpty||p.text.toLowerCase().contains(query)||p.authorName.toLowerCase().contains(query)).toList(),user))
+      Expanded(child: firebaseReady ? StreamBuilder<List<Post>>(stream:_db!.postsStream(popular:popular),builder:(context,snapshot){if(snapshot.hasError)return _empty('Unable to load community posts.');if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());final posts=(snapshot.data??[]).where((p)=>query.isEmpty||p.text.toLowerCase().contains(query)||p.authorName.toLowerCase().contains(query)).toList();return _postList(posts,user);}) : _postList(demoPosts.where((p)=>query.isEmpty||p.text.toLowerCase().contains(query)||p.authorName.toLowerCase().contains(query)).toList(),user))
     ]));
   }
   Widget _empty(String text)=>Center(child:Padding(padding:const EdgeInsets.all(24),child:Text(text,textAlign:TextAlign.center)));
@@ -38,12 +39,12 @@ class _CommunityScreenState extends State<CommunityScreen>{
           user:user,
           onOpen:()=>p.id.startsWith('demo-')?null:context.push('/community/post/'+p.id),
           onAuthor:()=>p.id.startsWith('demo-')?null:context.push('/profile/'+p.authorId),
-          onLike:user==null?null:()=>_db.toggleLike(p,user.uid),
+          onLike:user==null?null:()=>_db!.toggleLike(p,user.uid),
           onDelete:user?.uid==p.authorId?()=>_delete(p):null,
         );
       },
     );
   }
-  Future<void> _delete(Post p)async{final yes=await showDialog<bool>(context:context,builder:(_)=>AlertDialog(title:const Text('Delete post?'),content:const Text('This post will be permanently deleted.'),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Delete'))]));if(yes==true)await _db.deletePost(p.id);}
+  Future<void> _delete(Post p)async{final yes=await showDialog<bool>(context:context,builder:(_)=>AlertDialog(title:const Text('Delete post?'),content:const Text('This post will be permanently deleted.'),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Delete'))]));if(yes==true && _db != null)await _db!.deletePost(p.id);}
 }
 class _PostCard extends StatelessWidget{final Post post;final User? user;final VoidCallback onOpen,onAuthor;final VoidCallback? onLike,onDelete;const _PostCard({required this.post,required this.user,required this.onOpen,required this.onAuthor,this.onLike,this.onDelete});@override Widget build(BuildContext context){final liked=post.likedByUser(user?.uid);return Card(shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12)),child:InkWell(onTap:onOpen,borderRadius:BorderRadius.circular(12),child:Padding(padding:const EdgeInsets.fromLTRB(13,12,9,8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[InkWell(onTap:onAuthor,child:const CircleAvatar(backgroundColor:Color(0xFFEAF8F2),child:Icon(Icons.person,color:Color(0xFF00A66A)))),const SizedBox(width:10),Expanded(child:InkWell(onTap:onAuthor,child:Text(post.authorName,style:const TextStyle(fontWeight:FontWeight.w700,color:Color(0xFF00543D))))),if(onDelete!=null)IconButton(onPressed:onDelete,icon:const Icon(Icons.more_vert))]),const SizedBox(height:9),Text(post.text,style:const TextStyle(fontSize:14,height:1.4)),const SizedBox(height:7),Row(children:[IconButton(onPressed:onLike,icon:Icon(liked?Icons.favorite:Icons.favorite_border,color:liked?Colors.red:const Color(0xFF00A66A))),Text('${post.likesCount}'),IconButton(onPressed:onOpen,icon:const Icon(Icons.comment_outlined,color:Color(0xFF00A66A))),Text('${post.commentsCount}'),const Spacer(),const Text('View',style:TextStyle(color:Color(0xFF00543D),fontWeight:FontWeight.w600))])]))));}}
