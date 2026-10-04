@@ -52,7 +52,7 @@ class InstituteDetailScreen extends StatelessWidget {
               subtitle: Text(pending ? 'A representative has submitted a claim for admin verification.' : FirebaseService.initialized ? 'This institute is currently listed on Talib.' : 'This institute is listed on Talib. Firebase features are not configured yet.'),
               trailing: pending ? null : FilledButton(
                 onPressed: !FirebaseService.initialized || FirebaseAuth.instance.currentUser == null ? () => context.push('/signin') : () => context.push('/institute/' + institute.id + '/claim?name=' + Uri.encodeComponent(institute.name)),
-                child: Text(FirebaseAuth.instance.currentUser == null ? 'Sign In to Claim' : 'Claim'),
+                child: Text(FirebaseService.initialized && FirebaseAuth.instance.currentUser != null ? 'Claim' : 'Sign In to Claim'),
               ),
             ));
           },
