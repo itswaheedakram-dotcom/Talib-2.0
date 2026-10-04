@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../data/institute_repository.dart';
-import '../../../models/institute.dart';
+import '../data/institute_repository.dart';
+import '../../models/institute.dart';
 
 class FindInstituteScreen extends StatefulWidget {
   const FindInstituteScreen({super.key});
