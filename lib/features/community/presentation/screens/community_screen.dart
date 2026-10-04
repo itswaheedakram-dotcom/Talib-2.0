@@ -24,6 +24,26 @@ class _CommunityScreenState extends State<CommunityScreen>{
       Expanded(child: firebaseReady ? StreamBuilder<List<Post>>(stream:_db.postsStream(popular:popular),builder:(context,snapshot){if(snapshot.hasError)return _empty('Unable to load community posts.');if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());final posts=(snapshot.data??[]).where((p)=>query.isEmpty||p.text.toLowerCase().contains(query)||p.authorName.toLowerCase().contains(query)).toList();return _postList(posts,user);}) : _postList(demoPosts.where((p)=>query.isEmpty||p.text.toLowerCase().contains(query)||p.authorName.toLowerCase().contains(query)).toList(),user))
     ]));
   }
+  Widget _empty(String text)=>Center(child:Padding(padding:const EdgeInsets.all(24),child:Text(text,textAlign:TextAlign.center)));
+  Widget _postList(List<Post> posts, User? user){
+    if(posts.isEmpty)return _empty('No community posts found.');
+    return ListView.separated(
+      padding:const EdgeInsets.fromLTRB(12,6,12,90),
+      itemCount:posts.length,
+      separatorBuilder:(_,__)=>const SizedBox(height:8),
+      itemBuilder:(_,i){
+        final p=posts[i];
+        return _PostCard(
+          post:p,
+          user:user,
+          onOpen:()=>p.id.startsWith('demo-')?null:context.push('/community/post/'+p.id),
+          onAuthor:()=>p.id.startsWith('demo-')?null:context.push('/profile/'+p.authorId),
+          onLike:user==null?null:()=>_db.toggleLike(p,user.uid),
+          onDelete:user?.uid==p.authorId?()=>_delete(p):null,
+        );
+      },
+    );
+  }
   Future<void> _delete(Post p)async{final yes=await showDialog<bool>(context:context,builder:(_)=>AlertDialog(title:const Text('Delete post?'),content:const Text('This post will be permanently deleted.'),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Delete'))]));if(yes==true)await _db.deletePost(p.id);}
 }
 class _PostCard extends StatelessWidget{final Post post;final User? user;final VoidCallback onOpen,onAuthor;final VoidCallback? onLike,onDelete;const _PostCard({required this.post,required this.user,required this.onOpen,required this.onAuthor,this.onLike,this.onDelete});@override Widget build(BuildContext context){final liked=post.likedByUser(user?.uid);return Card(shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12)),child:InkWell(onTap:onOpen,borderRadius:BorderRadius.circular(12),child:Padding(padding:const EdgeInsets.fromLTRB(13,12,9,8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[InkWell(onTap:onAuthor,child:const CircleAvatar(backgroundColor:Color(0xFFEAF8F2),child:Icon(Icons.person,color:Color(0xFF00A66A)))),const SizedBox(width:10),Expanded(child:InkWell(onTap:onAuthor,child:Text(post.authorName,style:const TextStyle(fontWeight:FontWeight.w700,color:Color(0xFF00543D))))),if(onDelete!=null)IconButton(onPressed:onDelete,icon:const Icon(Icons.more_vert))]),const SizedBox(height:9),Text(post.text,style:const TextStyle(fontSize:14,height:1.4)),const SizedBox(height:7),Row(children:[IconButton(onPressed:onLike,icon:Icon(liked?Icons.favorite:Icons.favorite_border,color:liked?Colors.red:const Color(0xFF00A66A))),Text('${post.likesCount}'),IconButton(onPressed:onOpen,icon:const Icon(Icons.comment_outlined,color:Color(0xFF00A66A))),Text('${post.commentsCount}'),const Spacer(),const Text('View',style:TextStyle(color:Color(0xFF00543D),fontWeight:FontWeight.w600))])]))));}}
