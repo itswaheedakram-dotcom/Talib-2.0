@@ -8,7 +8,7 @@ class _ScholarshipsScreenState extends State<ScholarshipsScreen> {
   String _level='All', _field='All', _search='';
   static const items=[
     _S('HEC Undergraduate Scholarship','Undergraduate','All fields','Pakistan','Tuition, stipend and related support',Icons.school_outlined),
-    _S('Ehsaas Undergraduate Scholarship','Undergraduate','All fields','Pakistan','Need-based financial assistance',Icons.volunteer_activity_outlined),
+    _S('Ehsaas Undergraduate Scholarship','Undergraduate','All fields','Pakistan','Need-based financial assistance',Icons.volunteer_activism_outlined),
     _S('Punjab Educational Endowment Fund','Undergraduate','All fields','Punjab','Support for eligible students',Icons.account_balance_outlined),
     _S('HEC MS Scholarship','MS','All fields','Pakistan','Financial support for postgraduate study',Icons.science_outlined),
     _S('Need-Based Scholarship','Undergraduate','Computer Science','Pakistan','Financial aid for eligible students',Icons.computer_outlined),
