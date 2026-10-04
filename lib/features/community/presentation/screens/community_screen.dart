@@ -15,9 +15,9 @@ class _CommunityScreenState extends State<CommunityScreen>{
     if (firebaseReady && _db == null) _db = DatabaseService();
     final user = firebaseReady ? FirebaseAuth.instance.currentUser : null;
     final demoPosts = <Post>[
-      Post(id:'demo-1',text:'Welcome to Talib Community! Ask questions, share guidance and help other students.',authorId:'demo',authorName:'Talib Community',createdAt:DateTime.now().subtract(const Duration(minutes:15)),likesCount:12,commentsCount:4),
-      Post(id:'demo-2',text:'Which institute is best for your next education program? Share your experience and help fellow students.',authorId:'demo',authorName:'Student Guide',createdAt:DateTime.now().subtract(const Duration(hours:2)),likesCount:8,commentsCount:3),
-      Post(id:'demo-3',text:'Need admission guidance? You can use Find Institute to compare institutes, programs and eligibility.',authorId:'demo',authorName:'Talib Team',createdAt:DateTime.now().subtract(const Duration(hours:5)),likesCount:6,commentsCount:2),
+      Post(id:'demo-1',text:'Welcome to Talib Community! Ask questions, share guidance and help other students.',authorId:'demo-user-1',authorName:'Talib Community',createdAt:DateTime.now().subtract(const Duration(minutes:15)),likesCount:12,commentsCount:4),
+      Post(id:'demo-2',text:'Which institute is best for your next education program? Share your experience and help fellow students.',authorId:'demo-user-2',authorName:'Student Guide',createdAt:DateTime.now().subtract(const Duration(hours:2)),likesCount:8,commentsCount:3),
+      Post(id:'demo-3',text:'Need admission guidance? You can use Find Institute to compare institutes, programs and eligibility.',authorId:'demo-user-3',authorName:'Talib Team',createdAt:DateTime.now().subtract(const Duration(hours:5)),likesCount:6,commentsCount:2),
     ];
     return Scaffold(appBar:AppBar(title:const Text('Community'),actions:[PopupMenuButton<bool>(onSelected:(v)=>setState(()=>popular=v),itemBuilder:(_)=>const[PopupMenuItem(value:false,child:Text('Latest')),PopupMenuItem(value:true,child:Text('Popular'))])]),floatingActionButton:FloatingActionButton.extended(backgroundColor:green,onPressed:user==null?login:()=>context.push('/community/create'),icon:const Icon(Icons.add),label:const Text('Post')),body:Column(children:[
       Container(margin:const EdgeInsets.fromLTRB(12,10,12,6),padding:const EdgeInsets.all(13),decoration:BoxDecoration(color:lightGreen,borderRadius:BorderRadius.circular(12)),child:const Row(children:[Icon(Icons.groups_rounded,color:darkGreen,size:28),SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Need Guidance?',style:TextStyle(color:darkGreen,fontWeight:FontWeight.w700)),Text('Ask students and professionals for guidance.',style:TextStyle(fontSize:12,color:Colors.black54))]))])),
@@ -37,8 +37,8 @@ class _CommunityScreenState extends State<CommunityScreen>{
         return _PostCard(
           post:p,
           user:user,
-          onOpen:()=>p.id.startsWith('demo-')?null:context.push('/community/post/'+p.id),
-          onAuthor:()=>p.id.startsWith('demo-')?null:context.push('/profile/'+p.authorId),
+          onOpen:()=>context.push('/community/post/'+p.id),
+          onAuthor:()=>context.push('/profile/'+p.authorId),
           onLike:user==null?null:()=>_db!.toggleLike(p,user.uid),
           onDelete:user?.uid==p.authorId?()=>_delete(p):null,
         );
