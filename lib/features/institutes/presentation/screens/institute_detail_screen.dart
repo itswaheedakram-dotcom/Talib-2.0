@@ -1,21 +1,56 @@
 import 'package:flutter/material.dart';
+import '../../../models/institute.dart';
+
 class InstituteDetailScreen extends StatelessWidget {
   final String id;
-  const InstituteDetailScreen({super.key,required this.id});
+  const InstituteDetailScreen({super.key, required this.id});
+
+  static const _data = <Institute>[
+    Institute(id: 'school-1', name: 'The Educators', type: 'schools', city: 'Lahore', address: 'Lahore, Punjab', description: 'A school offering foundational and secondary education.', programs: ['Primary', 'Middle', 'Matric']),
+    Institute(id: 'school-2', name: 'Beaconhouse School System', type: 'schools', city: 'Lahore', address: 'Lahore, Punjab', description: 'A private school network providing education from early years through secondary levels.', programs: ['Early Years', 'Primary', 'Secondary']),
+    Institute(id: 'college-1', name: 'Government College Lahore', type: 'colleges', city: 'Lahore', address: 'Lahore, Punjab', description: 'A historic public college offering intermediate and degree programs.', programs: ['FA', 'FSc', 'ICS', 'BS']),
+    Institute(id: 'college-2', name: 'Government College of Science', type: 'colleges', city: 'Lahore', address: 'Lahore, Punjab', description: 'A public institution focused on science and degree education.', programs: ['FSc', 'BS']),
+    Institute(id: 'university-1', name: 'University of the Punjab', type: 'universities', city: 'Lahore', address: 'Quaid-e-Azam Campus, Lahore', description: 'A major public university with a broad range of academic disciplines.', programs: ['Undergraduate', 'Graduate', 'PhD']),
+    Institute(id: 'university-2', name: 'Islamia University Bahawalpur', type: 'universities', city: 'Bahawalpur', address: 'Bahawalpur, Punjab', description: 'A public-sector university serving students across multiple disciplines.', programs: ['Undergraduate', 'Graduate', 'PhD']),
+  ];
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Institute Detail')),
-    body: Padding(padding: const EdgeInsets.all(20),child: Column(crossAxisAlignment: CrossAxisAlignment.start,children: [
-      Card(child: Padding(padding: const EdgeInsets.all(22),child: Column(crossAxisAlignment: CrossAxisAlignment.start,children: [
-        const CircleAvatar(radius: 34,child: Icon(Icons.school)),
+  Widget build(BuildContext context) {
+    final institute = _data.cast<Institute?>().firstWhere((i) => i!.id == id, orElse: () => null);
+    if (institute == null) return const Scaffold(body: Center(child: Text('Institute not found')));
+    final scheme = Theme.of(context).colorScheme;
+    final icon = switch (institute.type) { 'schools' => Icons.school_rounded, 'colleges' => Icons.account_balance_rounded, _ => Icons.castle_rounded };
+    return Scaffold(
+      appBar: AppBar(title: const Text('Institute Details')),
+      body: ListView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 32), children: [
+        Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(gradient: LinearGradient(colors: [scheme.primary, scheme.primaryContainer]), borderRadius: BorderRadius.circular(24)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            CircleAvatar(radius: 32, backgroundColor: scheme.onPrimary.withValues(alpha: .14), child: Icon(icon, color: scheme.onPrimary, size: 30)),
+            const SizedBox(height: 18),
+            Text(institute.name, style: TextStyle(color: scheme.onPrimary, fontSize: 25, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            Row(children: [Icon(Icons.location_on_outlined, size: 18, color: scheme.onPrimary), const SizedBox(width: 5), Expanded(child: Text(institute.address, style: TextStyle(color: scheme.onPrimary.withValues(alpha: .88))))]),
+          ]),
+        ),
         const SizedBox(height: 16),
-        Text('Institute ' + id.replaceAll('-', ' '),style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-        const SizedBox(height: 8),
-        const Text('Programs, admission information, location and other useful details will appear here.'),
-      ]))),
-      const SizedBox(height: 14),
-      const ListTile(leading: Icon(Icons.location_on_outlined),title: Text('Location'),subtitle: Text('Pakistan')),
-      const ListTile(leading: Icon(Icons.menu_book_outlined),title: Text('Programs'),subtitle: Text('Programs will be loaded from Firebase')),
-    ])),
-  );
+        Text('About', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 7),
+        Text(institute.description),
+        const SizedBox(height: 22),
+        Text('Programs', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8, children: institute.programs.map((p) => Chip(label: Text(p))).toList()),
+        const SizedBox(height: 22),
+        Card(child: Column(children: [
+          ListTile(leading: const Icon(Icons.location_on_outlined), title: const Text('Location'), subtitle: Text(institute.address)),
+          const Divider(height: 1),
+          const ListTile(leading: Icon(Icons.info_outline_rounded), title: Text('Institute type'), subtitle: Text('Educational institute')),
+          const Divider(height: 1),
+          const ListTile(leading: Icon(Icons.phone_outlined), title: const Text('Contact'), subtitle: Text('Contact information will be connected to Firebase')),
+        ])),
+      ]),
+    );
+  }
 }
