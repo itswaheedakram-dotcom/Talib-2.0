@@ -38,22 +38,34 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
     super.dispose();
   }
 
-  List<String> _values(String Function(Institute) pick, String all) {
-    final values = InstituteRepository.instance.items
-        .map((i) => pick(i).trim())
-        .where((v) => v.isNotEmpty)
-        .toSet()
-        .toList()..sort();
+  Iterable<Institute> get _typeItems => _education == 'All'
+      ? InstituteRepository.instance.items
+      : InstituteRepository.instance.items.where((i) => _label(i.type) == _education);
+
+  Iterable<Institute> get _provinceItems => _province == 'All provinces'
+      ? _typeItems
+      : _typeItems.where((i) => i.province == _province);
+
+  Iterable<Institute> get _cityItems => _city == 'All cities'
+      ? _provinceItems
+      : _provinceItems.where((i) => i.city == _city);
+
+  Iterable<Institute> get _sectorItems => _sector == 'All sectors'
+      ? _cityItems
+      : _cityItems.where((i) => i.sector == _sector);
+
+  List<String> _values(Iterable<Institute> source, String Function(Institute) pick, String all) {
+    final values = source.map((i) => pick(i).trim()).where((v) => v.isNotEmpty).toSet().toList()..sort();
     return [all, ...values];
   }
 
-  List<String> get _provinces => _values((i) => i.province, 'All provinces');
-  List<String> get _cities => _values((i) => i.city, 'All cities');
-  List<String> get _campuses => _values((i) => i.campus, 'All campuses');
+  List<String> get _provinces => _values(_typeItems, (i) => i.province, 'All provinces');
+  List<String> get _cities => _values(_provinceItems, (i) => i.city, 'All cities');
+  List<String> get _campuses => _values(_cityItems, (i) => i.campus, 'All campuses');
 
   List<String> get _programs {
     final values = <String>{};
-    for (final i in InstituteRepository.instance.items) {
+    for (final i in _sectorItems) {
       values.addAll(i.programs.map((p) => p.trim()).where((p) => p.isNotEmpty));
       if (i.nextProgram.trim().isNotEmpty) values.add(i.nextProgram.trim());
     }
@@ -131,7 +143,32 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (sheetContext) => StatefulBuilder(
-        builder: (context, sheetSet) => Padding(
+        builder: (context, sheetSet) {
+          Iterable<Institute> typeItems() => education == 'All'
+              ? InstituteRepository.instance.items
+              : InstituteRepository.instance.items.where((i) => _label(i.type) == education);
+          Iterable<Institute> provinceItems() => province == 'All provinces'
+              ? typeItems()
+              : typeItems().where((i) => i.province == province);
+          Iterable<Institute> cityItems() => city == 'All cities'
+              ? provinceItems()
+              : provinceItems().where((i) => i.city == city);
+          Iterable<Institute> sectorItems() => sector == 'All sectors'
+              ? cityItems()
+              : cityItems().where((i) => i.sector == sector);
+
+          final provinces = _values(typeItems(), (i) => i.province, 'All provinces');
+          final cities = _values(provinceItems(), (i) => i.city, 'All cities');
+          final sectors = _values(cityItems(), (i) => i.sector, 'All sectors');
+          final campuses = _values(sectorItems(), (i) => i.campus, 'All campuses');
+          final programSet = <String>{};
+          for (final i in sectorItems()) {
+            programSet.addAll(i.programs.map((p) => p.trim()).where((p) => p.isNotEmpty));
+            if (i.nextProgram.trim().isNotEmpty) programSet.add(i.nextProgram.trim());
+          }
+          final programOptions = ['All programs', ...programSet.toList()..sort()];
+
+          return Padding(
           padding: EdgeInsets.fromLTRB(20, 8, 20, 24 + MediaQuery.viewInsetsOf(context).bottom),
           child: SingleChildScrollView(
             child: Column(
@@ -147,13 +184,24 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                   }, child: const Text('Clear all')),
                 ]),
                 const SizedBox(height: 8),
-                _Group('Institute Type', const ['All','School','College','University'], education, (v) => sheetSet(() => education = v)),
-                _Group('Province', _provinces, province, (v) => sheetSet(() => province = v)),
-                _Group('City', _cities, city, (v) => sheetSet(() => city = v)),
-                _Group('Sector', const ['All sectors','Private','Government','Semi-government'], sector, (v) => sheetSet(() => sector = v)),
-                _Group('Program / Degree', _programs, program, (v) => sheetSet(() => program = v)),
+                _Group('Institute Type', const ['All','School','College','University'], education, (v) => sheetSet(() {
+                  education = v; province = 'All provinces'; city = 'All cities';
+                  sector = 'All sectors'; program = 'All programs'; campus = 'All campuses';
+                })),
+                _Group('Province', provinces, province, (v) => sheetSet(() {
+                  province = v; city = 'All cities'; sector = 'All sectors';
+                  program = 'All programs'; campus = 'All campuses';
+                })),
+                _Group('City', cities, city, (v) => sheetSet(() {
+                  city = v; sector = 'All sectors'; program = 'All programs';
+                  campus = 'All campuses';
+                })),
+                _Group('Sector', sectors, sector, (v) => sheetSet(() {
+                  sector = v; program = 'All programs'; campus = 'All campuses';
+                })),
+                _Group('Program / Degree', programOptions, program, (v) => sheetSet(() => program = v)),
                 _Group('Application / Submission', const ['All modes','Online','Offline'], mode, (v) => sheetSet(() => mode = v)),
-                _Group('Campus', _campuses, campus, (v) => sheetSet(() => campus = v)),
+                _Group('Campus', campuses, campus, (v) => sheetSet(() => campus = v)),
                 const Text('Your Percentage / CGPA', style: TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 7),
                 TextField(
