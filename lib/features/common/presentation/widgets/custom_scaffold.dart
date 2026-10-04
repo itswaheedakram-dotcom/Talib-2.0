@@ -62,6 +62,27 @@ class CustomScaffold extends StatelessWidget {
   }
 }
 
+class _DrawerSectionTitle extends StatelessWidget {
+  final String title;
+  const _DrawerSectionTitle(this.title);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+      child: Text(
+        title.toUpperCase(),
+        style: const TextStyle(
+          color: Colors.white60,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.1,
+        ),
+      ),
+    );
+  }
+}
+
 class TalibDrawer extends StatelessWidget {
   const TalibDrawer({super.key});
 
@@ -111,16 +132,26 @@ class TalibDrawer extends StatelessWidget {
                   _item(context, Icons.home_rounded, 'Home', '/'),
                   _item(context, Icons.person_outline_rounded, 'Profile', '/profile'),
                   _item(context, Icons.article_outlined, 'News Feed', '/newsfeed'),
-                  _item(context, Icons.account_balance_outlined, 'Institutes', '/institutes'),
-                  _item(context, Icons.groups_outlined, 'Community', '/community'),
+                  const _DrawerSectionTitle('Explore'),
+                  _item(context, Icons.home_rounded, 'Home', '/'),
+                  _item(context, Icons.person_outline_rounded, 'Profile', '/profile'),
+                  _item(context, Icons.article_outlined, 'News Feed', '/newsfeed'),
+                  _item(context, Icons.notifications_none_rounded, 'Notifications', '/notifications'),
                   _item(context, Icons.search_rounded, 'Search', '/search'),
                   _item(context, Icons.bookmark_border_rounded, 'Bookmarks', '/bookmarks'),
-                  const Divider(color: Colors.white24, indent: 16, endIndent: 16),
+                  _item(context, Icons.groups_outlined, 'Community', '/community'),
+                  const _DrawerSectionTitle('Education'),
+                  _item(context, Icons.account_balance_outlined, 'All Institutes', '/institutes'),
+                  _item(context, Icons.manage_search_rounded, 'Find Institute', '/find'),
+                  _actionItem(context, Icons.add_business_outlined, 'Add Institute', () => _chooseInstituteType(context)),
+                  _item(context, Icons.school_outlined, 'Scholarships', '/scholarships'),
+                  _item(context, Icons.book_outlined, 'Courses', '/courses'),
+                  _item(context, Icons.event_outlined, 'Seminars', '/seminars'),
+                  _item(context, Icons.hotel_outlined, 'Hostels', '/hostels'),
+                  const _DrawerSectionTitle('Career & Community'),
                   _item(context, Icons.groups_rounded, 'Study Groups', '/groups'),
                   _item(context, Icons.menu_book_outlined, 'Study Resources', '/resources'),
                   _item(context, Icons.chat_bubble_outline_rounded, 'Messages', '/messages'),
-                  _item(context, Icons.school_outlined, 'Scholarships', '/scholarships'),
-                  _item(context, Icons.book_outlined, 'Courses', '/courses'),
                   _item(context, Icons.work_outline_rounded, 'Internships', '/internships'),
                   _item(context, Icons.work_rounded, 'Jobs', '/jobs'),
                   const Divider(color: Colors.white24, indent: 16, endIndent: 16),
@@ -189,6 +220,51 @@ class TalibDrawer extends StatelessWidget {
         Navigator.of(context).pop();
         action();
       },
+    );
+  }
+
+  static void _chooseInstituteType(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Add Institute',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Select the institute type to continue.',
+                style: TextStyle(color: Colors.black54),
+              ),
+              const SizedBox(height: 12),
+              for (final type in const [
+                ('university', 'University', Icons.account_balance),
+                ('college', 'College', Icons.school),
+                ('school', 'School', Icons.menu_book),
+              ])
+                ListTile(
+                  leading: Icon(type.$3, color: green),
+                  title: Text(type.$2),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.pop(context);
+                    context.go('/add-institute/${type.$1}');
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
