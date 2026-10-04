@@ -10,16 +10,16 @@ class AddInstituteScreen extends StatefulWidget{
 }
 class _AddInstituteScreenState extends State<AddInstituteScreen>{
   final _formKey=GlobalKey<FormState>();
-  final _name=TextEditingController(),_campus=TextEditingController(),_province=TextEditingController(),_city=TextEditingController(),_description=TextEditingController(),_website=TextEditingController(),_eligibility=TextEditingController();
+  final _name=TextEditingController(),_campus=TextEditingController(),_province=TextEditingController(),_city=TextEditingController(),_description=TextEditingController(),_website=TextEditingController(),_eligibility=TextEditingController(),_minScore=TextEditingController(),_nextProgram=TextEditingController();
   String _sector='Private',_submission='Online';bool _saving=false;
   String get title=>switch(widget.type){'schools'=>'Add School','colleges'=>'Add College','universities'=>'Add University',_=>'Add Institute'};
   String get typeLabel=>switch(widget.type){'schools'=>'School','colleges'=>'College','universities'=>'University',_=>'Institute'};
-  @override void dispose(){for(final c in[_name,_campus,_province,_city,_description,_website,_eligibility])c.dispose();super.dispose();}
+  @override void dispose(){for(final c in[_name,_campus,_province,_city,_description,_website,_eligibility,_minScore,_nextProgram])c.dispose();super.dispose();}
 
   Future<void> _submit() async{
     if(!_formKey.currentState!.validate())return;
     setState(()=>_saving=true);
-    final institute=Institute(id:'',name:_name.text.trim(),type:widget.type,campus:_campus.text.trim(),province:_province.text.trim(),city:_city.text.trim(),sector:_sector,description:_description.text.trim(),website:_website.text.trim(),submissionMode:_submission,eligibility:_eligibility.text.trim(),address:'${_city.text.trim()}, ${_province.text.trim()}',status:'pending');
+    final institute=Institute(id:'',name:_name.text.trim(),type:widget.type,campus:_campus.text.trim(),province:_province.text.trim(),city:_city.text.trim(),sector:_sector,description:_description.text.trim(),website:_website.text.trim(),submissionMode:_submission,eligibility:_eligibility.text.trim(),minScore:double.tryParse(_minScore.text.trim())??0,nextProgram:_nextProgram.text.trim(),address:'${_city.text.trim()}, ${_province.text.trim()}',status:'pending');
     final saved=await InstituteRepository.instance.add(institute);
     if(!mounted)return;
     setState(()=>_saving=false);
@@ -44,6 +44,8 @@ class _AddInstituteScreenState extends State<AddInstituteScreen>{
         _field(_description,'Description',Icons.description_outlined,maxLines:4),
         _field(_website,'Website',Icons.language_outlined,keyboard:TextInputType.url),
         _field(_eligibility,'Eligibility Criteria',Icons.rule_outlined,maxLines:4,required:true),
+        _field(_minScore,'Minimum Percentage / CGPA',Icons.percent,keyboard:const TextInputType.numberWithOptions(decimal:true)),
+        _field(_nextProgram,'Next Education Program',Icons.menu_book_outlined),
         const SizedBox(height:8),
         Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xFFEAF8F2),borderRadius:BorderRadius.circular(12)),child:Row(children:[const Icon(Icons.info_outline,color:green),const SizedBox(width:9),Expanded(child:Text('Your ${typeLabel.toLowerCase()} will be submitted for admin review. It is also available immediately in this session so the result can be verified.'))])),
         const SizedBox(height:18),
