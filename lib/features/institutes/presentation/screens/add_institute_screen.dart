@@ -28,29 +28,77 @@ class _AddInstituteScreenState extends State<AddInstituteScreen>{
     context.pop();
   }
 
-  @override Widget build(BuildContext context){
-    const green=Color(0xFF00A66A),dark=Color(0xFF00543D);
-    return Scaffold(appBar:AppBar(leading:IconButton(icon:const Icon(Icons.arrow_back_ios_new,size:18),onPressed:()=>context.pop()),title:Text(title)),
-      body:Form(key:_formKey,child:ListView(padding:const EdgeInsets.fromLTRB(16,8,16,30),children:[
-        Text('Institute Details',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w700,color:dark)),const SizedBox(height:5),
-        Text('Add the information required by the Talib Add Institute test case.',style:TextStyle(color:Colors.grey.shade700)),const SizedBox(height:14),
-        _field(_name,'Institute Name',Icons.account_balance_outlined,required:true),
-        _field(_campus,'Campus',Icons.location_city_outlined),
-        Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:_field(_province,'Province',Icons.map_outlined,required:true)),const SizedBox(width:10),Expanded(child:_field(_city,'City',Icons.location_on_outlined,required:true))]),
-        DropdownButtonFormField<String>(initialValue:_sector,decoration:const InputDecoration(labelText:'Sector',prefixIcon:Icon(Icons.business_outlined)),items:const['Private','Government','Semi-government'].map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(),onChanged:(v)=>setState(()=>_sector=v??_sector)),
-        const SizedBox(height:12),
-        DropdownButtonFormField<String>(initialValue:_submission,decoration:const InputDecoration(labelText:'Application Submission Mode',prefixIcon:Icon(Icons.link_outlined)),items:const['Online','Physical'].map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(),onChanged:(v)=>setState(()=>_submission=v??_submission)),
-        const SizedBox(height:12),
-        _field(_description,'Description',Icons.description_outlined,maxLines:4),
-        _field(_website,'Website',Icons.language_outlined,keyboard:TextInputType.url),
-        _field(_eligibility,'Eligibility Criteria',Icons.rule_outlined,maxLines:4,required:true),
-        _field(_minScore,'Minimum Percentage / CGPA',Icons.percent,keyboard:const TextInputType.numberWithOptions(decimal:true)),
-        _field(_nextProgram,'Next Education Program',Icons.menu_book_outlined),
-        const SizedBox(height:8),
-        Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xFFEAF8F2),borderRadius:BorderRadius.circular(12)),child:Row(children:[const Icon(Icons.info_outline,color:green),const SizedBox(width:9),Expanded(child:Text('Your ${typeLabel.toLowerCase()} will be submitted for admin review. It is also available immediately in this session so the result can be verified.'))])),
-        const SizedBox(height:18),
-        SizedBox(height:50,child:FilledButton(onPressed:_saving?null:_submit,style:FilledButton.styleFrom(backgroundColor:green),child:_saving?const SizedBox(height:22,width:22,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):const Text('Submit Institute')))
-      ]));
+  @override
+  Widget build(BuildContext context) {
+    const green = Color(0xFF00A66A);
+    const dark = Color(0xFF00543D);
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+          onPressed: () => context.pop(),
+        ),
+        title: Text(title),
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
+          children: [
+            const Text('Institute Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: dark)),
+            const SizedBox(height: 5),
+            Text('Add the information required by the Talib Add Institute test case.', style: TextStyle(color: Colors.grey.shade700)),
+            const SizedBox(height: 14),
+            _field(_name, 'Institute Name', Icons.account_balance_outlined, required: true),
+            _field(_campus, 'Campus', Icons.location_city_outlined),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: _field(_province, 'Province', Icons.map_outlined, required: true)),
+              const SizedBox(width: 10),
+              Expanded(child: _field(_city, 'City', Icons.location_on_outlined, required: true)),
+            ]),
+            DropdownButtonFormField<String>(
+              initialValue: _sector,
+              decoration: const InputDecoration(labelText: 'Sector', prefixIcon: Icon(Icons.business_outlined)),
+              items: const ['Private', 'Government', 'Semi-government'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+              onChanged: (v) => setState(() => _sector = v ?? _sector),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _submission,
+              decoration: const InputDecoration(labelText: 'Application Submission Mode', prefixIcon: Icon(Icons.link_outlined)),
+              items: const ['Online', 'Physical'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+              onChanged: (v) => setState(() => _submission = v ?? _submission),
+            ),
+            const SizedBox(height: 12),
+            _field(_description, 'Description', Icons.description_outlined, maxLines: 4),
+            _field(_website, 'Website', Icons.language_outlined, keyboard: TextInputType.url),
+            _field(_eligibility, 'Eligibility Criteria', Icons.rule_outlined, maxLines: 4, required: true),
+            _field(_minScore, 'Minimum Percentage / CGPA', Icons.percent, keyboard: const TextInputType.numberWithOptions(decimal: true)),
+            _field(_nextProgram, 'Next Education Program', Icons.menu_book_outlined),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: const Color(0xFFEAF8F2), borderRadius: BorderRadius.circular(12)),
+              child: Row(children: [
+                const Icon(Icons.info_outline, color: green),
+                const SizedBox(width: 9),
+                Expanded(child: Text('Your ${typeLabel.toLowerCase()} will be submitted for admin review. It is also available immediately in this session so the result can be verified.')),
+              ]),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              height: 50,
+              child: FilledButton(
+                onPressed: _saving ? null : _submit,
+                style: FilledButton.styleFrom(backgroundColor: green),
+                child: _saving ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Submit Institute'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
   Widget _field(TextEditingController c,String label,IconData icon,{bool required=false,int maxLines=1,TextInputType? keyboard})=>Padding(padding:const EdgeInsets.only(bottom:12),child:TextFormField(controller:c,maxLines:maxLines,keyboardType:keyboard,validator:required?(v)=>v==null||v.trim().isEmpty?'Required':null:null,decoration:InputDecoration(labelText:label,prefixIcon:Icon(icon))));
 }
