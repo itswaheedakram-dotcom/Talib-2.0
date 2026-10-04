@@ -50,7 +50,7 @@ class InstituteDetailScreen extends StatelessWidget {
               title: Text(pending ? 'Claim under review' : 'Institute profile'),
               subtitle: Text(pending ? 'A representative has submitted a claim for admin verification.' : 'This institute is currently listed on Talib.'),
               trailing: pending ? null : FilledButton(
-                onPressed: FirebaseAuth.instance.currentUser == null ? () => context.push('/signin') : () => context.push('/institute/' + institute.id + '/claim'),
+                onPressed: FirebaseAuth.instance.currentUser == null ? () => context.push('/signin') : () => context.push('/institute/' + institute.id + '/claim?name=' + Uri.encodeComponent(institute.name)),
                 child: Text(FirebaseAuth.instance.currentUser == null ? 'Sign In to Claim' : 'Claim'),
               ),
             ));
