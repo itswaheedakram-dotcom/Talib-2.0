@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/services/firebase_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -97,6 +98,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override void dispose(){for(final c in [name,level,institute,program,city])c.dispose();super.dispose();}
 
   @override Widget build(BuildContext context){
+    if (!FirebaseService.initialized) {
+      return Scaffold(appBar: AppBar(title: const Text('Profile')), body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.cloud_off, size: 64), const SizedBox(height: 12),
+        const Text('Firebase is not configured yet.', textAlign: TextAlign.center), const SizedBox(height: 8),
+        const Text('Navigation is working. Sign in and cloud profile features will work after Firebase configuration.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+      ]))));
+    }
     final u=user;
     if(loading)return const Scaffold(body:Center(child:CircularProgressIndicator()));
     if(u==null)return Scaffold(appBar:AppBar(title:const Text('Profile')),body:Center(child:Padding(
