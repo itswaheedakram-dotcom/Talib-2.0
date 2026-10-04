@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 ThemeData buildTheme() {
   return ThemeData(
     useMaterial3: false,
-    primarySwatch: Colors.blue,
-    primaryColor: const Color(0xFF2196F3),
+    primarySwatch: Colors.green,
+    primaryColor: const Color(0xFF4CAF50),
     scaffoldBackgroundColor: Colors.white,
     fontFamily: 'Roboto',
     appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xFF2196F3),
+      backgroundColor: Color(0xFF4CAF50),
       foregroundColor: Colors.white,
       elevation: 2,
       centerTitle: true,
@@ -32,7 +32,7 @@ ThemeData buildTheme() {
       ),
       focusedBorder: const OutlineInputBorder(
         borderRadius: BorderRadius.all(Radius.circular(6)),
-        borderSide: BorderSide(color: Color(0xFF2196F3), width: 1.5),
+        borderSide: BorderSide(color: Color(0xFF4CAF50), width: 1.5),
       ),
     ),
   );
