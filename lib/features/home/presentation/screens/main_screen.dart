@@ -42,7 +42,7 @@ class _MainScreenState extends State<MainScreen> {
           padding: EdgeInsets.zero,
           children: [
             const DrawerHeader(
-              decoration: BoxDecoration(color: Color(0xFF2196F3)),
+              decoration: BoxDecoration(color: Color(0xFF4CAF50)),
               child: Align(
                 alignment: Alignment.bottomLeft,
                 child: Text(
@@ -95,7 +95,7 @@ class _MainScreenState extends State<MainScreen> {
         currentIndex: index,
         onTap: (value) => setState(() => index = value),
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF2196F3),
+        selectedItemColor: const Color(0xFF4CAF50),
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
