@@ -16,8 +16,13 @@ jobs:
           cache: true
       - name: Generate Android project files
         run: flutter create --platforms=android --project-name talib_2 --org com.talib2 .
+      - name: Configure Android SDK compatibility
+        run: |
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' android/app/build.gradle.kts
       - name: Get dependencies
         run: flutter pub get
+      - name: Analyze Dart code
+        run: flutter analyze
       - name: Build release APK
         run: flutter build apk --release
       - name: Upload APK
