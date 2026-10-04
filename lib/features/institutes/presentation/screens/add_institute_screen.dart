@@ -45,7 +45,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen>{
         _field(_website,'Website',Icons.language_outlined,keyboard:TextInputType.url),
         _field(_eligibility,'Eligibility Criteria',Icons.rule_outlined,maxLines:4,required:true),
         const SizedBox(height:8),
-        Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xFFEAF8F2),borderRadius:BorderRadius.circular(12)),child:const Row(children:[Icon(Icons.info_outline,color:green),SizedBox(width:9),Expanded(child:Text('Your ${typeLabel.toLowerCase()} will be submitted for admin review. It is also available immediately in this session so the result can be verified.'))])),
+        Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xFFEAF8F2),borderRadius:BorderRadius.circular(12)),child:Row(children:[const Icon(Icons.info_outline,color:green),const SizedBox(width:9),Expanded(child:Text('Your ${typeLabel.toLowerCase()} will be submitted for admin review. It is also available immediately in this session so the result can be verified.'))])),
         const SizedBox(height:18),
         SizedBox(height:50,child:FilledButton(onPressed:_saving?null:_submit,style:FilledButton.styleFrom(backgroundColor:green),child:_saving?const SizedBox(height:22,width:22,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):const Text('Submit Institute')))
       ]));
