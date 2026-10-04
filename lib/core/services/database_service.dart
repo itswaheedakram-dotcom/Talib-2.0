@@ -5,8 +5,8 @@ class DatabaseService {
   final FirebaseFirestore _db=FirebaseFirestore.instance;
   CollectionReference<Map<String,dynamic>> collection(String name)=>_db.collection(name);
   Stream<List<Post>> postsStream({bool popular=false,String category='All',String query=''})=>_db.collection('posts').orderBy(popular?'likesCount':'createdAt',descending:true).snapshots().map((s)=>s.docs.map(Post.fromDoc).where((p)=>(category=='All'||p.category==category)&&(query.isEmpty||p.text.toLowerCase().contains(query.toLowerCase())||p.authorName.toLowerCase().contains(query.toLowerCase()))).toList());
-  Future<String> createPost({required String text,required String authorId,required String authorName,String category='General',bool isQuestion=false,List<String> pollOptions=const []})async{
-    final ref=await _db.collection('posts').add({'text':text.trim(),'authorId':authorId,'authorName':authorName,'category':category,'isQuestion':isQuestion,'createdAt':FieldValue.serverTimestamp(),'likesCount':0,'likedBy':<String>[],'commentsCount':0,'pollOptions':pollOptions,'pollVotes':<String,int>{}});
+  Future<String> createPost({required String text,required String authorId,required String authorName,String category='General',bool isQuestion=false,List<String> pollOptions=const [],String? instituteId})async{
+    final ref=await _db.collection('posts').add({'text':text.trim(),'authorId':authorId,'authorName':authorName,'category':category,'isQuestion':isQuestion,'createdAt':FieldValue.serverTimestamp(),'likesCount':0,'likedBy':<String>[],'commentsCount':0,'pollOptions':pollOptions,'pollVotes':<String,int>{},if(instituteId!=null)'instituteId':instituteId});
     return ref.id;
   }
   Future<void> updatePost({required String postId,required String text,String? category,bool? isQuestion})=>_db.collection('posts').doc(postId).update({'text':text.trim(),if(category!=null)'category':category,if(isQuestion!=null)'isQuestion':isQuestion});
