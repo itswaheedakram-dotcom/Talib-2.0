@@ -59,8 +59,35 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
     return [all, ...values];
   }
 
+  static const List<String> _punjabCities = [
+    'Attock', 'Bahawalnagar', 'Bahawalpur', 'Bhakkar', 'Chakwal',
+    'Chiniot', 'Dera Ghazi Khan', 'Faisalabad', 'Gujranwala', 'Gujrat',
+    'Hafizabad', 'Jhang', 'Jhelum', 'Kasur', 'Khanewal', 'Khushab',
+    'Lahore', 'Layyah', 'Lodhran', 'Mandi Bahauddin', 'Mianwali',
+    'Multan', 'Muzaffargarh', 'Nankana Sahib', 'Narowal', 'Okara',
+    'Pakpattan', 'Rahim Yar Khan', 'Rajanpur', 'Rawalpindi', 'Sahiwal',
+    'Sargodha', 'Sheikhupura', 'Sialkot', 'Toba Tek Singh', 'Vehari',
+    'Ahmedpur East', 'Alipur', 'Arifwala', 'Bhalwal', 'Burewala',
+    'Chishtian', 'Daska', 'Depalpur', 'Dera Din Panah', 'Dunyapur',
+    'Gojra', 'Gujar Khan', 'Hasilpur', 'Haroonabad', 'Jalalpur Jattan',
+    'Jaranwala', 'Jatoi', 'Kamalia', 'Kamoke', 'Kahror Pacca',
+    'Kharian', 'Kot Addu', 'Kot Momin', 'Liaquatpur', 'Mailsi',
+    'Malakwal', 'Muridke', 'Narowal', 'Pattoki', 'Pindi Bhattian',
+    'Pindi Gheb', 'Rajanpur', 'Sadiqabad', 'Sambrial', 'Sammundri',
+    'Shakargarh', 'Shorkot', 'Shujaabad', 'Taxila', 'Wazirabad',
+    'Yazman', 'Zafarwal',
+  ];
+
   List<String> get _provinces => _values(_typeItems, (i) => i.province, 'All provinces');
-  List<String> get _cities => _values(_provinceItems, (i) => i.city, 'All cities');
+  List<String> get _cities {
+    final dataCities = _values(_provinceItems, (i) => i.city, 'All cities');
+    if (_province == 'Punjab') {
+      final merged = <String>{...dataCities.skip(1), ..._punjabCities};
+      final sorted = merged.toList()..sort();
+      return ['All cities', ...sorted];
+    }
+    return dataCities;
+  }
   List<String> get _campuses => _values(_cityItems, (i) => i.campus, 'All campuses');
 
   List<String> get _programs {
