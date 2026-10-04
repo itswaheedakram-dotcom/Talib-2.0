@@ -115,6 +115,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _field(name,'Name',Icons.person_outline),_field(level,'Education level',Icons.school_outlined),_field(institute,'Institute',Icons.account_balance_outlined),
         _field(program,'Program / Degree',Icons.menu_book_outlined),_field(city,'City',Icons.location_on_outlined),
         SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:saving?null:_save,icon:saving?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.save_outlined),label:Text(saving?'Saving...':'Save Profile'))),
+        const SizedBox(height:24),const Text('My Reputation',style:TextStyle(fontSize:18,fontWeight:FontWeight.w600)),const SizedBox(height:8),
+        StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+          stream: FirebaseFirestore.instance.collection('users').doc(u.uid).collection('reviews').snapshots(),
+          builder: (context, snap) {
+            final docs=snap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[];
+            var sum=0;
+            for(final d in docs){final r=(d.data()['rating'] as num?)?.toInt()??0;if(r>0)sum+=r;}
+            final avg=docs.isEmpty?0.0:sum/docs.length;
+            final status=avg>=4.5&&docs.length>=10?'Eligible for verification':'Building reputation';
+            return Card(child: Padding(padding:const EdgeInsets.all(14),child:Row(children:[
+              const Icon(Icons.star,color:Color(0xFF2E7D32),size:28),const SizedBox(width:12),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Text(docs.isEmpty?'No reviews yet':avg.toStringAsFixed(1)+' / 5',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w600)),
+                Text(docs.length.toString()+' public reviews • '+status,style:const TextStyle(color:Colors.grey,fontSize:12)),
+              ])),
+              IconButton(onPressed:()=>context.push('/profile/'+u.uid),icon:const Icon(Icons.open_in_new),tooltip:'View public profile'),
+            ])));
+          },
+        ),
         const SizedBox(height:24),const Text('My Activity',style:TextStyle(fontSize:18,fontWeight:FontWeight.w600)),
         _action(Icons.article_outlined,'My Posts','View posts you have created',()=>context.push('/community')),
         _action(Icons.bookmark_outline,'Saved Items','Open your saved posts and resources',()=>context.push('/bookmarks')),
