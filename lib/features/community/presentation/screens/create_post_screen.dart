@@ -24,5 +24,5 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
     DropdownButtonFormField<String>(value:category,decoration:const InputDecoration(labelText:'Category',border:OutlineInputBorder()),items:categories.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>category=v??category)),
     const SizedBox(height:12),SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Ask a question'),subtitle:const Text('Let other students answer and mark the best answer.'),value:isQuestion,onChanged:(v)=>setState(()=>isQuestion=v)),const SizedBox(height:4),
     TextField(controller:_controller,maxLines:8,maxLength:1000,decoration:const InputDecoration(hintText:'What do you want to share?',border:OutlineInputBorder())),
-  ]);}
+  ]));}
 }
