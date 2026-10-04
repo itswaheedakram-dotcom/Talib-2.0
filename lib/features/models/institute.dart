@@ -20,6 +20,8 @@ class Institute {
   final String admissionDeadline;
   final String feeRange;
   final bool entryTestRequired;
+  final String imageUrl;
+  final List<String> facilities;
 
   const Institute({
     required this.id,
@@ -43,6 +45,8 @@ class Institute {
     this.admissionDeadline = '',
     this.feeRange = '',
     this.entryTestRequired = false,
+    this.imageUrl = '',
+    this.facilities = const [],
   });
 
   Map<String, dynamic> toMap() => {
@@ -51,6 +55,7 @@ class Institute {
     'website': website, 'submissionMode': submissionMode, 'eligibility': eligibility,
     'programs': programs, 'contact': contact, 'status': status, 'minScore': minScore, 'nextProgram': nextProgram,
     'admissionStatus': admissionStatus, 'admissionDeadline': admissionDeadline, 'feeRange': feeRange, 'entryTestRequired': entryTestRequired,
+    'imageUrl': imageUrl, 'facilities': facilities,
   };
 
   factory Institute.fromMap(String id, Map<String, dynamic> map) => Institute(
@@ -75,5 +80,7 @@ class Institute {
     admissionDeadline: (map['admissionDeadline'] ?? '').toString(),
     feeRange: (map['feeRange'] ?? '').toString(),
     entryTestRequired: map['entryTestRequired'] == true,
+    imageUrl: (map['imageUrl'] ?? '').toString(),
+    facilities: List<String>.from((map['facilities'] ?? const []).map((e) => e.toString())),
   );
 }
