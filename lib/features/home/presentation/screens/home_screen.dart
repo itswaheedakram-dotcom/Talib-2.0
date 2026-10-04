@@ -1,54 +1,109 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   static const green = Color(0xFF00A66A);
   static const darkGreen = Color(0xFF00543D);
   static const lightGreen = Color(0xFFEAF8F2);
+  bool _isExpanded = true;
+
+  static const items = [
+    _HomeItem('News Feed', Icons.article_rounded, '/newsfeed'),
+    _HomeItem('Institutes', Icons.account_balance_rounded, '/institutes'),
+    _HomeItem('Scholarships', Icons.school_rounded, '/scholarships'),
+    _HomeItem('Courses', Icons.book_rounded, '/courses'),
+    _HomeItem('Seminars', Icons.record_voice_over_rounded, '/seminars'),
+    _HomeItem('Hostels', Icons.hotel_rounded, '/hostels'),
+    _HomeItem('Internships', Icons.work_outline_rounded, '/internships'),
+    _HomeItem('Jobs', Icons.work_rounded, '/jobs'),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    const items = [
-      _HomeItem('News Feed', Icons.rss_feed_rounded, '/newsfeed'),
-      _HomeItem('Institutes', Icons.school_rounded, '/institutes'),
-      _HomeItem('Scholarships', Icons.card_giftcard_rounded, '/scholarships'),
-      _HomeItem('Courses', Icons.menu_book_rounded, '/courses'),
-      _HomeItem('Seminars', Icons.event_rounded, '/seminars'),
-      _HomeItem('Hostels', Icons.hotel_rounded, '/hostels'),
-      _HomeItem('Internships', Icons.work_outline_rounded, '/internships'),
-      _HomeItem('Jobs', Icons.business_center_outlined, '/jobs'),
-    ];
-
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 26),
       children: [
         Row(children: [
-          const Expanded(child: Text('If you cannot greet things, do small things\nin a great way!', style: TextStyle(fontSize: 16, color: Colors.black87, height: 1.35))),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none_rounded, color: darkGreen)),
-        ]),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 8, offset: Offset(0, 3))]),
-          child: GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: items.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 8, mainAxisSpacing: 12, childAspectRatio: .9),
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return InkWell(
-                onTap: () => context.push(item.route),
-                borderRadius: BorderRadius.circular(10),
-                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Container(width: 45, height: 45, decoration: BoxDecoration(color: lightGreen, borderRadius: BorderRadius.circular(12)), child: Icon(item.icon, color: green, size: 23)),
-                  const SizedBox(height: 6),
-                  Text(item.title, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
-                ]),
-              );
-            },
+          const Expanded(
+            child: Text(
+              'If you cannot greet things, do small things\nin a great way!',
+              style: TextStyle(fontSize: 16, color: Colors.black87, height: 1.35),
+            ),
           ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.notifications_none_rounded, color: darkGreen),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: const [
+              BoxShadow(color: Color(0x12000000), blurRadius: 8, offset: Offset(0, 3)),
+            ],
+          ),
+          child: Column(children: [
+            AnimatedCrossFade(
+              firstChild: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  childAspectRatio: 0.95,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 8,
+                ),
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  return InkWell(
+                    onTap: () => context.push(item.route),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Column(children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.green.shade100, width: 1.5),
+                        ),
+                        child: Icon(item.icon, color: green, size: 28),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        item.title,
+                        style: TextStyle(fontSize: 12, color: Colors.teal.shade800),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ]),
+                  );
+                },
+              ),
+              secondChild: const SizedBox(width: double.infinity, height: 0),
+              crossFadeState: _isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+              duration: const Duration(milliseconds: 300),
+            ),
+            IconButton(
+              tooltip: _isExpanded ? 'Collapse menu' : 'Expand menu',
+              icon: Icon(
+                _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                color: green,
+                size: 30,
+              ),
+              onPressed: () => setState(() => _isExpanded = !_isExpanded),
+            ),
+          ]),
         ),
         const SizedBox(height: 14),
         InkWell(
@@ -93,7 +148,7 @@ class HomeScreen extends StatelessWidget {
 class _CommunityIcon extends StatelessWidget {
   const _CommunityIcon();
   @override
-  Widget build(BuildContext context) => Container(width: 62, height: 62, decoration: BoxDecoration(color: HomeScreen.green, borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.groups_rounded, color: Colors.white, size: 32));
+  Widget build(BuildContext context) => Container(width: 62, height: 62, decoration: BoxDecoration(color: _HomeState.green, borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.groups_rounded, color: Colors.white, size: 32));
 }
 
 class _HomeItem {
