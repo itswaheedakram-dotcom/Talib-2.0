@@ -15,6 +15,7 @@ import '../features/auth/presentation/screens/sign_in_screen.dart';
 import '../features/auth/presentation/screens/register_screen.dart';
 import '../features/common/presentation/screens/bookmarks_screen.dart';
 import '../features/common/presentation/screens/empty_feature_screen.dart';
+import '../features/profile/presentation/screens/profile_screen.dart';
 import '../features/seminars/presentation/screens/seminars_screen.dart';
 import '../features/hostels/presentation/screens/hostels_screen.dart';
 import '../features/internships/presentation/screens/internships_screen.dart';
@@ -34,6 +35,7 @@ final appRouter = GoRouter(
     GoRoute(path: '/community/create', builder: (_, __) => const CreatePostScreen()),
     GoRoute(path: '/community/post/:id', builder: (_, s) => PostCommentsScreen(id: s.pathParameters['id']!)),
     GoRoute(path: '/signin', builder: (_, __) => const SignInScreen()),
+    GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
     GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
     GoRoute(path: '/bookmarks', builder: (_, __) => const BookmarksScreen()),
     GoRoute(path: '/scholarships', builder: (_, __) => const ScholarshipsScreen()),
