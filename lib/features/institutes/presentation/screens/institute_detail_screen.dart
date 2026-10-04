@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../../../models/institute.dart';
+import '../../../../core/services/firebase_service.dart';
 
 class InstituteDetailScreen extends StatelessWidget {
   final String id;
@@ -42,15 +43,15 @@ class InstituteDetailScreen extends StatelessWidget {
         const SizedBox(height: 7),
         Text(institute.description),
         StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance.collection('instituteClaims').where('instituteId', isEqualTo: institute.id).where('status', isEqualTo: 'pending').limit(1).snapshots(),
+          stream: FirebaseService.initialized ? FirebaseFirestore.instance.collection('instituteClaims').where('instituteId', isEqualTo: institute.id).where('status', isEqualTo: 'pending').limit(1).snapshots() : const Stream.empty(),
           builder: (context, claimSnap) {
             final pending = claimSnap.data?.docs.isNotEmpty == true;
             return Card(child: ListTile(
               leading: Icon(pending ? Icons.hourglass_top : Icons.business_outlined, color: scheme.primary),
               title: Text(pending ? 'Claim under review' : 'Institute profile'),
-              subtitle: Text(pending ? 'A representative has submitted a claim for admin verification.' : 'This institute is currently listed on Talib.'),
+              subtitle: Text(pending ? 'A representative has submitted a claim for admin verification.' : FirebaseService.initialized ? 'This institute is currently listed on Talib.' : 'This institute is listed on Talib. Firebase features are not configured yet.'),
               trailing: pending ? null : FilledButton(
-                onPressed: FirebaseAuth.instance.currentUser == null ? () => context.push('/signin') : () => context.push('/institute/' + institute.id + '/claim?name=' + Uri.encodeComponent(institute.name)),
+                onPressed: !FirebaseService.initialized || FirebaseAuth.instance.currentUser == null ? () => context.push('/signin') : () => context.push('/institute/' + institute.id + '/claim?name=' + Uri.encodeComponent(institute.name)),
                 child: Text(FirebaseAuth.instance.currentUser == null ? 'Sign In to Claim' : 'Claim'),
               ),
             ));
