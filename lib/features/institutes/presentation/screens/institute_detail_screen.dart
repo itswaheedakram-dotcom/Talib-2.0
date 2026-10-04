@@ -101,6 +101,12 @@ class InstituteDetailScreen extends StatelessWidget {
                 child: const Text('Apply / Details'),
               )),
             ]),
+            const SizedBox(height: 9),
+            SizedBox(width: double.infinity, child: OutlinedButton.icon(
+              onPressed: () => context.push('/institute/' + institute.id + '/community?name=' + Uri.encodeComponent(institute.name)),
+              icon: const Icon(Icons.forum_outlined),
+              label: const Text('Institute Community'),
+            )),
           ])),
           const SizedBox(height: 10),
           _section('Facilities', const Column(children: [
