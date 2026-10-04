@@ -37,7 +37,7 @@ class HomeScreen extends StatelessWidget {
             height: 92,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF2196F3),
+              color: const Color(0xFF4CAF50),
               borderRadius: BorderRadius.circular(6),
             ),
             child: const Row(
@@ -90,7 +90,7 @@ class HomeScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   child: Row(
                     children: [
-                      Icon(item.icon, color: const Color(0xFF2196F3), size: 27),
+                      Icon(item.icon, color: const Color(0xFF4CAF50), size: 27),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -118,8 +118,8 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 24,
-                    backgroundColor: Color(0xFFE3F2FD),
-                    child: Icon(Icons.people, color: Color(0xFF2196F3)),
+                    backgroundColor: Color(0xFFE8F5E9),
+                    child: Icon(Icons.people, color: Color(0xFF4CAF50)),
                   ),
                   SizedBox(width: 12),
                   Expanded(
