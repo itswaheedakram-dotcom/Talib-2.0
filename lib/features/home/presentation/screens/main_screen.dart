@@ -13,6 +13,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int index = 0;
+
   final pages = const [
     HomeScreen(),
     SearchScreen(),
@@ -25,10 +26,20 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF8),
       appBar: AppBar(
-        title: const Text('Talib 2.0'),
         backgroundColor: const Color(0xFF00A878),
         foregroundColor: Colors.white,
         elevation: 0,
+        title: const Text(
+          'Talib 2.0',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        leading: Builder(
+          builder: (drawerContext) => IconButton(
+            icon: const Icon(Icons.menu_rounded, size: 28),
+            tooltip: 'Open menu',
+            onPressed: () => Scaffold.of(drawerContext).openDrawer(),
+          ),
+        ),
       ),
       drawer: const TalibDrawer(),
       body: IndexedStack(index: index, children: pages),
