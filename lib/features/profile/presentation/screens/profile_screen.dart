@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/firebase_service.dart';
+import '../../../../core/services/database_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -190,6 +191,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const Icon(Icons.verified_outlined, color: green),
                 ],
               );
+            },
+          ),
+        ),
+      );
+      sections.add(const SizedBox(height: 12));
+      sections.add(
+        _section(
+          'Community Reputation',
+          FutureBuilder<Map<String,dynamic>>(
+            future: DatabaseService().reputation(u.uid),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) return const LinearProgressIndicator();
+              final d=snap.data??{};
+              final badges=List<String>.from(d['badges']??const []);
+              return Column(crossAxisAlignment: CrossAxisAlignment.start, children:[
+                Row(children:[
+                  const Icon(Icons.emoji_events_outlined, color: green, size: 30),
+                  const SizedBox(width:10),
+                  Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    Text('${d['score']??0} Reputation',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w700,color:darkGreen)),
+                    Text('${d['posts']??0} posts • ${d['comments']??0} comments • ${d['likes']??0} likes',style:const TextStyle(color:Colors.black54)),
+                  ])),
+                ]),
+                const SizedBox(height:10),
+                if(badges.isEmpty) const Text('Keep helping the community to unlock badges.',style:TextStyle(color:Colors.black54)),
+                if(badges.isNotEmpty) Wrap(spacing:6,runSpacing:6,children:badges.map((b)=>Chip(avatar:const Icon(Icons.military_tech_outlined,size:16),label:Text(b))).toList()),
+              ]);
             },
           ),
         ),
