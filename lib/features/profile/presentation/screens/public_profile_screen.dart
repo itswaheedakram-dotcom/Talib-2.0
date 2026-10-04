@@ -66,8 +66,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         ]))),const SizedBox(height:12),const Card(child:Padding(padding:EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Community Activity',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),SizedBox(height:8),Text('This profile is participating in the Talib community.',style:TextStyle(color:Colors.grey))])))
       ]));
     }
-    return Scaffold(appBar: AppBar(title: const Text('Profile')), body: const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('Public profile data is unavailable until Firebase is configured.', textAlign: TextAlign.center))));
-    }
     return Scaffold(
     appBar: AppBar(title: const Text('Profile')),
     body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
