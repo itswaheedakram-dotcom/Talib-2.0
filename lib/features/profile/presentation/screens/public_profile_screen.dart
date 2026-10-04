@@ -104,11 +104,19 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 if (city.isNotEmpty) Text(city, style: const TextStyle(color: Colors.grey)),
                 if (me != null && me!.uid != widget.id) ...[
                   const SizedBox(height: 10),
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children:[
-                    OutlinedButton.icon(onPressed:()=>_reportUser(name),icon:const Icon(Icons.flag_outlined),label:const Text('Report')),
-                    const SizedBox(width:8),
-                    OutlinedButton.icon(onPressed:()=>_blockUser(name),icon:const Icon(Icons.block_outlined),label:const Text('Block')),
-                  ]),
+                  StreamBuilder<bool>(
+                    stream: DatabaseService().followingStream(me!.uid, widget.id),
+                    builder: (context, followSnapshot) {
+                      final following = followSnapshot.data == true;
+                      return Row(mainAxisAlignment: MainAxisAlignment.center, children:[
+                        FilledButton.icon(onPressed:()=>DatabaseService().toggleFollow(me!.uid, widget.id, !following),icon:Icon(following?Icons.person_remove_outlined:Icons.person_add_outlined),label:Text(following?'Following':'Follow')),
+                        const SizedBox(width:8),
+                        OutlinedButton.icon(onPressed:()=>_reportUser(name),icon:const Icon(Icons.flag_outlined),label:const Text('Report')),
+                        const SizedBox(width:8),
+                        OutlinedButton.icon(onPressed:()=>_blockUser(name),icon:const Icon(Icons.block_outlined),label:const Text('Block')),
+                      ]);
+                    },
+                  ),
                 ],
               ])),
               const SizedBox(height: 18),
@@ -116,6 +124,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 _Stat(value: total == 0 ? '—' : average.toStringAsFixed(1), label: 'Rating'),
                 _Stat(value: total.toString(), label: 'Reviews'),
                 _Stat(value: verified ? 'Verified' : eligible ? 'Eligible' : 'Community', label: 'Status'),
+                if (me != null) StreamBuilder<int>(stream: DatabaseService().followerCountStream(widget.id), builder: (_, s) => _Stat(value: (s.data ?? 0).toString(), label: 'Followers')),
               ]))),
               if (eligible) const Padding(padding: EdgeInsets.only(top: 8), child: Text(
                 'This profile meets the current community reputation threshold for verification review.',
