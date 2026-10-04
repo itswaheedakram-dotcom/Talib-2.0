@@ -171,6 +171,9 @@ class InstituteDetailScreen extends StatelessWidget {
       TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w700, color: darkGreen)),
       TextSpan(text: value, style: const TextStyle(color: Colors.black87)),
     ])),
+    ])),
+  );
+
   static Widget _info(IconData icon, String title, String value) => ListTile(
     dense: true,
     contentPadding: EdgeInsets.zero,
