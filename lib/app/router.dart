@@ -6,6 +6,7 @@ import '../features/institutes/presentation/screens/institute_list_screen.dart';
 import '../features/institutes/presentation/screens/institute_detail_screen.dart';
 import '../features/institutes/presentation/screens/find_institute_screen.dart';
 import '../features/scholarships/presentation/screens/scholarships_screen.dart';
+import '../features/courses/presentation/screens/courses_screen.dart';
 import '../features/search/presentation/screens/search_screen.dart';
 import '../features/community/presentation/screens/community_screen.dart';
 import '../features/community/presentation/screens/create_post_screen.dart';
@@ -32,7 +33,8 @@ final appRouter = GoRouter(
     GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
     GoRoute(path: '/bookmarks', builder: (_, __) => const BookmarksScreen()),
     GoRoute(path: '/scholarships', builder: (_, __) => const ScholarshipsScreen()),
-    for (final name in ['Courses','Seminars','Hostels','Internships','Jobs'])
+    GoRoute(path: '/courses', builder: (_, __) => const CoursesScreen()),
+    for (final name in ['Seminars','Hostels','Internships','Jobs'])
       GoRoute(path: '/' + name.toLowerCase(), builder: (_, __) => EmptyFeatureScreen(title: name)),
   ],
 );
