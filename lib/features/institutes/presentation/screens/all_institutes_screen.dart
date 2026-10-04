@@ -1,49 +1,147 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class AllInstitutesScreen extends StatelessWidget {
+class AllInstitutesScreen extends StatefulWidget {
   const AllInstitutesScreen({super.key});
   @override
+  State<AllInstitutesScreen> createState() => _AllInstitutesScreenState();
+}
+
+class _AllInstitutesScreenState extends State<AllInstitutesScreen> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    const green = Color(0xFF00A66A);
+    const darkGreen = Color(0xFF00543D);
     final categories = const [
-      ('Schools', 'Primary, middle & high schools', Icons.school_rounded, 'schools'),
-      ('Colleges', 'Intermediate & degree colleges', Icons.account_balance_rounded, 'colleges'),
-      ('Universities', 'Universities & higher education', Icons.castle_rounded, 'universities'),
+      ('Schools', 'schools', Icons.school_rounded),
+      ('Colleges', 'colleges', Icons.account_balance_rounded),
+      ('Universities', 'universities', Icons.account_balance_rounded),
     ];
+
     return Scaffold(
-      appBar: AppBar(title: const Text('All Institutes')),
+      appBar: AppBar(
+        title: const Text('Institutes'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 19),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+        padding: const EdgeInsets.fromLTRB(18, 14, 18, 110),
         children: [
-          Text('Find an institute', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
-          const Text('Choose an institute category to browse available institutions.'),
-          const SizedBox(height: 20),
+          const Text(
+            'Institutes',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: darkGreen),
+          ),
+          const SizedBox(height: 5),
+          const Text(
+            'Explore schools, colleges and universities.',
+            style: TextStyle(color: Colors.black54),
+          ),
+          const SizedBox(height: 18),
           ...categories.map((item) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Card(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: () => context.push('/institutes/' + item.$4),
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Row(children: [
-                    Container(width: 52, height: 52, decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(15)), child: Icon(item.$3, color: scheme.primary)),
-                    const SizedBox(width: 15),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(item.$1, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 4),
-                      Text(item.$2, style: const TextStyle(color: Colors.black54)),
-                    ])),
-                    const Icon(Icons.chevron_right_rounded),
-                  ]),
+                padding: const EdgeInsets.only(bottom: 14),
+                child: _InstituteCategoryCard(
+                  title: item.$1,
+                  icon: item.$3,
+                  onTap: () => context.push('/institutes/${item.$2}'),
                 ),
-              ),
-            ),
-          )),
+              )),
+        ],
+      ),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (_expanded) ...[
+            _MiniAction(label: 'Find Institute', icon: Icons.search, onTap: () => context.push('/find')),
+            const SizedBox(height: 9),
+            _MiniAction(label: 'Add Institute', icon: Icons.add_business_outlined, onTap: () => context.push('/find')),
+            const SizedBox(height: 12),
+          ],
+          FloatingActionButton(
+            heroTag: 'institute_actions',
+            onPressed: () => setState(() => _expanded = !_expanded),
+            child: Icon(_expanded ? Icons.close : Icons.add),
+          ),
         ],
       ),
     );
   }
+}
+
+class _InstituteCategoryCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+  const _InstituteCategoryCard({required this.title, required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    const green = Color(0xFF00A66A);
+    return Material(
+      color: green,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox(
+          height: 145,
+          child: Stack(
+            children: [
+              Positioned(
+                right: 18,
+                bottom: 10,
+                child: Icon(icon, size: 88, color: Colors.white.withOpacity(.18)),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(title, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w700)),
+                    Row(
+                      children: const [
+                        Text('Browse institutes', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                        Spacer(),
+                        Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 22),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniAction extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  const _MiniAction({required this.label, required this.icon, required this.onTap});
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Colors.white,
+        elevation: 3,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(icon, size: 19, color: const Color(0xFF00543D)),
+              const SizedBox(width: 7),
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+            ]),
+          ),
+        ),
+      );
 }
