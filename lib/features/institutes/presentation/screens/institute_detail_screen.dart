@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../../../models/institute.dart';
+import '../../data/institute_repository.dart';
 import '../../../../core/services/firebase_service.dart';
 
 class InstituteDetailScreen extends StatelessWidget {
@@ -13,19 +14,9 @@ class InstituteDetailScreen extends StatelessWidget {
   static const darkGreen = Color(0xFF00543D);
   static const lightGreen = Color(0xFFEAF8F2);
 
-  static const _data = <Institute>[
-    Institute(id: 'school-1', name: 'The Educators', type: 'schools', city: 'Lahore', address: 'Lahore, Punjab', description: 'A school offering foundational and secondary education.', programs: ['Primary', 'Middle', 'Matric']),
-    Institute(id: 'school-2', name: 'Beaconhouse School System', type: 'schools', city: 'Lahore', address: 'Lahore, Punjab', description: 'A private school network providing education from early years through secondary levels.', programs: ['Early Years', 'Primary', 'Secondary']),
-    Institute(id: 'college-1', name: 'Government College Lahore', type: 'colleges', city: 'Lahore', address: 'Lahore, Punjab', description: 'A historic public college offering intermediate and degree programs.', programs: ['FA', 'FSc', 'ICS', 'BS']),
-    Institute(id: 'college-2', name: 'Government College of Science', type: 'colleges', city: 'Lahore', address: 'Lahore, Punjab', description: 'A public institution focused on science and degree education.', programs: ['FSc', 'BS']),
-    Institute(id: 'university-1', name: 'University of the Punjab', type: 'universities', city: 'Lahore', address: 'Quaid-e-Azam Campus, Lahore', description: 'A major public university with a broad range of academic disciplines.', programs: ['Undergraduate', 'Graduate', 'PhD']),
-    Institute(id: 'university-2', name: 'Islamia University Bahawalpur', type: 'universities', city: 'Bahawalpur', address: 'Bahawalpur, Punjab', description: 'A public-sector university serving students across multiple disciplines.', programs: ['Undergraduate', 'Graduate', 'PhD']),
-  ];
-
   @override Widget build(BuildContext context) {
-    final matches = _data.where((i) => i.id == id).toList();
-    if (matches.isEmpty) return const Scaffold(body: Center(child: Text('Institute not found')));
-    final institute = matches.first;
+    final institute = InstituteRepository.instance.byId(id);
+    if (institute == null) return const Scaffold(body: Center(child: Text('Institute not found')));
     final typeLabel = institute.type == 'schools' ? 'School' : institute.type == 'colleges' ? 'College' : 'University';
     final image = institute.type == 'schools'
         ? 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1200&q=80'
