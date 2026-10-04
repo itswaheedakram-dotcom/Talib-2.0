@@ -1,32 +1,38 @@
 import 'package:flutter/material.dart';
 
 ThemeData buildTheme() {
-  const primary = Color(0xFF1769AA);
-  final scheme = ColorScheme.fromSeed(seedColor: primary);
-
   return ThemeData(
-    useMaterial3: true,
-    colorScheme: scheme,
-    scaffoldBackgroundColor: const Color(0xFFF7F9FC),
+    useMaterial3: false,
+    primarySwatch: Colors.blue,
+    primaryColor: const Color(0xFF2196F3),
+    scaffoldBackgroundColor: Colors.white,
     fontFamily: 'Roboto',
     appBarTheme: const AppBarTheme(
-      centerTitle: false,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Color(0xFF2196F3),
+      foregroundColor: Colors.white,
+      elevation: 2,
+      centerTitle: true,
     ),
-    cardTheme: CardThemeData(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+    cardTheme: CardTheme(
+      elevation: 2,
+      margin: const EdgeInsets.all(8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     ),
-    inputDecorationTheme: const InputDecorationTheme(
+    inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.white,
+      fillColor: Colors.grey.shade100,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(14)),
-        borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(6),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(6)),
+        borderSide: BorderSide(color: Color(0xFF2196F3), width: 1.5),
       ),
     ),
   );
