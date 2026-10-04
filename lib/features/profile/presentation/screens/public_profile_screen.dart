@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../../core/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 
 class PublicProfileScreen extends StatefulWidget {
@@ -52,7 +53,11 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     controller.dispose();
   }
 
-  @override Widget build(BuildContext context) => Scaffold(
+  @override Widget build(BuildContext context) {
+    if (!FirebaseService.initialized) {
+      return Scaffold(appBar: AppBar(title: const Text('Profile')), body: const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('Public profile data is unavailable until Firebase is configured.', textAlign: TextAlign.center))));
+    }
+    return Scaffold(
     appBar: AppBar(title: const Text('Profile')),
     body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance.collection('users').doc(widget.id).snapshots(),
@@ -124,6 +129,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       },
     ),
   );
+  }
 
   Widget _InfoTile(IconData icon, String label, String value) => ListTile(contentPadding: EdgeInsets.zero, leading: Icon(icon, color: const Color(0xFF4CAF50)), title: Text(value), subtitle: Text(label));
 }
