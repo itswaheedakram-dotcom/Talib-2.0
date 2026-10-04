@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/services/firebase_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -20,19 +19,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final u = user;
     if (u == null) { if (mounted) setState(() => loading = false); return; }
     name.text = u.displayName ?? '';
-    if (FirebaseService.initialized) {
+    try {
       final d = (await FirebaseFirestore.instance.collection('users').doc(u.uid).get()).data() ?? {};
       name.text = (d['name'] ?? name.text).toString();
       level.text = (d['educationLevel'] ?? '').toString();
       institute.text = (d['institute'] ?? '').toString();
       program.text = (d['program'] ?? '').toString();
       city.text = (d['city'] ?? '').toString();
-    }
+    } catch (_) {}
     if (mounted) setState(() => loading = false);
   }
   Future<void> _save() async {
     final u = user;
-    if (u == null || !FirebaseService.initialized) return;
+    if (u == null) return;
     setState(() => saving = true);
     await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'name': name.text.trim(), 'email': u.email ?? '', 'educationLevel': level.text.trim(), 'institute': institute.text.trim(), 'program': program.text.trim(), 'city': city.text.trim(), 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
     await u.updateDisplayName(name.text.trim().isEmpty ? null : name.text.trim());
@@ -41,7 +40,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override void dispose() { for (final c in [name, level, institute, program, city]) c.dispose(); super.dispose(); }
 
   @override Widget build(BuildContext context) {
-    if (!FirebaseService.initialized) return _message('Profile', 'Profile will be available after Firebase is connected.');
     if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     final u = user;
     if (u == null) return Scaffold(appBar: AppBar(title: const Text('Profile')), body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.person_outline, size: 70, color: green), const SizedBox(height: 12), const Text('Sign in to create and manage your profile', textAlign: TextAlign.center), const SizedBox(height: 16), SizedBox(width: double.infinity, child: FilledButton(onPressed: () => context.push('/signin'), style: FilledButton.styleFrom(backgroundColor: green), child: const Text('Sign In')))]))));
