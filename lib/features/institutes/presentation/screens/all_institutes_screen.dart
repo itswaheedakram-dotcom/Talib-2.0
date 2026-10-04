@@ -32,7 +32,7 @@ class AllInstitutesScreen extends StatelessWidget {
                     Container(width: 52, height: 52, decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(15)), child: Icon(item.$3, color: scheme.primary)),
                     const SizedBox(width: 15),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(item.$1, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w750)),
+                      Text(item.$1, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                       const SizedBox(height: 4),
                       Text(item.$2, style: const TextStyle(color: Colors.black54)),
                     ])),
