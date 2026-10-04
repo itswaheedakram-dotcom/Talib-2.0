@@ -52,13 +52,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
       _G('Field',const ['All','Computer Science','Information Technology','Business','Education'],_field,(v)=>ss(()=>_field=v)),
       _G('Mode',const ['All','On Campus','Online'],_mode,(v)=>ss(()=>_mode=v)),
       Row(children:[Expanded(child:OutlinedButton(onPressed:(){setState((){_level='All';_field='All';_mode='All';});Navigator.pop(context);},child:const Text('Clear'))),const SizedBox(width:12),Expanded(child:FilledButton(onPressed:(){setState((){});Navigator.pop(context);},child:const Text('Apply')))]),
-    ])));
+    ]))));
   void _details(_C c)=>showModalBottomSheet<void>(context:context,showDragHandle:true,builder:(_)=>Padding(
     padding:const EdgeInsets.fromLTRB(20,8,20,30),child:Wrap(runSpacing:12,children:[
       Text(c.name,style:Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight:FontWeight.w800)),
       Text('Study level: '+c.level),Text('Field: '+c.field),Text('Mode: '+c.mode),Text('Duration: '+c.duration),
       FilledButton.icon(onPressed:(){},icon:const Icon(Icons.school_outlined),label:const Text('View course')),
-    ]));
+    ]))));
 }
 class _G extends StatelessWidget{final String title,selected;final List<String> values;final ValueChanged<String> onChanged;const _G(this.title,this.values,this.selected,this.onChanged);
 @override Widget build(BuildContext c)=>Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:8),Wrap(spacing:8,children:values.map((v)=>ChoiceChip(label:Text(v),selected:selected==v,onSelected:(_)=>onChanged(v))).toList())]);}
