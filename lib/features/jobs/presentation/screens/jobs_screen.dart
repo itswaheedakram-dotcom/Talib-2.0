@@ -29,12 +29,12 @@ class _JobsScreenState extends State<JobsScreen>{
     Text('Filter jobs',style:Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight:FontWeight.bold)),const SizedBox(height:16),
     Wrap(spacing:8,children:['All','Remote','Hybrid','On-site'].map((v)=>ChoiceChip(label:Text(v),selected:mode==v,onSelected:(_){setSheet((){});setState(()=>mode=v);})).toList()),const SizedBox(height:16),
     SizedBox(width:double.infinity,child:FilledButton(onPressed:()=>Navigator.pop(context),child:const Text('Apply Filters'))),
-  ])));
+  ]))));
   void details(Job j)=>showModalBottomSheet(context:context,isScrollControlled:true,showDragHandle:true,builder:(_)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(20,8,20,24),child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
     Text(j.title,style:Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight:FontWeight.bold)),const SizedBox(height:6),Text(j.company,style:Theme.of(context).textTheme.titleMedium),const SizedBox(height:16),
     Text(j.description),const SizedBox(height:18),Text('Requirements',style:Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight:FontWeight.bold)),
     ...j.requirements.map((r)=>ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.check_circle_outline),title:Text(r))),
     Text('Application deadline: ${j.deadline}',style:const TextStyle(fontWeight:FontWeight.w600)),const SizedBox(height:16),
     SizedBox(width:double.infinity,child:FilledButton(onPressed:()=>Navigator.pop(context),child:const Text('Apply Now'))),
-  ]))));
+  ])))));
 }
