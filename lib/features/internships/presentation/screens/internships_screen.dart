@@ -62,6 +62,6 @@ class _InternshipsScreenState extends State<InternshipsScreen> {
       Wrap(spacing: 8, children: ['All','Remote','Hybrid','On-site'].map((v)=>ChoiceChip(label: Text(v), selected: _mode==v, onSelected: (_){setSheet((){});setState(()=>_mode=v);})).toList()),
       SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Paid internships only'), value: _paidOnly, onChanged: (v){setSheet((){});setState(()=>_paidOnly=v);}),
       SizedBox(width: double.infinity, child: FilledButton(onPressed: ()=>Navigator.pop(context), child: const Text('Apply Filters'))),
-    ])));
+    ]))));
   }
 }
