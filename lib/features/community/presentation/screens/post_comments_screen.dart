@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/services/database_service.dart';
 import '../../../models/post.dart';
 
@@ -16,11 +17,14 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
 
   @override void dispose() { _comment.dispose(); super.dispose(); }
 
-  @override
-  Widget build(BuildContext context) {
+  @override Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    const green = Color(0xFF00A66A);
     return Scaffold(
-      appBar: AppBar(title: const Text('Post')),
+      appBar: AppBar(
+        leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), onPressed: () => context.pop()),
+        title: const Text('Comments'),
+      ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance.collection('posts').doc(widget.id).snapshots(),
         builder: (context, postSnapshot) {
@@ -28,56 +32,61 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
           if (!postSnapshot.hasData || !postSnapshot.data!.exists) return const Center(child: Text('Post not found.'));
           final post = Post.fromDoc(postSnapshot.data!);
           return Column(children: [
-            Expanded(
-              child: ListView(padding: const EdgeInsets.all(12), children: [
-                Card(child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(post.authorName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 10),
-                    Text(post.text, style: const TextStyle(fontSize: 16)),
-                    Row(children: [
-                      IconButton(
-                        onPressed: user == null ? null : () => _db.toggleLike(post, user.uid),
-                        icon: Icon(post.likedByUser(user?.uid) ? Icons.favorite : Icons.favorite_border),
-                      ),
-                      Text(post.likesCount.toString()),
-                    ]),
-                  ]),
-                )),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(4, 14, 4, 8),
-                  child: Text('Comments', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
-                ),
+            Expanded(child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 20),
+              children: [
+                Row(children: [
+                  const CircleAvatar(radius: 21, backgroundColor: Color(0xFFEAF8F2), child: Icon(Icons.person, color: green)),
+                  const SizedBox(width: 10),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(post.authorName, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    const Text('Student / Community member', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                  ])),
+                  IconButton(onPressed: user == null ? null : () => _db.toggleLike(post, user.uid), icon: Icon(post.likedByUser(user?.uid) ? Icons.thumb_up : Icons.thumb_up_outlined, color: green)),
+                ]),
+                const SizedBox(height: 10),
+                Text(post.text, style: const TextStyle(fontSize: 15, height: 1.4)),
+                const SizedBox(height: 14),
+                Divider(color: Colors.grey.shade200),
+                const SizedBox(height: 8),
+                const Text('Comments', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
                 StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: _db.commentsStream(widget.id),
                   builder: (context, comments) {
                     if (comments.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
                     final docs = comments.data?.docs ?? [];
-                    if (docs.isEmpty) return const Text('No comments yet.');
+                    if (docs.isEmpty) return const Padding(padding: EdgeInsets.only(top: 15), child: Text('No comments yet.'));
                     return Column(children: docs.map((doc) {
                       final data = doc.data();
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: const CircleAvatar(child: Icon(Icons.person)),
-                        title: Text((data['authorName'] ?? 'Student').toString()),
-                        subtitle: Text((data['text'] ?? '').toString()),
+                        leading: const CircleAvatar(radius: 18, backgroundColor: Color(0xFFEAF8F2), child: Icon(Icons.person, size: 19, color: green)),
+                        title: Text((data['authorName'] ?? 'Student').toString(), style: const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Padding(padding: const EdgeInsets.only(top: 3), child: Text((data['text'] ?? '').toString())),
                       );
                     }).toList());
                   },
                 ),
-              ]),
-            ),
+              ],
+            )),
             SafeArea(child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
               child: Row(children: [
                 Expanded(child: TextField(
-                  controller: _comment, enabled: user != null,
+                  controller: _comment,
+                  enabled: user != null,
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => _addComment(user),
-                  decoration: const InputDecoration(hintText: 'Write a comment...'),
+                  decoration: InputDecoration(
+                    hintText: user == null ? 'Sign in to comment' : 'Write a comment...',
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                  ),
                 )),
-                IconButton(onPressed: user == null ? null : () => _addComment(user), icon: const Icon(Icons.send)),
+                const SizedBox(width: 6),
+                IconButton(onPressed: user == null ? null : () => _addComment(user), icon: const Icon(Icons.send, color: green)),
               ]),
             )),
           ]);
