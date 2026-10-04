@@ -10,10 +10,11 @@ class FindInstituteScreen extends StatefulWidget {
 class _FindInstituteScreenState extends State<FindInstituteScreen> {
   final _searchController = TextEditingController();
   String _education='All', _province='All provinces', _city='All cities', _sector='All sectors', _program='All programs';
+  final _scoreController = TextEditingController();
 
   @override void initState() { super.initState(); InstituteRepository.instance.addListener(_onChanged); InstituteRepository.instance.load(); }
   void _onChanged(){if(mounted)setState((){});}
-  @override void dispose(){InstituteRepository.instance.removeListener(_onChanged);_searchController.dispose();super.dispose();}
+  @override void dispose(){InstituteRepository.instance.removeListener(_onChanged);_searchController.dispose();_scoreController.dispose();super.dispose();}
 
   List<Institute> get _results {
     final q=_searchController.text.trim().toLowerCase();
@@ -24,13 +25,15 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
         (_province=='All provinces'||i.province==_province) &&
         (_city=='All cities'||i.city==_city) &&
         (_sector=='All sectors'||i.sector==_sector) &&
-        (_program=='All programs'||i.programs.any((p)=>p.toLowerCase()==_program.toLowerCase()));
+        (_program=='All programs'||i.nextProgram.toLowerCase()==_program.toLowerCase()||i.programs.any((p)=>p.toLowerCase()==_program.toLowerCase())) &&
+        (_scoreController.text.trim().isEmpty || (double.tryParse(_scoreController.text.trim()) ?? 0) >= i.minScore);
     }).toList();
   }
   String _label(String type)=>switch(type){'schools'=>'School','colleges'=>'College','universities'=>'University',_=>type};
 
   void _showFilters(){
     var education=_education,province=_province,city=_city,sector=_sector,program=_program;
+    _scoreController.text = _scoreController.text;
     showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,
       builder:(sheetContext)=>StatefulBuilder(builder:(context,sheetSet)=>Padding(
         padding:EdgeInsets.fromLTRB(20,8,20,24+MediaQuery.viewInsetsOf(context).bottom),
@@ -40,7 +43,9 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
           _Group('Province',['All provinces','Punjab','Sindh','Khyber Pakhtunkhwa','Balochistan','Islamabad Capital Territory'],province,(v)=>sheetSet(()=>province=v)),
           _Group('City',['All cities','Lahore','Multan','Bahawalpur','Islamabad','Rawalpindi'],city,(v)=>sheetSet(()=>city=v)),
           _Group('Sector',['All sectors','Private','Government','Semi-government'],sector,(v)=>sheetSet(()=>sector=v)),
-          _Group('Program',['All programs','Matric','Intermediate','FA','FSc','ICS','I.Com','BS','MS','MPhil','PhD'],program,(v)=>sheetSet(()=>program=v)),
+          _Group('Next Education Program',['All programs','Intermediate','FA','FSc','ICS','I.Com','BS','MS','MPhil','PhD'],program,(v)=>sheetSet(()=>program=v)),
+          TextField(controller:_scoreController,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'Percentage / CGPA obtained',prefixIcon:Icon(Icons.percent)),onChanged:(_)=>sheetSet((){})),
+          const SizedBox(height:8),
           Row(children:[
             Expanded(child:OutlinedButton(onPressed:(){setState((){_education='All';_province='All provinces';_city='All cities';_sector='All sectors';_program='All programs';});Navigator.pop(sheetContext);},child:const Text('Clear all'))),
             const SizedBox(width:12),
@@ -57,7 +62,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
       body:RefreshIndicator(onRefresh:repo.load,child:CustomScrollView(slivers:[
         SliverPadding(padding:const EdgeInsets.fromLTRB(20,10,20,18),sliver:SliverList(delegate:SliverChildListDelegate([
           const Text('Find the right institute',style:TextStyle(fontSize:23,fontWeight:FontWeight.w800)),const SizedBox(height:6),
-          const Text('Use the filters from the original Talib test case to find matching institutes.'),const SizedBox(height:16),
+          const Text('Use education, percentage/CGPA, next program, province, city and sector to find matching institutes.'),const SizedBox(height:16),
           TextField(controller:_searchController,onChanged:(_)=>setState((){}),decoration:InputDecoration(hintText:'Search institute, city or program',prefixIcon:const Icon(Icons.search),suffixIcon:_searchController.text.isEmpty?null:IconButton(onPressed:(){_searchController.clear();setState((){});},icon:const Icon(Icons.clear)))),
           const SizedBox(height:12),
           Wrap(spacing:7,runSpacing:7,children:[Chip(label:Text(_education)),Chip(label:Text(_province)),Chip(label:Text(_city)),Chip(label:Text(_sector)),Chip(label:Text(_program))]),
