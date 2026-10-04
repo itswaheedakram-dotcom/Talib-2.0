@@ -22,6 +22,10 @@ class _MainScreenState extends State<MainScreen>{
       ListTile(leading:const Icon(Icons.bookmark),title:const Text('Bookmarks'),onTap:(){Navigator.pop(context);setState(()=>index=3);}),
       ListTile(leading:const Icon(Icons.info_outline),title:const Text('About Us'),onTap:()=>_showAbout(context)),
       ListTile(leading:const Icon(Icons.person_outline),title:const Text('Profile / Sign In'),onTap:(){Navigator.pop(context);context.push('/profile');}),
+      const Divider(),
+      ListTile(leading:const Icon(Icons.groups_outlined),title:const Text('Study Groups'),onTap:(){Navigator.pop(context);context.push('/groups');}),
+      ListTile(leading:const Icon(Icons.menu_book_outlined),title:const Text('Study Resources'),onTap:(){Navigator.pop(context);context.push('/resources');}),
+      ListTile(leading:const Icon(Icons.chat_bubble_outline),title:const Text('Messages'),onTap:(){Navigator.pop(context);context.push('/messages');}),
     ])),
     body:IndexedStack(index:index,children:pages),
     bottomNavigationBar:BottomNavigationBar(currentIndex:index,onTap:(v)=>setState(()=>index=v),type:BottomNavigationBarType.fixed,selectedItemColor:const Color(0xFF4CAF50),unselectedItemColor:Colors.grey,items:const[
