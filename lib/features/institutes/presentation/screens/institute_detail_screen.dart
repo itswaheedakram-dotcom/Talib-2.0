@@ -18,7 +18,7 @@ class InstituteDetailScreen extends StatelessWidget {
     final institute = InstituteRepository.instance.byId(id);
     if (institute == null) return const Scaffold(body: Center(child: Text('Institute not found')));
     final typeLabel = institute.type == 'schools' ? 'School' : institute.type == 'colleges' ? 'College' : 'University';
-    final image = institute.type == 'schools'
+    final image = institute.imageUrl.isNotEmpty ? institute.imageUrl : institute.type == 'schools'
         ? 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1200&q=80'
         : institute.type == 'colleges'
             ? 'https://images.unsplash.com/photo-1564981797816-1043664bf78d?auto=format&fit=crop&w=1200&q=80'
@@ -28,7 +28,7 @@ class InstituteDetailScreen extends StatelessWidget {
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), onPressed: () => context.pop()),
         title: Text(typeLabel),
-        actions: const [Icon(Icons.notifications_none), SizedBox(width: 8)],
+        actions: [IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () => context.push('/institute/${institute.id}/edit')), const SizedBox(width: 8)],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 28),
@@ -79,6 +79,11 @@ class InstituteDetailScreen extends StatelessWidget {
             _info(Icons.info_outline, 'About', institute.description),
             _info(Icons.location_on_outlined, 'City', institute.city),
             _info(Icons.account_balance_outlined, 'Type', typeLabel),
+            _info(Icons.location_city_outlined, 'Campus', institute.campus.isEmpty ? 'Not provided' : institute.campus),
+            _info(Icons.map_outlined, 'Province', institute.province.isEmpty ? 'Not provided' : institute.province),
+            _info(Icons.business_outlined, 'Sector', institute.sector),
+            _info(Icons.phone_outlined, 'Contact', institute.contact.isEmpty ? 'Not provided' : institute.contact),
+            _info(Icons.language_outlined, 'Website', institute.website.isEmpty ? 'Not provided' : institute.website),
           ])),
           const SizedBox(height: 10),
           _section('Admission', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -119,12 +124,9 @@ class InstituteDetailScreen extends StatelessWidget {
             )),
           ])),
           const SizedBox(height: 10),
-          _section('Facilities', const Column(children: [
-            _Facility(Icons.school_outlined, 'Scholarships'),
-            _Facility(Icons.local_library_outlined, 'Library'),
-            _Facility(Icons.wifi_rounded, 'Internet / Wi-Fi'),
-            _Facility(Icons.sports_soccer_outlined, 'Sports Facilities'),
-          ])),
+          _section('Facilities', institute.facilities.isEmpty
+              ? const Text('No facilities added yet.')
+              : Column(children: institute.facilities.map((f) => _Facility(Icons.check_circle_outline, f)).toList())),
           const SizedBox(height: 10),
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseService.initialized
