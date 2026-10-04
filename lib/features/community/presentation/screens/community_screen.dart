@@ -106,8 +106,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
 class _PostCard extends StatelessWidget {
   final Post post; final User? user; final bool saved;
-  final VoidCallback onOpen; final VoidCallback? onLike; final VoidCallback? onBookmark; final VoidCallback? onDelete;
-  const _PostCard({required this.post, required this.user, required this.saved, required this.onOpen, this.onLike, this.onBookmark, this.onDelete});
+  final VoidCallback onOpen; final VoidCallback onAuthor; final VoidCallback? onLike; final VoidCallback? onBookmark; final VoidCallback? onDelete;
+  const _PostCard({required this.post, required this.user, required this.saved, required this.onOpen, required this.onAuthor, this.onLike, this.onBookmark, this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -119,7 +119,7 @@ class _PostCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 12, 8, 8),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              CircleAvatar(child: Text(post.authorName.isEmpty ? '?' : post.authorName[0].toUpperCase())),
+              CircleAvatar(backgroundColor: const Color(0xFFE8F5E9), child: Text(post.authorName.isEmpty ? '?' : post.authorName[0].toUpperCase(), style: const TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold))),
               const SizedBox(width: 10),
               Expanded(child: Text(post.authorName, style: const TextStyle(fontWeight: FontWeight.bold))),
               if (onDelete != null) IconButton(icon: const Icon(Icons.delete_outline), onPressed: onDelete),
