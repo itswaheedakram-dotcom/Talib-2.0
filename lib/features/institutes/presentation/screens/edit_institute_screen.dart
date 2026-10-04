@@ -111,7 +111,7 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
     );
   }
 
-  Widget _field(TextEditingController c,String label,IconData icon,[bool required=false,{int maxLines=1,TextInputType? keyboard}]) =>
+  Widget _field(TextEditingController c,String label,IconData icon,{bool required=false,int maxLines=1,TextInputType? keyboard}) =>
       Padding(padding:const EdgeInsets.only(bottom:12),child:TextFormField(controller:c,maxLines:maxLines,keyboardType:keyboard,validator:required?(v)=>v==null||v.trim().isEmpty?'Required':null:null,decoration:InputDecoration(labelText:label,prefixIcon:Icon(icon),border:const OutlineInputBorder())));
   Widget _dropdown(String label,String value,List<String> items,void Function(String) onChanged)=>Padding(padding:const EdgeInsets.only(bottom:12),child:DropdownButtonFormField<String>(initialValue:items.contains(value)?value:items.first,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder()),items:items.map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(),onChanged:(v){if(v!=null)onChanged(v);}));
 }
