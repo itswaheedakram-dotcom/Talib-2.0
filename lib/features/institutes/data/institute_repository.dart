@@ -45,7 +45,7 @@ class InstituteRepository extends ChangeNotifier {
     error = null;
     try {
       if (FirebaseService.initialized) {
-        final ref = await FirebaseFirestore.instance.collection('institutes').add(institute.toMap());
+        final ref = await FirebaseFirestore.instance.collection('institutes').add({...institute.toMap(), 'status': 'pending'});
         final saved = Institute.fromMap(ref.id, {...institute.toMap(), 'status':'pending'});
         _items.add(saved);
         notifyListeners();
