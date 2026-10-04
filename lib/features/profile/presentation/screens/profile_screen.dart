@@ -66,13 +66,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override Widget build(BuildContext context) {
     final u = user;
     if (u == null) {
-      return Scaffold(appBar: AppBar(title: const Text('Profile')), body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.person_outline, size: 70, color: green),
-        const SizedBox(height: 12),
-        const Text('Sign in to create and manage your profile', textAlign: TextAlign.center),
-        const SizedBox(height: 16),
-        SizedBox(width: double.infinity, child: FilledButton(onPressed: () => context.push('/signin'), style: FilledButton.styleFrom(backgroundColor: green), child: const Text('Sign In')))
-      ])));
+      return Scaffold(
+        appBar: AppBar(title: const Text('Profile')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.person_outline, size: 70, color: green),
+                const SizedBox(height: 12),
+                const Text('Sign in to create and manage your profile', textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => context.push('/signin'),
+                    style: FilledButton.styleFrom(backgroundColor: green),
+                    child: const Text('Sign In'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     final display = name.text.trim().isEmpty ? 'Student' : name.text.trim();
