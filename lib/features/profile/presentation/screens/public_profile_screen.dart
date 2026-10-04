@@ -54,8 +54,18 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   }
 
   @override Widget build(BuildContext context) {
-    if (!FirebaseService.initialized) {
-      return Scaffold(appBar: AppBar(title: const Text('Profile')), body: const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('Public profile data is unavailable until Firebase is configured.', textAlign: TextAlign.center))));
+    if (!FirebaseService.initialized || widget.id.startsWith('demo-user-')) {
+      final demo={'demo-user-1':{'name':'Talib Community','city':'Pakistan','level':'Student Community','institute':'Talib 2.0','program':'Student Guidance'},'demo-user-2':{'name':'Student Guide','city':'Pakistan','level':'Student / Mentor','institute':'Talib Community','program':'Education Guidance'},'demo-user-3':{'name':'Talib Team','city':'Pakistan','level':'Community Team','institute':'Talib 2.0','program':'Admission Guidance'}}[widget.id]??{'name':'Student','city':'Pakistan','level':'Community Member','institute':'','program':''};
+      final name=demo['name']!;
+      return Scaffold(appBar:AppBar(title:const Text('Profile')),body:ListView(padding:const EdgeInsets.all(16),children:[
+        Center(child:CircleAvatar(radius:44,backgroundColor:const Color(0xFFE8F5E9),child:Text(name[0],style:const TextStyle(fontSize:32,color:Color(0xFF2E7D32))))),
+        const SizedBox(height:10),Center(child:Text(name,style:const TextStyle(fontSize:22,fontWeight:FontWeight.w600))),Center(child:Text(demo['city']!,style:const TextStyle(color:Colors.grey))),
+        const SizedBox(height:18),Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          const Text('Profile Information',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),const SizedBox(height:10),_InfoTile(Icons.school_outlined,'Education level',demo['level']!),if(demo['institute']!.isNotEmpty)_InfoTile(Icons.account_balance_outlined,'Institute',demo['institute']!),if(demo['program']!.isNotEmpty)_InfoTile(Icons.menu_book_outlined,'Program / Degree',demo['program']!)
+        ]))),const SizedBox(height:12),const Card(child:Padding(padding:EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Community Activity',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),SizedBox(height:8),Text('This profile is participating in the Talib community.',style:TextStyle(color:Colors.grey))])))
+      ]));
+    }
+    return Scaffold(appBar: AppBar(title: const Text('Profile')), body: const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('Public profile data is unavailable until Firebase is configured.', textAlign: TextAlign.center))));
     }
     return Scaffold(
     appBar: AppBar(title: const Text('Profile')),
