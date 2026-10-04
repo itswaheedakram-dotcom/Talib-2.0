@@ -34,5 +34,44 @@ class DatabaseService {
   Stream<int> followerCountStream(String uid)=>_db.collection('users').doc(uid).collection('followers').snapshots().map((s)=>s.size);
   Future<void> notifyMention({required String targetId,required String fromId,required String postId})=>_db.collection('users').doc(targetId).collection('notifications').add({'type':'mention','text':'mentioned you in a community post','postId':postId,'fromId':fromId,'createdAt':FieldValue.serverTimestamp(),'read':false});
   Future<void> votePoll({required String postId,required String uid,required int option})async{final ref=_db.collection('posts').doc(postId);await _db.runTransaction((tx)async{final s=await tx.get(ref);if(!s.exists)return;final d=s.data()??{};final voters=Map<String,dynamic>.from(d['pollVoters']??{});final old=voters[uid];final votes=Map<String,dynamic>.from(d['pollVotes']??{});if(old!=null){final k=old.toString();votes[k]=((votes[k]??0) as num).toInt()-1;}voters[uid]=option;final k=option.toString();votes[k]=((votes[k]??0) as num).toInt()+1;tx.update(ref,{'pollVoters':voters,'pollVotes':votes});});}
+  Future<void> notifyMentions({required String text,required String fromId,required String postId})async{
+    final matches=RegExp(r'@([A-Za-z0-9_.-]+(?:\\s+[A-Za-z0-9_.-]+)?)').allMatches(text);
+    if(matches.isEmpty)return;
+    final mentioned=matches.map((m)=>m.group(1)!.trim().toLowerCase()).toSet();
+    if(mentioned.isEmpty)return;
+    final users=await _db.collection('users').get();
+    for(final doc in users.docs){
+      if(doc.id==fromId)continue;
+      final data=doc.data();
+      final name=(data['username']??data['name']??'').toString().trim().toLowerCase();
+      if(name.isEmpty||!mentioned.contains(name))continue;
+      await notifyMention(targetId:doc.id,fromId:fromId,postId:postId);
+    }
+  }
+  Future<Map<String,dynamic>> reputation(String uid)async{
+    final posts=(await _db.collection('posts').where('authorId',isEqualTo:uid).get()).docs;
+    var likes=0,comments=0,bestAnswers=0;
+    for(final p in posts){
+      final d=p.data();
+      likes+=(d['likesCount'] as num?)?.toInt()??0;
+      comments+=(d['commentsCount'] as num?)?.toInt()??0;
+      if((d['bestAnswerId']??'').toString().isNotEmpty)bestAnswers++;
+    }
+    final followerCount=(await _db.collection('users').doc(uid).collection('followers').get()).size;
+    final commentDocs=(await _db.collectionGroup('comments').where('authorId',isEqualTo:uid).get()).size;
+    final reviews=(await _db.collection('users').doc(uid).collection('reviews').get()).docs;
+    var ratingSum=0;
+    for(final r in reviews)ratingSum+=(r.data()['rating'] as num?)?.toInt()??0;
+    final avg=reviews.isEmpty?0.0:ratingSum/reviews.length;
+    final score=posts.length*5+commentDocs*3+likes*2+comments+bestAnswers*10+followerCount+((avg*2).round());
+    final badges=<String>[];
+    if(posts.length>=1)badges.add('First Post');
+    if(commentDocs>=5)badges.add('Helpful Voice');
+    if(likes>=10)badges.add('Popular Contributor');
+    if(bestAnswers>=1)badges.add('Answer Expert');
+    if(followerCount>=10)badges.add('Community Builder');
+    if(avg>=4.5&&reviews.length>=5)badges.add('Trusted Member');
+    return {'score':score,'posts':posts.length,'comments':commentDocs,'likes':likes,'bestAnswers':bestAnswers,'followers':followerCount,'rating':avg,'reviews':reviews.length,'badges':badges};
+  }
   Future<void> markNotificationRead(String uid,String id)=>_db.collection('users').doc(uid).collection('notifications').doc(id).update({'read':true});
 }
