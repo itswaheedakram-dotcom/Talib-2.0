@@ -105,7 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const Text('Sign in to create and manage your profile.',textAlign:TextAlign.center),const SizedBox(height:18),
         SizedBox(width:double.infinity,child:FilledButton(onPressed:()=>context.push('/signin'),child:const Text('Sign In'))),
         TextButton(onPressed:()=>context.push('/register'),child:const Text('Create an account'))
-      ])));
+      ]))));
     final display=name.text.trim().isEmpty?'Student':name.text.trim();
     return Scaffold(appBar:AppBar(title:const Text('Profile'),actions:[IconButton(onPressed:saving?null:_save,icon:const Icon(Icons.save_outlined))]),
       body:ListView(padding:const EdgeInsets.all(16),children:[
