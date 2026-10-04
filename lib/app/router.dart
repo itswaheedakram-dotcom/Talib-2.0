@@ -37,7 +37,6 @@ final appRouter = GoRouter(
         GoRoute(path: '/seminars', builder: (_, __) => const SeminarsScreen()),
         GoRoute(path: '/hostels', builder: (_, __) => const HostelsScreen()),
     GoRoute(path: '/internships', builder: (_, __) => const InternshipsScreen()),
-    for (final name in ['Jobs'])
-      GoRoute(path: '/' + name.toLowerCase(), builder: (_, __) => EmptyFeatureScreen(title: name)),
+    GoRoute(path: '/jobs', builder: (_, __) => const JobsScreen()),
   ],
 );
