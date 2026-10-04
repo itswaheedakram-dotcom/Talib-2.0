@@ -6,234 +6,148 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final features = <_HomeFeature>[
-      _HomeFeature('Institutes', 'Schools, colleges & universities', Icons.school_rounded, '/institutes'),
-      _HomeFeature('Find Now', 'Find the right institute', Icons.location_searching_rounded, '/find'),
-      _HomeFeature('Scholarships', 'Funding & opportunities', Icons.workspace_premium_rounded, '/scholarships'),
-      _HomeFeature('Courses', 'Programs & learning', Icons.menu_book_rounded, '/courses'),
-      _HomeFeature('Seminars', 'Events & seminars', Icons.event_rounded, '/seminars'),
-      _HomeFeature('Hostels', 'Student accommodation', Icons.hotel_rounded, '/hostels'),
-      _HomeFeature('Internships', 'Gain practical experience', Icons.work_history_rounded, '/internships'),
-      _HomeFeature('Jobs', 'Start your career', Icons.business_center_rounded, '/jobs'),
+    final items = <_HomeItem>[
+      _HomeItem('News Feed', Icons.rss_feed, '/community'),
+      _HomeItem('Institutes', Icons.school, '/institutes'),
+      _HomeItem('Scholarships', Icons.card_giftcard, '/scholarships'),
+      _HomeItem('Courses', Icons.menu_book, '/courses'),
+      _HomeItem('Seminars', Icons.event, '/seminars'),
+      _HomeItem('Hostels', Icons.hotel, '/hostels'),
+      _HomeItem('Internships', Icons.work, '/internships'),
+      _HomeItem('Jobs', Icons.business_center, '/jobs'),
     ];
 
-    return SafeArea(
-      child: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-            sliver: SliverToBoxAdapter(
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 24),
+      children: [
+        const Text(
+          'Welcome to Talib 2.0',
+          style: TextStyle(fontSize: 21, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 5),
+        const Text(
+          'Find everything you need for your education and career.',
+          style: TextStyle(color: Colors.grey, fontSize: 13),
+        ),
+        const SizedBox(height: 16),
+        InkWell(
+          onTap: () => context.push('/find'),
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            height: 92,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2196F3),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.location_on, color: Colors.white, size: 38),
+                SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Finding Institute?',
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500)),
+                      SizedBox(height: 5),
+                      Text('Find an institute near you',
+                          style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        const Text(
+          'Explore',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 8),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: items.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 6,
+            mainAxisSpacing: 6,
+            childAspectRatio: 1.55,
+          ),
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return Card(
+              margin: EdgeInsets.zero,
+              elevation: 1.5,
+              child: InkWell(
+                onTap: () => context.push(item.route),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: [
+                      Icon(item.icon, color: const Color(0xFF2196F3), size: 27),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          item.title,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 18),
+        Card(
+          margin: EdgeInsets.zero,
+          elevation: 1.5,
+          child: InkWell(
+            onTap: () => context.push('/community'),
+            child: const Padding(
+              padding: EdgeInsets.all(14),
               child: Row(
                 children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    alignment: Alignment.center,
-                    child: Icon(Icons.school_rounded, color: colorScheme.onPrimary, size: 25),
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: Color(0xFFE3F2FD),
+                    child: Icon(Icons.people, color: Color(0xFF2196F3)),
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(
+                  SizedBox(width: 12),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Welcome to', style: TextStyle(fontSize: 13, color: Colors.black54)),
-                        SizedBox(height: 2),
-                        Text('Talib 2.0', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
+                        Text('Community', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                        SizedBox(height: 4),
+                        Text('Connect with students and share your ideas.',
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                       ],
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => context.push('/search'),
-                    icon: const Icon(Icons.search_rounded),
-                    tooltip: 'Search',
-                  ),
+                  Icon(Icons.chevron_right, color: Colors.grey),
                 ],
               ),
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
-            sliver: SliverToBoxAdapter(
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [colorScheme.primary, colorScheme.primaryContainer],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Your education,\nall in one place.',
-                      style: TextStyle(
-                        color: colorScheme.onPrimary,
-                        fontSize: 27,
-                        height: 1.12,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Discover institutes, opportunities, courses and more.',
-                      style: TextStyle(color: colorScheme.onPrimary.withValues(alpha: .86), height: 1.35),
-                    ),
-                    const SizedBox(height: 18),
-                    FilledButton.tonalIcon(
-                      onPressed: () => context.push('/find'),
-                      icon: const Icon(Icons.explore_rounded),
-                      label: const Text('Find an institute'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-            sliver: SliverToBoxAdapter(
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text('Explore', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                  ),
-                  TextButton(
-                    onPressed: () => context.push('/institutes'),
-                    child: const Text('Institutes'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverGrid(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final item = features[index];
-                  return _FeatureCard(feature: item, onTap: () => context.push(item.route));
-                },
-                childCount: features.length,
-              ),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.16,
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 26, 20, 12),
-            sliver: SliverToBoxAdapter(
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text('Community', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                  ),
-                  TextButton(
-                    onPressed: () => context.push('/community'),
-                    child: const Text('View all'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-            sliver: SliverToBoxAdapter(
-              child: Card(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(18),
-                  onTap: () => context.push('/community'),
-                  child: const Padding(
-                    padding: EdgeInsets.all(17),
-                    child: Row(
-                      children: [
-                        CircleAvatar(radius: 25, child: Icon(Icons.forum_rounded)),
-                        SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Educational community', style: TextStyle(fontWeight: FontWeight.w700)),
-                              SizedBox(height: 4),
-                              Text('Ask questions, share ideas and connect with students.', style: TextStyle(color: Colors.black54)),
-                            ],
-                          ),
-                        ),
-                        Icon(Icons.chevron_right_rounded),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-class _HomeFeature {
+class _HomeItem {
   final String title;
-  final String subtitle;
   final IconData icon;
   final String route;
 
-  const _HomeFeature(this.title, this.subtitle, this.icon, this.route);
-}
-
-class _FeatureCard extends StatelessWidget {
-  final _HomeFeature feature;
-  final VoidCallback onTap;
-
-  const _FeatureCard({required this.feature, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.all(15),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                child: Icon(feature.icon, color: colorScheme.primary),
-              ),
-              const Spacer(),
-              Text(feature.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-              const SizedBox(height: 4),
-              Text(
-                feature.subtitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: Colors.black54, height: 1.25),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  const _HomeItem(this.title, this.icon, this.route);
 }
