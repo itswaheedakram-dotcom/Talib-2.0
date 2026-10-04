@@ -58,7 +58,7 @@ class _InstituteListScreenState extends State<InstituteListScreen> {
               title: Text(institute.name, style: const TextStyle(fontWeight: FontWeight.w700)),
               subtitle: Text(institute.city + ' • ' + institute.programs.take(2).join(', ')),
               trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => context.push('/institute/' + institute.id),
+              onTap: () => context.push('/institute/${institute.id}'),
             ));
           },
         )),
