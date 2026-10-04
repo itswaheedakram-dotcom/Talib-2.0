@@ -130,6 +130,28 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 'This profile meets the current community reputation threshold for verification review.',
                 textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF2E7D32), fontSize: 12),
               )),
+              const SizedBox(height: 12),
+              FutureBuilder<Map<String,dynamic>>(
+                future: DatabaseService().reputation(widget.id),
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) return const LinearProgressIndicator();
+                  final d=snap.data??{};
+                  final badges=List<String>.from(d['badges']??const []);
+                  return Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    const Text('Community Reputation',style:TextStyle(fontSize:18,fontWeight:FontWeight.w600)),
+                    const SizedBox(height:8),
+                    Row(children:[
+                      const Icon(Icons.emoji_events_outlined,color:Color(0xFF2E7D32),size:28),
+                      const SizedBox(width:8),
+                      Expanded(child:Text('${d['score']??0} Reputation • ${d['posts']??0} posts • ${d['comments']??0} comments',style:const TextStyle(fontWeight:FontWeight.w600))),
+                    ]),
+                    if(badges.isNotEmpty) ...[
+                      const SizedBox(height:10),
+                      Wrap(spacing:6,runSpacing:6,children:badges.map((b)=>Chip(avatar:const Icon(Icons.military_tech_outlined,size:16),label:Text(b))).toList()),
+                    ],
+                  ])));
+                },
+              ),
               if (institute.isNotEmpty || program.isNotEmpty || level.isNotEmpty) ...[
                 const SizedBox(height: 14), const Text('Education', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                 if (level.isNotEmpty) _InfoTile(Icons.school_outlined, 'Education level', level),
