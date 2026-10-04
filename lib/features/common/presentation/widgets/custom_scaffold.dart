@@ -11,7 +11,16 @@ class CustomScaffold extends StatelessWidget {
   final bool showBottomNavigation;
   final Widget? floatingActionButton;
 
-  const CustomScaffold({super.key, required this.title, required this.body, this.currentIndex = 0, this.onBottomNavTap, this.bottomItems, this.showBottomNavigation = true, this.floatingActionButton});
+  const CustomScaffold({
+    super.key,
+    required this.title,
+    required this.body,
+    this.currentIndex = 0,
+    this.onBottomNavTap,
+    this.bottomItems,
+    this.showBottomNavigation = true,
+    this.floatingActionButton,
+  });
 
   static const green = Color(0xFF00A878);
 
@@ -26,70 +35,163 @@ class CustomScaffold extends StatelessWidget {
         elevation: 0,
         automaticallyImplyLeading: false,
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        leading: Builder(builder: (context) => IconButton(icon: const Icon(Icons.menu_rounded, size: 28), tooltip: 'Menu', onPressed: () => Scaffold.of(context).openDrawer())),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu_rounded, size: 28),
+            tooltip: 'Menu',
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
       ),
-      drawer: const _TalibDrawer(),
+      drawer: const TalibDrawer(),
       body: body,
       floatingActionButton: floatingActionButton,
-      bottomNavigationBar: showBottomNavigation && bottomItems != null ? BottomNavigationBar(currentIndex: currentIndex, onTap: onBottomNavTap, type: BottomNavigationBarType.fixed, selectedItemColor: const Color(0xFF009B76), unselectedItemColor: Colors.grey, backgroundColor: Colors.white, elevation: 8, items: bottomItems!) : null,
+      bottomNavigationBar: showBottomNavigation && bottomItems != null
+          ? BottomNavigationBar(
+              currentIndex: currentIndex,
+              onTap: onBottomNavTap,
+              type: BottomNavigationBarType.fixed,
+              selectedItemColor: const Color(0xFF009B76),
+              unselectedItemColor: Colors.grey,
+              backgroundColor: Colors.white,
+              elevation: 8,
+              items: bottomItems!,
+            )
+          : null,
     );
   }
 }
 
-class _TalibDrawer extends StatelessWidget {
-  const _TalibDrawer();
+class TalibDrawer extends StatelessWidget {
+  const TalibDrawer({super.key});
+
   static const green = Color(0xFF00563F);
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final name = user?.displayName?.trim().isNotEmpty == true ? user!.displayName!.trim() : 'Talib User';
-    final email = user?.email?.trim().isNotEmpty == true ? user!.email!.trim() : 'Guest User';
+    final name = user?.displayName?.trim().isNotEmpty == true
+        ? user!.displayName!.trim()
+        : 'Talib User';
+    final email = user?.email?.trim().isNotEmpty == true
+        ? user!.email!.trim()
+        : 'Guest User';
 
     return Drawer(
       width: MediaQuery.of(context).size.width * .84,
       backgroundColor: green,
       child: SafeArea(
-        child: Column(children: [
-          UserAccountsDrawerHeader(
-            margin: EdgeInsets.zero,
-            decoration: const BoxDecoration(color: green),
-            accountName: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            accountEmail: Text(email, style: const TextStyle(color: Colors.white70)),
-            currentAccountPicture: CircleAvatar(
-              backgroundColor: Colors.white,
-              backgroundImage: user?.photoURL != null ? NetworkImage(user!.photoURL!) : null,
-              child: user?.photoURL == null ? const Icon(Icons.person, size: 50, color: green) : null,
+        child: Column(
+          children: [
+            UserAccountsDrawerHeader(
+              margin: EdgeInsets.zero,
+              decoration: const BoxDecoration(color: green),
+              accountName: Text(
+                name,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              accountEmail: Text(
+                email,
+                style: const TextStyle(color: Colors.white70),
+              ),
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.white,
+                backgroundImage: user?.photoURL != null
+                    ? NetworkImage(user!.photoURL!)
+                    : null,
+                child: user?.photoURL == null
+                    ? const Icon(Icons.person, size: 50, color: green)
+                    : null,
+              ),
             ),
-          ),
-          Expanded(child: ListView(padding: EdgeInsets.zero, children: [
-            _item(context, Icons.home_rounded, 'Home', '/'),
-            _item(context, Icons.person_outline_rounded, 'Profile', '/profile'),
-            _item(context, Icons.person_add_alt_1_rounded, 'Invite a friend', null, _invite),
-            _item(context, Icons.report_problem_outlined, 'Report an issue', null, _report),
-            _item(context, Icons.help_outline_rounded, 'Help & FAQs', null, _help),
-            _item(context, Icons.star_border_rounded, 'Rate us', null, _rate),
-            const Divider(color: Colors.white24, indent: 16, endIndent: 16),
-            _item(context, Icons.groups_outlined, 'Study Groups', '/groups'),
-            _item(context, Icons.menu_book_outlined, 'Study Resources', '/resources'),
-            _item(context, Icons.chat_bubble_outline_rounded, 'Messages', '/messages'),
-            const Divider(color: Colors.white24, indent: 16, endIndent: 16),
-            _item(context, Icons.settings_outlined, 'Settings', null, _settings),
-            _item(context, Icons.logout_rounded, 'Logout', null, () async { await FirebaseAuth.instance.signOut(); }),
-          ])),
-        ]),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _item(context, Icons.home_rounded, 'Home', '/'),
+                  _item(context, Icons.person_outline_rounded, 'Profile', '/profile'),
+                  _item(context, Icons.article_outlined, 'News Feed', '/newsfeed'),
+                  _item(context, Icons.account_balance_outlined, 'Institutes', '/institutes'),
+                  _item(context, Icons.groups_outlined, 'Community', '/community'),
+                  _item(context, Icons.search_rounded, 'Search', '/search'),
+                  _item(context, Icons.bookmark_border_rounded, 'Bookmarks', '/bookmarks'),
+                  const Divider(color: Colors.white24, indent: 16, endIndent: 16),
+                  _item(context, Icons.groups_rounded, 'Study Groups', '/groups'),
+                  _item(context, Icons.menu_book_outlined, 'Study Resources', '/resources'),
+                  _item(context, Icons.chat_bubble_outline_rounded, 'Messages', '/messages'),
+                  _item(context, Icons.school_outlined, 'Scholarships', '/scholarships'),
+                  _item(context, Icons.book_outlined, 'Courses', '/courses'),
+                  _item(context, Icons.work_outline_rounded, 'Internships', '/internships'),
+                  _item(context, Icons.work_rounded, 'Jobs', '/jobs'),
+                  const Divider(color: Colors.white24, indent: 16, endIndent: 16),
+                  _actionItem(context, Icons.person_add_alt_1_rounded, 'Invite a friend', _invite),
+                  _actionItem(context, Icons.report_problem_outlined, 'Report an issue', _report),
+                  _actionItem(context, Icons.help_outline_rounded, 'Help & FAQs', _help),
+                  _actionItem(context, Icons.star_border_rounded, 'Rate us', _rate),
+                  _actionItem(context, Icons.settings_outlined, 'Settings', _settings),
+                  _actionItem(
+                    context,
+                    Icons.logout_rounded,
+                    'Logout',
+                    () async {
+                      await FirebaseAuth.instance.signOut();
+                      if (context.mounted) {
+                        context.go('/signin');
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _item(BuildContext context, IconData icon, String label, String? route, [VoidCallback? action]) {
+  Widget _item(BuildContext context, IconData icon, String label, String route) {
     return ListTile(
       dense: true,
       leading: Icon(icon, color: Colors.white.withOpacity(.94), size: 22),
-      title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.w500)),
-      onTap: () { Navigator.pop(context); if (route != null) context.push(route); if (action != null) action(); },
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14.5,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      onTap: () {
+        Navigator.of(context).pop();
+        context.go(route);
+      },
     );
   }
+
+  Widget _actionItem(
+    BuildContext context,
+    IconData icon,
+    String label,
+    VoidCallback action,
+  ) {
+    return ListTile(
+      dense: true,
+      leading: Icon(icon, color: Colors.white.withOpacity(.94), size: 22),
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14.5,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      onTap: () {
+        Navigator.of(context).pop();
+        action();
+      },
+    );
+  }
+
   static void _invite() {}
   static void _report() {}
   static void _help() {}
