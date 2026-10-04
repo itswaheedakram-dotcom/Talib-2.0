@@ -68,8 +68,8 @@ class InstituteDetailScreen extends StatelessWidget {
                 const Expanded(child: Text('Admissions', style: TextStyle(fontWeight: FontWeight.w700, color: darkGreen))),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(color: green, borderRadius: BorderRadius.circular(14)),
-                  child: const Text('OPEN', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                  decoration: BoxDecoration(color: institute.admissionStatus.toLowerCase() == 'open' ? green : Colors.orange, borderRadius: BorderRadius.circular(14)),
+                  child: Text(institute.admissionStatus.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                 ),
               ]),
             ),
@@ -82,6 +82,16 @@ class InstituteDetailScreen extends StatelessWidget {
           ])),
           const SizedBox(height: 10),
           _section('Admission', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              _admissionBadge('Status', institute.admissionStatus),
+              if (institute.admissionDeadline.isNotEmpty) _admissionBadge('Deadline', institute.admissionDeadline),
+              if (institute.feeRange.isNotEmpty) _admissionBadge('Fee', institute.feeRange),
+              _admissionBadge('Entry Test', institute.entryTestRequired ? 'Required' : 'Not required'),
+              _admissionBadge('Apply', institute.submissionMode),
+              if (institute.minScore > 0) _admissionBadge('Minimum Score', institute.minScore.toString()),
+              if (institute.eligibility.isNotEmpty) _admissionBadge('Eligibility', institute.eligibility),
+            ]),
+            const SizedBox(height: 12),
             Wrap(spacing: 7, runSpacing: 7, children: institute.programs.map((p) => Container(
               padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
               decoration: BoxDecoration(color: lightGreen, borderRadius: BorderRadius.circular(18)),
@@ -152,6 +162,13 @@ class InstituteDetailScreen extends StatelessWidget {
     ])),
   );
 
+  static Widget _admissionBadge(String label, String value) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    decoration: BoxDecoration(color: lightGreen, borderRadius: BorderRadius.circular(10)),
+    child: RichText(text: TextSpan(children: [
+      TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w700, color: darkGreen)),
+      TextSpan(text: value, style: const TextStyle(color: Colors.black87)),
+    ])),
   static Widget _info(IconData icon, String title, String value) => ListTile(
     dense: true,
     contentPadding: EdgeInsets.zero,
