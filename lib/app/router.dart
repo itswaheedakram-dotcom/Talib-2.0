@@ -10,6 +10,8 @@ import '../features/institutes/presentation/screens/claim_institute_screen.dart'
 import '../features/institutes/presentation/screens/institute_dashboard_screen.dart';
 import '../features/institutes/presentation/screens/institute_admin_screen.dart';
 import '../features/institutes/presentation/screens/admin_institute_claims_screen.dart';
+import '../features/institutes/presentation/screens/add_institute_screen.dart';
+import '../features/institutes/presentation/screens/discipline_info_screen.dart';
 import '../features/scholarships/presentation/screens/scholarships_screen.dart';
 import '../features/courses/presentation/screens/courses_screen.dart';
 import '../features/search/presentation/screens/search_screen.dart';
@@ -35,6 +37,8 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/institute/:id',builder:(_,s)=>InstituteDetailScreen(id:s.pathParameters['id']!)),
   GoRoute(path:'/institute/:id/claim',builder:(_,s)=>ClaimInstituteScreen(instituteId:s.pathParameters['id']!,instituteName:s.uri.queryParameters['name']??'Institute')),
   GoRoute(path:'/find',builder:(_,__)=>const FindInstituteScreen()),
+  GoRoute(path:'/add-institute/:type',builder:(_,s)=>AddInstituteScreen(type:s.pathParameters['type']!)),
+  GoRoute(path:'/institute/:id/programs',builder:(_,s)=>DisciplineInfoScreen(instituteId:s.pathParameters['id']!)),
   GoRoute(path:'/institute-dashboard',builder:(_,__)=>const InstituteDashboardScreen()),
   GoRoute(path:'/institute-admin/:claimId',builder:(_,s)=>InstituteAdminScreen(claimId:s.pathParameters['claimId']!)),
   GoRoute(path:'/admin/institute-claims',builder:(_,__)=>const AdminInstituteClaimsScreen()),
