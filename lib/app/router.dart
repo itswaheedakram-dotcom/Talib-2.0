@@ -18,6 +18,8 @@ import '../features/search/presentation/screens/search_screen.dart';
 import '../features/community/presentation/screens/community_screen.dart';
 import '../features/community/presentation/screens/create_post_screen.dart';
 import '../features/community/presentation/screens/post_comments_screen.dart';
+import '../features/models/post.dart';
+import '../features/community/presentation/screens/notifications_screen.dart';
 import '../features/auth/presentation/screens/sign_in_screen.dart';
 import '../features/auth/presentation/screens/register_screen.dart';
 import '../features/common/presentation/screens/bookmarks_screen.dart';
@@ -44,7 +46,8 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/admin/institute-claims',builder:(_,__)=>const AdminInstituteClaimsScreen()),
   GoRoute(path:'/search',builder:(_,__)=>const SearchScreen()),
   GoRoute(path:'/community',builder:(_,__)=>const CommunityScreen()),
-  GoRoute(path:'/community/create',builder:(_,__)=>const CreatePostScreen()),
+  GoRoute(path:'/community/create',builder:(_,s)=>CreatePostScreen(post:s.extra is Post?s.extra as Post:null)),
+  GoRoute(path:'/notifications',builder:(_,__)=>const NotificationsScreen()),
   GoRoute(path:'/community/post/:id',builder:(_,s)=>PostCommentsScreen(id:s.pathParameters['id']!)),
   GoRoute(path:'/signin',builder:(_,__)=>const SignInScreen()),
   GoRoute(path:'/profile',builder:(_,__)=>const ProfileScreen()),
