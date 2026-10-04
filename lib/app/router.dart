@@ -5,6 +5,10 @@ import '../features/institutes/presentation/screens/all_institutes_screen.dart';
 import '../features/institutes/presentation/screens/institute_list_screen.dart';
 import '../features/institutes/presentation/screens/institute_detail_screen.dart';
 import '../features/institutes/presentation/screens/find_institute_screen.dart';
+import '../features/institutes/presentation/screens/claim_institute_screen.dart';
+import '../features/institutes/presentation/screens/institute_dashboard_screen.dart';
+import '../features/institutes/presentation/screens/institute_admin_screen.dart';
+import '../features/institutes/presentation/screens/admin_institute_claims_screen.dart';
 import '../features/scholarships/presentation/screens/scholarships_screen.dart';
 import '../features/courses/presentation/screens/courses_screen.dart';
 import '../features/search/presentation/screens/search_screen.dart';
@@ -30,7 +34,11 @@ final appRouter = GoRouter(
     GoRoute(path: '/institutes', builder: (_, __) => const AllInstitutesScreen()),
     GoRoute(path: '/institutes/:type', builder: (_, s) => InstituteListScreen(type: s.pathParameters['type']!)),
     GoRoute(path: '/institute/:id', builder: (_, s) => InstituteDetailScreen(id: s.pathParameters['id']!)),
+    GoRoute(path: '/institute/:id/claim', builder: (_, s) => ClaimInstituteScreen(instituteId: s.pathParameters['id']!, instituteName: 'Institute')),
     GoRoute(path: '/find', builder: (_, __) => const FindInstituteScreen()),
+    GoRoute(path: '/institute-dashboard', builder: (_, __) => const InstituteDashboardScreen()),
+    GoRoute(path: '/institute-admin/:claimId', builder: (_, s) => InstituteAdminScreen(claimId: s.pathParameters['claimId']!)),
+    GoRoute(path: '/admin/institute-claims', builder: (_, __) => const AdminInstituteClaimsScreen()),
     GoRoute(path: '/search', builder: (_, __) => const SearchScreen()),
     GoRoute(path: '/community', builder: (_, __) => const CommunityScreen()),
     GoRoute(path: '/community/create', builder: (_, __) => const CreatePostScreen()),
