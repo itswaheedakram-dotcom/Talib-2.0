@@ -45,7 +45,8 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
     try{
       final name=user.displayName?.trim().isNotEmpty==true?user.displayName!.trim():(user.email??'Student');
       if(widget.post==null){
-        await _db.createPost(text:text,authorId:user.uid,authorName:name,category:category,isQuestion:isQuestion,pollOptions:options,instituteId:widget.instituteId);
+        final postId=await _db.createPost(text:text,authorId:user.uid,authorName:name,category:category,isQuestion:isQuestion,pollOptions:options,instituteId:widget.instituteId);
+        await _db.notifyMentions(text:text,fromId:user.uid,postId:postId);
       }else{
         await _db.updatePost(postId:widget.post!.id,text:text,category:category,isQuestion:isQuestion);
       }
