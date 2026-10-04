@@ -1,165 +1,86 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../data/institute_repository.dart';
+import '../../../models/institute.dart';
 
 class FindInstituteScreen extends StatefulWidget {
   const FindInstituteScreen({super.key});
   @override State<FindInstituteScreen> createState() => _FindInstituteScreenState();
 }
-
 class _FindInstituteScreenState extends State<FindInstituteScreen> {
   final _searchController = TextEditingController();
-  String _type = 'All', _city = 'All cities', _program = 'All programs';
+  String _education='All', _province='All provinces', _city='All cities', _sector='All sectors', _program='All programs';
 
-  static const _institutes = [
-    _Item('school-1', 'The Educators', 'School', 'Lahore', ['Matric', 'Intermediate']),
-    _Item('school-2', 'Beaconhouse School System', 'School', 'Lahore', ['Matric', 'Intermediate']),
-    _Item('college-1', 'Government College Lahore', 'College', 'Lahore', ['ICS', 'I.Com', 'FA', 'FSc']),
-    _Item('college-2', 'Government College of Science', 'College', 'Lahore', ['FSc', 'ICS']),
-    _Item('university-1', 'University of the Punjab', 'University', 'Lahore', ['BS', 'MS', 'MPhil', 'PhD']),
-    _Item('university-2', 'Islamia University Bahawalpur', 'University', 'Bahawalpur', ['BS', 'MS', 'MPhil', 'PhD']),
-  ];
+  @override void initState() { super.initState(); InstituteRepository.instance.addListener(_onChanged); InstituteRepository.instance.load(); }
+  void _onChanged(){if(mounted)setState((){});}
+  @override void dispose(){InstituteRepository.instance.removeListener(_onChanged);_searchController.dispose();super.dispose();}
 
-  List<_Item> get _results {
-    final q = _searchController.text.trim().toLowerCase();
-    return _institutes.where((i) {
-      final search = q.isEmpty || i.name.toLowerCase().contains(q) ||
-          i.city.toLowerCase().contains(q) ||
-          i.programs.any((p) => p.toLowerCase().contains(q));
-      return search && (_type == 'All' || i.type == _type) &&
-          (_city == 'All cities' || i.city == _city) &&
-          (_program == 'All programs' || i.programs.contains(_program));
+  List<Institute> get _results {
+    final q=_searchController.text.trim().toLowerCase();
+    return InstituteRepository.instance.items.where((i){
+      final searchable='${i.name} ${i.city} ${i.province} ${i.campus} ${i.description} ${i.programs.join(' ')}'.toLowerCase();
+      return (q.isEmpty||searchable.contains(q)) &&
+        (_education=='All'||_label(i.type)==_education) &&
+        (_province=='All provinces'||i.province==_province) &&
+        (_city=='All cities'||i.city==_city) &&
+        (_sector=='All sectors'||i.sector==_sector) &&
+        (_program=='All programs'||i.programs.any((p)=>p.toLowerCase()==_program.toLowerCase()));
     }).toList();
   }
+  String _label(String type)=>switch(type){'schools'=>'School','colleges'=>'College','universities'=>'University',_=>type};
 
-  void _showFilters() {
-    showModalBottomSheet<void>(
-      context: context, showDragHandle: true, isScrollControlled: true,
-      builder: (context) => StatefulBuilder(builder: (context, sheetSet) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 8, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
-        child: Wrap(runSpacing: 18, children: [
-          Text('Filters', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-          _Group('Institute type', const ['All', 'School', 'College', 'University'], _type, (v) => sheetSet(() => _type = v)),
-          _Group('City', const ['All cities', 'Lahore', 'Multan', 'Bahawalpur', 'Islamabad'], _city, (v) => sheetSet(() => _city = v)),
-          _Group('Program', const ['All programs', 'Matric', 'Intermediate', 'ICS', 'I.Com', 'FA', 'FSc', 'BS', 'MS', 'MPhil', 'PhD'], _program, (v) => sheetSet(() => _program = v)),
-          Row(children: [
-            Expanded(child: OutlinedButton(onPressed: () {
-              setState(() { _type = 'All'; _city = 'All cities'; _program = 'All programs'; });
-              Navigator.pop(context);
-            }, child: const Text('Clear all'))),
-            const SizedBox(width: 12),
-            Expanded(child: FilledButton(onPressed: () { setState(() {}); Navigator.pop(context); }, child: const Text('Show results'))),
-          ]),
-        ]),
-      )),
+  void _showFilters(){
+    var education=_education,province=_province,city=_city,sector=_sector,program=_program;
+    showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,
+      builder:(sheetContext)=>StatefulBuilder(builder:(context,sheetSet)=>Padding(
+        padding:EdgeInsets.fromLTRB(20,8,20,24+MediaQuery.viewInsetsOf(context).bottom),
+        child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          const Text('Find Institute',style:TextStyle(fontSize:22,fontWeight:FontWeight.w800)),const SizedBox(height:16),
+          _Group('Current / Next Education',['All','School','College','University'],education,(v)=>sheetSet(()=>education=v)),
+          _Group('Province',['All provinces','Punjab','Sindh','Khyber Pakhtunkhwa','Balochistan','Islamabad Capital Territory'],province,(v)=>sheetSet(()=>province=v)),
+          _Group('City',['All cities','Lahore','Multan','Bahawalpur','Islamabad','Rawalpindi'],city,(v)=>sheetSet(()=>city=v)),
+          _Group('Sector',['All sectors','Private','Government','Semi-government'],sector,(v)=>sheetSet(()=>sector=v)),
+          _Group('Program',['All programs','Matric','Intermediate','FA','FSc','ICS','I.Com','BS','MS','MPhil','PhD'],program,(v)=>sheetSet(()=>program=v)),
+          Row(children:[
+            Expanded(child:OutlinedButton(onPressed:(){setState((){_education='All';_province='All provinces';_city='All cities';_sector='All sectors';_program='All programs';});Navigator.pop(sheetContext);},child:const Text('Clear all'))),
+            const SizedBox(width:12),
+            Expanded(child:FilledButton(onPressed:(){setState((){_education=education;_province=province;_city=city;_sector=sector;_program=program;});Navigator.pop(sheetContext);},child:const Text('Find now'))),
+          ])
+        ]))
+      ))
     );
   }
 
-  @override void dispose() { _searchController.dispose(); super.dispose(); }
-
-  @override
-  Widget build(BuildContext context) {
-    final results = _results;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Find Institute'), actions: [
-        IconButton(onPressed: _showFilters, icon: const Icon(Icons.tune), tooltip: 'Filters'),
-      ]),
-      body: CustomScrollView(slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          sliver: SliverList(delegate: SliverChildListDelegate([
-            Text('Find the right institute', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 6),
-            const Text('Search by name, city or program, then narrow the results with filters.'),
-            const SizedBox(height: 18),
-            SearchBar(
-              controller: _searchController,
-              hintText: 'Search institute, city or program',
-              leading: const Icon(Icons.search),
-              trailing: [if (_searchController.text.isNotEmpty) IconButton(onPressed: () { _searchController.clear(); setState(() {}); }, icon: const Icon(Icons.clear))],
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 14),
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              _chip('Type: $_type', _type != 'All'),
-              _chip('City: $_city', _city != 'All cities'),
-              _chip('Program: $_program', _program != 'All programs'),
-            ]),
-            const SizedBox(height: 20),
-            Row(children: [
-              Text('${results.length} institutes found', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-              const Spacer(),
-              TextButton.icon(onPressed: _showFilters, icon: const Icon(Icons.tune, size: 18), label: const Text('Filters')),
-            ]),
-          ])),
-        ),
-        if (results.isEmpty)
-          const SliverFillRemaining(hasScrollBody: false, child: Center(child: Padding(
-            padding: EdgeInsets.all(32),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.search_off_rounded, size: 52), SizedBox(height: 12),
-              Text('No matching institutes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-              SizedBox(height: 6), Text('Try another search or clear one of the filters.', textAlign: TextAlign.center),
-            ]),
-          )))
-        else
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-            sliver: SliverList.builder(
-              itemCount: results.length,
-              itemBuilder: (context, index) {
-                final i = results[index];
-                return Padding(padding: const EdgeInsets.only(bottom: 12), child: Card(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(20),
-                    onTap: () => context.push('/institute/${i.id}'),
-                    child: Padding(padding: const EdgeInsets.all(16), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      CircleAvatar(radius: 25, child: Icon(_icon(i.type))),
-                      const SizedBox(width: 14),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(i.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                        const SizedBox(height: 5),
-                        Text('${i.type} • ${i.city}'),
-                        const SizedBox(height: 9),
-                        Wrap(spacing: 6, runSpacing: 6, children: i.programs.take(3).map((p) => Chip(label: Text(p), visualDensity: VisualDensity.compact)).toList()),
-                      ])),
-                      const Icon(Icons.chevron_right),
-                    ])),
-                  ),
-                ));
-              },
-            ),
-          ),
-      ]),
-    );
+  @override Widget build(BuildContext context){
+    final results=_results; final repo=InstituteRepository.instance;
+    return Scaffold(appBar:AppBar(title:const Text('Find Institute'),actions:[IconButton(onPressed:_showFilters,icon:const Icon(Icons.tune))]),
+      body:RefreshIndicator(onRefresh:repo.load,child:CustomScrollView(slivers:[
+        SliverPadding(padding:const EdgeInsets.fromLTRB(20,10,20,18),sliver:SliverList(delegate:SliverChildListDelegate([
+          const Text('Find the right institute',style:TextStyle(fontSize:23,fontWeight:FontWeight.w800)),const SizedBox(height:6),
+          const Text('Use the filters from the original Talib test case to find matching institutes.'),const SizedBox(height:16),
+          TextField(controller:_searchController,onChanged:(_)=>setState((){}),decoration:InputDecoration(hintText:'Search institute, city or program',prefixIcon:const Icon(Icons.search),suffixIcon:_searchController.text.isEmpty?null:IconButton(onPressed:(){_searchController.clear();setState((){});},icon:const Icon(Icons.clear)))),
+          const SizedBox(height:12),
+          Wrap(spacing:7,runSpacing:7,children:[Chip(label:Text(_education)),Chip(label:Text(_province)),Chip(label:Text(_city)),Chip(label:Text(_sector)),Chip(label:Text(_program))]),
+          const SizedBox(height:14),
+          Row(children:[Text('${results.length} institutes found',style:const TextStyle(fontWeight:FontWeight.w800,fontSize:16)),const Spacer(),TextButton.icon(onPressed:_showFilters,icon:const Icon(Icons.tune,size:18),label:const Text('Filters'))])
+        ]))),
+        if(repo.loading) const SliverToBoxAdapter(child:LinearProgressIndicator(minHeight:2)),
+        if(results.isEmpty) const SliverFillRemaining(hasScrollBody:false,child:Center(child:Padding(padding:EdgeInsets.all(30),child:Column(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.search_off_rounded,size:54),SizedBox(height:12),Text('No matching institutes',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),SizedBox(height:6),Text('Change your filters or search term and try again.',textAlign:TextAlign.center)]))))
+        else SliverPadding(padding:const EdgeInsets.fromLTRB(20,0,20,32),sliver:SliverList.builder(itemCount:results.length,itemBuilder:(context,index){
+          final i=results[index]; return Padding(padding:const EdgeInsets.only(bottom:10),child:Card(child:ListTile(contentPadding:const EdgeInsets.all(12),
+            leading:CircleAvatar(child:Icon(_icon(i.type))),title:Text(i.name,style:const TextStyle(fontWeight:FontWeight.w800)),
+            subtitle:Text('${_label(i.type)} • ${i.city}${i.sector.isEmpty?'':' • ${i.sector}'}'),trailing:const Icon(Icons.chevron_right),
+            onTap:()=>context.push('/institute/${i.id}'))));
+        }))
+      ]));
   }
-
-  Widget _chip(String label, bool active) => Chip(
-    avatar: Icon(active ? Icons.check : Icons.filter_alt_outlined, size: 16),
-    label: Text(label),
-  );
-
-  IconData _icon(String type) => switch (type) {
-    'School' => Icons.school_outlined,
-    'College' => Icons.account_balance_outlined,
-    _ => Icons.account_balance,
-  };
+  IconData _icon(String type)=>switch(type){'schools'=>Icons.school_outlined,'colleges'=>Icons.account_balance_outlined,_=>Icons.account_balance};
 }
-
-class _Group extends StatelessWidget {
-  final String title, selected;
-  final List<String> values;
-  final ValueChanged<String> onChanged;
-  const _Group(this.title, this.values, this.selected, this.onChanged);
-  @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-    const SizedBox(height: 8),
-    Wrap(spacing: 8, runSpacing: 8, children: values.map((v) => ChoiceChip(label: Text(v), selected: selected == v, onSelected: (_) => onChanged(v))).toList()),
-  ]);
-}
-
-class _Item {
-  final String id, name, type, city;
-  final List<String> programs;
-  const _Item(this.id, this.name, this.type, this.city, this.programs);
+class _Group extends StatelessWidget{
+  final String title;final List<String> values;final String selected;final ValueChanged<String> onChanged;
+  const _Group(this.title,this.values,this.selected,this.onChanged);
+  @override Widget build(BuildContext context)=>Padding(padding:const EdgeInsets.only(bottom:14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Text(title,style:const TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:7),
+    Wrap(spacing:7,runSpacing:7,children:values.map((v)=>ChoiceChip(label:Text(v),selected:selected==v,onSelected:(_)=>onChanged(v))).toList())
+  ]));
 }
