@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import '../../../models/institute.dart';
 
 class InstituteDetailScreen extends StatelessWidget {
@@ -38,6 +41,21 @@ class InstituteDetailScreen extends StatelessWidget {
         Text('About', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
         const SizedBox(height: 7),
         Text(institute.description),
+        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance.collection('instituteClaims').where('instituteId', isEqualTo: institute.id).where('status', isEqualTo: 'pending').limit(1).snapshots(),
+          builder: (context, claimSnap) {
+            final pending = claimSnap.data?.docs.isNotEmpty == true;
+            return Card(child: ListTile(
+              leading: Icon(pending ? Icons.hourglass_top : Icons.business_outlined, color: scheme.primary),
+              title: Text(pending ? 'Claim under review' : 'Institute profile'),
+              subtitle: Text(pending ? 'A representative has submitted a claim for admin verification.' : 'This institute is currently listed on Talib.'),
+              trailing: pending ? null : FilledButton(
+                onPressed: FirebaseAuth.instance.currentUser == null ? () => context.push('/signin') : () => context.push('/institute/' + institute.id + '/claim'),
+                child: Text(FirebaseAuth.instance.currentUser == null ? 'Sign In to Claim' : 'Claim'),
+              ),
+            ));
+          },
+        ),
         const SizedBox(height: 22),
         Text('Programs', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
         const SizedBox(height: 10),
