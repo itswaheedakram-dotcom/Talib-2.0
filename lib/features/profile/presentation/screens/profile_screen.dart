@@ -26,6 +26,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
     city.text=(d['city']??'').toString();
     if(mounted)setState(()=>loading=false);
   }
+  Future<void> _submitReview(String targetId, String targetName) async {
+    final me = user;
+    if (me == null) return;
+    if (me.uid == targetId) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You cannot review your own profile.')));
+      return;
+    }
+    final rating = ValueNotifier<int>(5);
+    final review = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Review $targetName'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          ValueListenableBuilder<int>(
+            valueListenable: rating,
+            builder: (_, value, __) => Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (i) => IconButton(
+                onPressed: () => rating.value = i + 1,
+                icon: Icon(i < value ? Icons.star : Icons.star_border),
+              )),
+            ),
+          ),
+          TextField(
+            controller: review,
+            maxLines: 4,
+            maxLength: 300,
+            decoration: const InputDecoration(
+              labelText: 'Public review',
+              hintText: 'How did this person help you?',
+            ),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Publish')),
+        ],
+      ),
+    );
+    if (result != true || review.text.trim().isEmpty) {
+      rating.dispose();
+      review.dispose();
+      return;
+    }
+    final targetReview = FirebaseFirestore.instance.collection('users').doc(targetId).collection('reviews').doc(me.uid);
+    await targetReview.set({
+      'reviewerId': me.uid,
+      'reviewerName': me.displayName ?? 'Student',
+      'rating': rating.value,
+      'text': review.text.trim(),
+      'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    rating.dispose();
+    review.dispose();
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Review published')));
+  }
+
   Future<void> _save() async {
     final u=user;if(u==null)return;setState(()=>saving=true);
     await FirebaseFirestore.instance.collection('users').doc(u.uid).set({
