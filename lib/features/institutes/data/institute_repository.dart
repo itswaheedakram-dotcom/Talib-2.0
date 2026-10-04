@@ -76,6 +76,30 @@ class InstituteRepository extends ChangeNotifier {
     }
   }
 
+  Future<bool> update(Institute institute) async {
+    error = null;
+    try {
+      if (FirebaseService.initialized) {
+        await FirebaseFirestore.instance.collection('institutes').doc(institute.id).set(
+          institute.toMap(),
+          SetOptions(merge: true),
+        );
+      }
+      final index = _items.indexWhere((e) => e.id == institute.id);
+      if (index >= 0) {
+        _items[index] = institute;
+      } else {
+        _items.add(institute);
+      }
+      notifyListeners();
+      return true;
+    } catch (e) {
+      error = 'Institute could not be updated. Please try again.';
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<Institute?> add(Institute institute) async {
     error = null;
     try {
