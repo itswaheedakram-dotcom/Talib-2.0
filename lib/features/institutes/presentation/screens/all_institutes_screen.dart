@@ -3,15 +3,13 @@ import 'package:go_router/go_router.dart';
 
 class AllInstitutesScreen extends StatefulWidget {
   const AllInstitutesScreen({super.key});
-  @override
-  State<AllInstitutesScreen> createState() => _AllInstitutesScreenState();
+  @override State<AllInstitutesScreen> createState() => _AllInstitutesScreenState();
 }
 
 class _AllInstitutesScreenState extends State<AllInstitutesScreen> {
   bool _expanded = false;
 
-  @override
-  Widget build(BuildContext context) {
+  @override Widget build(BuildContext context) {
     const green = Color(0xFF00A66A);
     const darkGreen = Color(0xFF00543D);
     final categories = const [
@@ -23,32 +21,23 @@ class _AllInstitutesScreenState extends State<AllInstitutesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Institutes'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 19),
-          onPressed: () => context.pop(),
-        ),
+        leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 19), onPressed: () => context.pop()),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(18, 14, 18, 110),
         children: [
-          const Text(
-            'Institutes',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: darkGreen),
-          ),
+          const Text('Institutes', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: darkGreen)),
           const SizedBox(height: 5),
-          const Text(
-            'Explore schools, colleges and universities.',
-            style: TextStyle(color: Colors.black54),
-          ),
+          const Text('Explore schools, colleges and universities.', style: TextStyle(color: Colors.black54)),
           const SizedBox(height: 18),
           ...categories.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: _InstituteCategoryCard(
-                  title: item.$1,
-                  icon: item.$3,
-                  onTap: () => context.push('/institutes/${item.$2}'),
-                ),
-              )),
+            padding: const EdgeInsets.only(bottom: 14),
+            child: _InstituteCategoryCard(
+              title: item.$1,
+              icon: item.$3,
+              onTap: () => context.push('/institutes/' + item.$2),
+            ),
+          )),
         ],
       ),
       floatingActionButton: Column(
@@ -58,7 +47,11 @@ class _AllInstitutesScreenState extends State<AllInstitutesScreen> {
           if (_expanded) ...[
             _MiniAction(label: 'Find Institute', icon: Icons.search, onTap: () => context.push('/find')),
             const SizedBox(height: 9),
-            _MiniAction(label: 'Add Institute', icon: Icons.add_business_outlined, onTap: () => context.push('/find')),
+            _MiniAction(label: 'Add School', icon: Icons.school_outlined, onTap: () => context.push('/add-institute/schools')),
+            const SizedBox(height: 7),
+            _MiniAction(label: 'Add College', icon: Icons.account_balance_outlined, onTap: () => context.push('/add-institute/colleges')),
+            const SizedBox(height: 7),
+            _MiniAction(label: 'Add University', icon: Icons.castle_outlined, onTap: () => context.push('/add-institute/universities')),
             const SizedBox(height: 12),
           ],
           FloatingActionButton(
@@ -78,8 +71,7 @@ class _InstituteCategoryCard extends StatelessWidget {
   final VoidCallback onTap;
   const _InstituteCategoryCard({required this.title, required this.icon, required this.onTap});
 
-  @override
-  Widget build(BuildContext context) {
+  @override Widget build(BuildContext context) {
     const green = Color(0xFF00A66A);
     return Material(
       color: green,
@@ -89,32 +81,24 @@ class _InstituteCategoryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         child: SizedBox(
           height: 145,
-          child: Stack(
-            children: [
-              Positioned(
-                right: 18,
-                bottom: 10,
-                child: Icon(icon, size: 88, color: Colors.white.withOpacity(.18)),
+          child: Stack(children: [
+            Positioned(right: 18, bottom: 10, child: Icon(icon, size: 88, color: Colors.white.withOpacity(.18))),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(title, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w700)),
+                  Row(children: const [
+                    Text('Browse institutes', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    Spacer(),
+                    Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 22),
+                  ]),
+                ],
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(title, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w700)),
-                    Row(
-                      children: const [
-                        Text('Browse institutes', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                        Spacer(),
-                        Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 22),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ]),
         ),
       ),
     );
@@ -126,22 +110,21 @@ class _MiniAction extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   const _MiniAction({required this.label, required this.icon, required this.onTap});
-  @override
-  Widget build(BuildContext context) => Material(
-        color: Colors.white,
-        elevation: 3,
-        borderRadius: BorderRadius.circular(22),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(22),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(icon, size: 19, color: const Color(0xFF00543D)),
-              const SizedBox(width: 7),
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-            ]),
-          ),
-        ),
-      );
+  @override Widget build(BuildContext context) => Material(
+    color: Colors.white,
+    elevation: 3,
+    borderRadius: BorderRadius.circular(22),
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 19, color: const Color(0xFF00543D)),
+          const SizedBox(width: 7),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ]),
+      ),
+    ),
+  );
 }
