@@ -8,7 +8,7 @@ on:
 
 jobs:
   flutter_setup:
-    name: Flutter setup diagnostic
+    name: Flutter Android generation diagnostic
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,6 +26,20 @@ jobs:
       - name: Analyze Dart code
         continue-on-error: true
         run: flutter analyze
+
+      - name: Generate Android project
+        run: flutter create --platforms=android --project-name talib_2 --org com.talib2 .
+
+      - name: Verify Android project
+        shell: bash
+        run: |
+          test -f android/app/build.gradle.kts
+          test -f android/settings.gradle.kts
+          echo "Android project generated successfully"
+          echo "Application Gradle:"
+          sed -n '1,120p' android/app/build.gradle.kts
+          echo "Settings Gradle:"
+          sed -n '1,100p' android/settings.gradle.kts
 
       - name: Verify Flutter
         run: flutter --version
