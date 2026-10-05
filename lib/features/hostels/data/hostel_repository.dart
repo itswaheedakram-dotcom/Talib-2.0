@@ -13,15 +13,20 @@ class HostelRepository {
 
   Stream<List<Hostel>> watchHostels() {
     return _collection
+        .where('status', isEqualTo: 'approved')
         .orderBy('name')
         .snapshots()
         .map((snapshot) => snapshot.docs.map(Hostel.fromDoc).toList());
   }
 
-  /// Adds the bundled examples only when the collection is empty.
-  ///
-  /// This is safe to call whenever the Hostels screen opens: existing hostel
-  /// records are never overwritten and demo records are not duplicated.
+  Stream<List<Hostel>> watchOwnerHostels(String ownerId) {
+    return _collection
+        .where('ownerId', isEqualTo: ownerId)
+        .orderBy('name')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map(Hostel.fromDoc).toList());
+  }
+
   Future<void> seedDemoDataIfEmpty() async {
     final snapshot = await _collection.limit(1).get();
     if (snapshot.docs.isNotEmpty) return;
@@ -31,6 +36,8 @@ class HostelRepository {
       final ref = _collection.doc(hostel.id);
       batch.set(ref, {
         ...hostel.toMap(),
+        'status': 'approved',
+        'isVerified': true,
         'isDemo': true,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -39,9 +46,15 @@ class HostelRepository {
     await batch.commit();
   }
 
-  Future<String> addHostel(Hostel hostel) async {
-    final ref = await _collection.add({
+  Future<String> submitHostel(Hostel hostel) async {
+    final ref = _collection.doc();
+    await ref.set({
       ...hostel.toMap(),
+      'ownerId': hostel.ownerId,
+      'ownerName': hostel.ownerName,
+      'status': 'pending',
+      'isVerified': false,
+      'isDemo': false,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
