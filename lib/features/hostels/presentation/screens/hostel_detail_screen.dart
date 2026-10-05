@@ -2,135 +2,693 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../../../app/theme.dart';
 import '../../data/hostel_repository.dart';
 import '../../data/hostel_review.dart';
+import '../../data/hostel_seed_data.dart';
 import '../../../models/hostel.dart';
 
 class HostelDetailScreen extends StatefulWidget {
   final Hostel hostel;
+
   const HostelDetailScreen({super.key, required this.hostel});
-  @override State<HostelDetailScreen> createState() => _HostelDetailScreenState();
+
+  @override
+  State<HostelDetailScreen> createState() => _HostelDetailScreenState();
 }
 
 class _HostelDetailScreenState extends State<HostelDetailScreen> {
-  final _repo = HostelRepository();
-  int _page = 0;
+  int _galleryIndex = 0;
   double _myRating = 0;
-  final _comment = TextEditingController();
-  bool _savingReview = false;
   HostelReview? _myReview;
+  bool _loadingReview = false;
+  bool _savingReview = false;
+  final TextEditingController _commentController = TextEditingController();
+
   Hostel get hostel => widget.hostel;
 
-  List<String> get _images { final images=<String>[...hostel.imageUrls]; if(hostel.imageUrl.isNotEmpty&&!images.contains(hostel.imageUrl)) images.insert(0,hostel.imageUrl); return images; }
-  @override void initState(){super.initState();_loadMyReview();}
-  @override void dispose(){_comment.dispose();super.dispose();}
+  List<String> get images {
+    final values = <String>[];
+    for (final value in hostel.imageUrls) {
+      if (value.trim().isNotEmpty && !values.contains(value.trim())) {
+        values.add(value.trim());
+      }
+    }
+    if (hostel.imageUrl.trim().isNotEmpty &&
+        !values.contains(hostel.imageUrl.trim())) {
+      values.insert(0, hostel.imageUrl.trim());
+    }
+    return values;
+  }
 
-  Future<void> _loadMyReview() async { try { final user=FirebaseAuth.instance.currentUser; if(user==null||hostel.id.isEmpty)return; final review=await _repo.getMyReview(hostel.id,user.uid); if(!mounted)return; setState((){_myReview=review;_myRating=review?.rating??0;_comment.text=review?.comment??'';}); } catch (_) { /* Reviews are optional; details must still render. */ } }
-  Future<void> _submitReview() async { final user=FirebaseAuth.instance.currentUser; if(user==null){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Please sign in to review this hostel.')));return;} if(_myRating<1){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Please select a rating.')));return;} setState(()=>_savingReview=true); try{await _repo.submitReview(hostelId:hostel.id,userId:user.uid,userName:user.displayName?.trim().isNotEmpty==true?user.displayName!.trim():'Member',rating:_myRating,comment:_comment.text.trim());await _loadMyReview();if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Your review has been saved.')));}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Review could not be saved. Please try again.')));}finally{if(mounted)setState(()=>_savingReview=false);}}
-  Future<void> _openWebsite() async {var value=hostel.website.trim();if(value.isEmpty)return;if(!value.startsWith('http://')&&!value.startsWith('https://'))value='https://$value';final uri=Uri.tryParse(value);if(uri!=null&&await canLaunchUrl(uri))await launchUrl(uri,mode:LaunchMode.externalApplication);}
-  Future<void> _copyPhone() async {await Clipboard.setData(ClipboardData(text:hostel.phone));if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Phone number copied')));}
+  bool get signedIn {
+    try {
+      return FirebaseAuth.instance.currentUser != null;
+    } catch (_) {
+      return false;
+    }
+  }
 
-  @override Widget build(BuildContext context){final images=_images;return Scaffold(backgroundColor:AppColors.cream,appBar:AppBar(title:const Text('Hostel Details')),body:ListView(padding:const EdgeInsets.only(bottom:30),children:[Padding(padding:const EdgeInsets.fromLTRB(16,14,16,10),child:Row(children:[Expanded(child:Text(hostel.name,style:const TextStyle(color:AppColors.darkGreen,fontSize:24,fontWeight:FontWeight.w700))),_ratingSummary(hostel.rating,hostel.reviewCount)])),_gallery(images),Padding(padding:const EdgeInsets.fromLTRB(16,0,16,0),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[_title('Location'),_card([if(hostel.address.isNotEmpty)_row(Icons.location_on_outlined,'Address',hostel.address),if(hostel.area.isNotEmpty||hostel.city.isNotEmpty)_row(Icons.place_outlined,'Area',[hostel.area,hostel.city].where((e)=>e.isNotEmpty).join(', ')),if(hostel.distance.isNotEmpty)_row(Icons.near_me_outlined,'Distance',hostel.distance)]),_title('Complete Details'),_card([_row(Icons.apartment_outlined,'Hostel Type',hostel.type),_row(Icons.people_outline,'For',hostel.gender),if(hostel.roomType.isNotEmpty)_row(Icons.bed_outlined,'Room Type',hostel.roomType),if(hostel.availability.isNotEmpty)_row(Icons.event_available_outlined,'Availability',hostel.availability),if(hostel.price.isNotEmpty)_row(Icons.payments_outlined,'Monthly Rent',hostel.price),if(hostel.securityFee.isNotEmpty)_row(Icons.account_balance_wallet_outlined,'Security Fee',hostel.securityFee),_row(Icons.ac_unit_outlined,'Air Conditioning',hostel.ac?'Available':'Not available'),if(hostel.meals.isNotEmpty)_row(Icons.restaurant_outlined,'Meals / Mess',hostel.meals)]),if(hostel.facilities.isNotEmpty)...[_title('Facilities'),_card([Wrap(spacing:8,runSpacing:8,children:hostel.facilities.map(_facility).toList())])],if(hostel.description.isNotEmpty)...[_title('About Hostel'),_card([Text(hostel.description,style:const TextStyle(color:AppColors.mutedText,height:1.45,fontSize:14))])],if(hostel.ownerName.isNotEmpty&&!hostel.isDemo)...[_title('Listed By'),_card([_row(Icons.person_outline,'Owner',hostel.ownerName)])],_title('Reviews'),_reviewsCard(),if(hostel.phone.isNotEmpty||hostel.website.isNotEmpty)...[_title('Contact'),_card([if(hostel.phone.isNotEmpty)_button(Icons.phone_outlined,hostel.phone,_copyPhone),if(hostel.phone.isNotEmpty&&hostel.website.isNotEmpty)const SizedBox(height:8),if(hostel.website.isNotEmpty)_button(Icons.language_outlined,hostel.website,_openWebsite)])]]))]));}
+  @override
+  void initState() {
+    super.initState();
+    _loadMyReview();
+  }
 
-  Widget _reviewsCard()=>StreamBuilder<List<HostelReview>>(stream:hostel.id.isEmpty?const Stream.empty():_repo.watchReviews(hostel.id),builder:(context,snapshot){final reviews=snapshot.data??const <HostelReview>[];return _card([Row(children:[_ratingSummary(hostel.rating,hostel.reviewCount),const Spacer(),if(_signedIn)TextButton(onPressed:_showReviewEditor,child:Text(_myReview==null?'Write review':'Edit review'))]),const SizedBox(height:12),if(reviews.isEmpty)const Text('No reviews yet. Be the first registered member to review this hostel.',style:TextStyle(color:AppColors.mutedText,height:1.4)),...reviews.take(8).map((r)=>Padding(padding:const EdgeInsets.only(top:12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Expanded(child:Text(r.userName,style:const TextStyle(color:AppColors.darkGreen,fontWeight:FontWeight.w700))),_stars(r.rating)]),if(r.comment.isNotEmpty)Padding(padding:const EdgeInsets.only(top:5),child:Text(r.comment,style:const TextStyle(color:AppColors.mutedText,height:1.35)))])))]);});
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadMyReview() async {
+    if (!signedIn || hostel.id.isEmpty) return;
+    setState(() => _loadingReview = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final review = await HostelRepository().getMyReview(hostel.id, user.uid);
+      if (!mounted) return;
+      setState(() {
+        _myReview = review;
+        _myRating = review?.rating ?? 0;
+        _commentController.text = review?.comment ?? '';
+      });
+    } catch (_) {
+      // Review data is optional. Never block hostel details.
+    } finally {
+      if (mounted) setState(() => _loadingReview = false);
+    }
+  }
+
+  Stream<List<HostelReview>> _reviewStream() {
+    if (hostel.id.isEmpty) return const Stream<List<HostelReview>>.empty();
+    try {
+      return HostelRepository().watchReviews(hostel.id);
+    } catch (_) {
+      return const Stream<List<HostelReview>>.empty();
+    }
+  }
+
+  Future<void> _saveReview() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to review this hostel.')),
+      );
+      return;
+    }
+    if (_myRating < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a rating.')),
+      );
+      return;
+    }
+
+    setState(() => _savingReview = true);
+    try {
+      await HostelRepository().submitReview(
+        hostelId: hostel.id,
+        userId: user.uid,
+        userName: user.displayName?.trim().isNotEmpty == true
+            ? user.displayName!.trim()
+            : 'Member',
+        rating: _myRating,
+        comment: _commentController.text.trim(),
+      );
+      await _loadMyReview();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Your review has been saved.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Review could not be saved.')),
+      );
+    } finally {
+      if (mounted) setState(() => _savingReview = false);
+    }
+  }
+
+  Future<void> _openWebsite() async {
+    var value = hostel.website.trim();
+    if (value.isEmpty) return;
+    if (!value.startsWith('http://') && !value.startsWith('https://')) {
+      value = 'https://$value';
+    }
+    final uri = Uri.tryParse(value);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _copyPhone() async {
+    await Clipboard.setData(ClipboardData(text: hostel.phone));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Phone number copied')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final gallery = images;
+
+    return Scaffold(
+      backgroundColor: AppColors.cream,
+      appBar: AppBar(title: const Text('Hostel Details')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
+        children: [
+          Text(
+            hostel.name,
+            style: const TextStyle(
+              color: AppColors.darkGreen,
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          if (hostel.reviewCount > 0) ...[
+            const SizedBox(height: 6),
+            _ratingSummary(hostel.rating, hostel.reviewCount),
+          ],
+          const SizedBox(height: 14),
+          _gallery(gallery),
+          const SizedBox(height: 4),
+          _sectionTitle('Location'),
+          _infoCard([
+            if (hostel.address.isNotEmpty)
+              _infoRow(Icons.location_on_outlined, 'Address', hostel.address),
+            if (hostel.area.isNotEmpty || hostel.city.isNotEmpty)
+              _infoRow(
+                Icons.place_outlined,
+                'Area',
+                [hostel.area, hostel.city]
+                    .where((e) => e.isNotEmpty)
+                    .join(', '),
+              ),
+            if (hostel.distance.isNotEmpty)
+              _infoRow(
+                Icons.near_me_outlined,
+                'Distance',
+                hostel.distance,
+              ),
+          ]),
+          _sectionTitle('Complete Details'),
+          _infoCard([
+            if (hostel.type.isNotEmpty)
+              _infoRow(Icons.apartment_outlined, 'Hostel Type', hostel.type),
+            if (hostel.gender.isNotEmpty)
+              _infoRow(Icons.people_outline, 'For', hostel.gender),
+            if (hostel.roomType.isNotEmpty)
+              _infoRow(Icons.bed_outlined, 'Room Type', hostel.roomType),
+            if (hostel.availability.isNotEmpty)
+              _infoRow(
+                Icons.event_available_outlined,
+                'Availability',
+                hostel.availability,
+              ),
+            if (hostel.price.isNotEmpty)
+              _infoRow(Icons.payments_outlined, 'Monthly Rent', hostel.price),
+            if (hostel.securityFee.isNotEmpty)
+              _infoRow(
+                Icons.account_balance_wallet_outlined,
+                'Security Fee',
+                hostel.securityFee,
+              ),
+            _infoRow(
+              Icons.ac_unit_outlined,
+              'Air Conditioning',
+              hostel.ac ? 'Available' : 'Not available',
+            ),
+            if (hostel.meals.isNotEmpty)
+              _infoRow(Icons.restaurant_outlined, 'Meals / Mess', hostel.meals),
+          ]),
+          if (hostel.facilities.isNotEmpty) ...[
+            _sectionTitle('Facilities'),
+            _infoCard([
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: hostel.facilities
+                    .map(
+                      (item) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.softGreen,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          item,
+                          style: const TextStyle(
+                            color: AppColors.darkGreen,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ]),
+          ],
+          if (hostel.description.isNotEmpty) ...[
+            _sectionTitle('About Hostel'),
+            _infoCard([
+              Text(
+                hostel.description,
+                style: const TextStyle(
+                  color: AppColors.mutedText,
+                  fontSize: 14,
+                  height: 1.45,
+                ),
+              ),
+            ]),
+          ],
+          if (hostel.ownerName.isNotEmpty && !hostel.isDemo) ...[
+            _sectionTitle('Listed By'),
+            _infoCard([
+              _infoRow(Icons.person_outline, 'Owner', hostel.ownerName),
+            ]),
+          ],
+          _sectionTitle('Reviews'),
+          _reviewsCard(),
+          if (hostel.phone.isNotEmpty || hostel.website.isNotEmpty) ...[
+            _sectionTitle('Contact'),
+            _infoCard([
+              if (hostel.phone.isNotEmpty)
+                _contactButton(
+                  Icons.phone_outlined,
+                  hostel.phone,
+                  _copyPhone,
+                ),
+              if (hostel.phone.isNotEmpty && hostel.website.isNotEmpty)
+                const SizedBox(height: 8),
+              if (hostel.website.isNotEmpty)
+                _contactButton(
+                  Icons.language_outlined,
+                  hostel.website,
+                  _openWebsite,
+                ),
+            ]),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _gallery(List<String> values) {
+    return Container(
+      height: 235,
+      decoration: BoxDecoration(
+        color: AppColors.softGreen,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: values.isEmpty
+          ? const Center(
+              child: Icon(
+                Icons.hotel_rounded,
+                color: AppColors.primaryGreen,
+                size: 72,
+              ),
+            )
+          : PageView.builder(
+              itemCount: values.length,
+              onPageChanged: (index) {
+                if (mounted) setState(() => _galleryIndex = index);
+              },
+              itemBuilder: (_, index) {
+                return Image.network(
+                  values[index],
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Center(
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      color: AppColors.primaryGreen,
+                      size: 48,
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _reviewsCard() {
+    return StreamBuilder<List<HostelReview>>(
+      stream: _reviewStream(),
+      builder: (context, snapshot) {
+        final reviews = snapshot.data ?? const <HostelReview>[];
+
+        return _infoCard([
+          Row(
+            children: [
+              _ratingSummary(hostel.rating, hostel.reviewCount),
+              const Spacer(),
+              if (signedIn)
+                TextButton(
+                  onPressed: _loadingReview ? null : _showReviewEditor,
+                  child: Text(
+                    _myReview == null ? 'Write review' : 'Edit review',
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (snapshot.hasError)
+            const Text(
+              'Reviews are temporarily unavailable.',
+              style: TextStyle(color: AppColors.mutedText),
+            )
+          else if (reviews.isEmpty)
+            const Text(
+              'No reviews yet. Be the first registered member to review this hostel.',
+              style: TextStyle(
+                color: AppColors.mutedText,
+                height: 1.4,
+              ),
+            )
+          else
+            ...reviews.take(8).map(
+              (review) => Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            review.userName,
+                            style: const TextStyle(
+                              color: AppColors.darkGreen,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        _stars(review.rating),
+                      ],
+                    ),
+                    if (review.comment.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: Text(
+                          review.comment,
+                          style: const TextStyle(
+                            color: AppColors.mutedText,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+        ]);
+      },
+    );
+  }
 
   Future<void> _showReviewEditor() async {
-    final result=await showModalBottomSheet<bool>(
-      context:context,isScrollControlled:true,showDragHandle:true,backgroundColor:AppColors.cream,
-      builder:(sheetContext)=>StatefulBuilder(
-        builder:(context,setSheet)=>Padding(
-          padding:EdgeInsets.fromLTRB(20,8,20,MediaQuery.of(context).viewInsets.bottom+20),
-          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-            const Text('Your Review',style:TextStyle(color:AppColors.darkGreen,fontSize:21,fontWeight:FontWeight.w700)),
-            const SizedBox(height:12),
-            Center(child:Row(mainAxisSize:MainAxisSize.min,children:List.generate(5,(index)=>IconButton(
-              onPressed:()=>setSheet(()=>_myRating=index+1.0),
-              icon:Icon(index<_myRating?Icons.star_rounded:Icons.star_border_rounded,color:AppColors.primaryGreen,size:32),
-            )))),
-            TextField(controller:_comment,maxLines:4,decoration:const InputDecoration(labelText:'Review',hintText:'Share your experience')),
-            const SizedBox(height:14),
-            SizedBox(width:double.infinity,child:FilledButton(
-              style:FilledButton.styleFrom(backgroundColor:AppColors.primaryGreen,foregroundColor:AppColors.white),
-              onPressed:_savingReview?null:() async{
-                await _submitReview();
-                if(sheetContext.mounted)Navigator.of(sheetContext).pop(true);
-              },
-              child:Text(_savingReview?'Saving...':'Submit review'),
-            )),
-          ]),
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: AppColors.cream,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                8,
+                20,
+                MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Your Review',
+                    style: TextStyle(
+                      color: AppColors.darkGreen,
+                      fontSize: 21,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(
+                        5,
+                        (index) => IconButton(
+                          onPressed: () {
+                            setSheetState(() => _myRating = index + 1.0);
+                          },
+                          icon: Icon(
+                            index < _myRating
+                                ? Icons.star_rounded
+                                : Icons.star_border_rounded,
+                            color: AppColors.primaryGreen,
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  TextField(
+                    controller: _commentController,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Review',
+                      hintText: 'Share your experience',
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primaryGreen,
+                        foregroundColor: AppColors.white,
+                      ),
+                      onPressed: _savingReview ? null : _saveReview,
+                      child: Text(
+                        _savingReview ? 'Saving...' : 'Submit review',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _sectionTitle(String value) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 18, 0, 8),
+      child: Text(
+        value,
+        style: const TextStyle(
+          color: AppColors.darkGreen,
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
-    if(result==true&&mounted)setState((){});
   }
 
-  bool get _signedIn { try { return FirebaseAuth.instance.currentUser != null; } catch (_) { return false; } }
+  Widget _infoCard(List<Widget> children) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
 
-  Widget _ratingSummary(double rating,int count)=>Row(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.star_rounded,color:AppColors.primaryGreen,size:19),const SizedBox(width:3),Text(rating>0?rating.toStringAsFixed(1):'New',style:const TextStyle(color:AppColors.darkGreen,fontWeight:FontWeight.w700,fontSize:12)),if(count>0)Text(' ($count)',style:const TextStyle(color:AppColors.mutedText,fontSize:11))]);
-  Widget _stars(double rating)=>Row(mainAxisSize:MainAxisSize.min,children:List.generate(5,(i)=>Icon(i<rating.round()?Icons.star_rounded:Icons.star_border_rounded,color:AppColors.primaryGreen,size:16)));
-  Widget _gallery(List<String> images) {
-    return Column(children:[
-      Container(
-        margin:const EdgeInsets.symmetric(horizontal:16),
-        height:235,
-        decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(18)),
-        clipBehavior:Clip.antiAlias,
-        child:images.isEmpty
-          ? const Center(child:Icon(Icons.hotel_rounded,color:AppColors.primaryGreen,size:72))
-          : PageView.builder(
-              itemCount:images.length,
-              onPageChanged:(index)=>setState(()=>_page=index),
-              itemBuilder:(_,index)=>Image.network(
-                images[index],fit:BoxFit.cover,
-                errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,color:AppColors.primaryGreen,size:48)),
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: AppColors.primaryGreen, size: 20),
+          const SizedBox(width: 11),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$label\n',
+                    style: const TextStyle(
+                      color: AppColors.mutedText,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: const TextStyle(
+                      color: AppColors.darkGreen,
+                      fontSize: 14,
+                      height: 1.25,
+                    ),
+                  ),
+                ],
               ),
             ),
+          ),
+        ],
       ),
-      if(images.length>1)
-        Padding(
-          padding:const EdgeInsets.only(top:8),
-          child:Row(mainAxisAlignment:MainAxisAlignment.center,children:List.generate(images.length,(index)=>Container(
-            width:7,height:7,margin:const EdgeInsets.symmetric(horizontal:3),
-            decoration:BoxDecoration(color:index==_page?AppColors.primaryGreen:AppColors.divider,shape:BoxShape.circle),
-          ))),
-        ),
-    ]);
+    );
   }
 
-  Widget _title(String t)=>Padding(padding:const EdgeInsets.fromLTRB(0,18,0,8),child:Text(t,style:const TextStyle(color:AppColors.darkGreen,fontSize:17,fontWeight:FontWeight.w700)));
-  Widget _card(List<Widget> c)=>Container(width:double.infinity,padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:AppColors.white,borderRadius:BorderRadius.circular(16)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:c));
-  Widget _row(IconData i,String l,String v)=>Padding(padding:const EdgeInsets.symmetric(vertical:6),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(i,color:AppColors.primaryGreen,size:20),const SizedBox(width:11),Expanded(child:RichText(text:TextSpan(children:[TextSpan(text:'$l\n',style:const TextStyle(color:AppColors.mutedText,fontSize:11,fontWeight:FontWeight.w600)),TextSpan(text:v,style:const TextStyle(color:AppColors.darkGreen,fontSize:14,height:1.25))])))]));
-  Widget _facility(String v)=>Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(10)),child:Text(v,style:const TextStyle(color:AppColors.darkGreen,fontSize:12,fontWeight:FontWeight.w600)));
-  Widget _button(IconData i,String label,VoidCallback onPressed)=>SizedBox(width:double.infinity,child:OutlinedButton.icon(onPressed:onPressed,style:OutlinedButton.styleFrom(foregroundColor:AppColors.primaryGreen,side:const BorderSide(color:AppColors.divider),padding:const EdgeInsets.symmetric(vertical:13)),icon:Icon(i),label:Text(label,maxLines:1,overflow:TextOverflow.ellipsis)));
-}
+  Widget _ratingSummary(double rating, int count) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(
+          Icons.star_rounded,
+          color: AppColors.primaryGreen,
+          size: 19,
+        ),
+        const SizedBox(width: 3),
+        Text(
+          rating > 0 ? rating.toStringAsFixed(1) : 'New',
+          style: const TextStyle(
+            color: AppColors.darkGreen,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
+        ),
+        if (count > 0)
+          Text(
+            ' ($count)',
+            style: const TextStyle(
+              color: AppColors.mutedText,
+              fontSize: 11,
+            ),
+          ),
+      ],
+    );
+  }
 
+  Widget _stars(double rating) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(
+        5,
+        (index) => Icon(
+          index < rating.round()
+              ? Icons.star_rounded
+              : Icons.star_border_rounded,
+          color: AppColors.primaryGreen,
+          size: 16,
+        ),
+      ),
+    );
+  }
+
+  Widget _contactButton(
+    IconData icon,
+    String label,
+    VoidCallback onPressed,
+  ) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primaryGreen,
+          side: const BorderSide(color: AppColors.divider),
+          padding: const EdgeInsets.symmetric(vertical: 13),
+        ),
+        icon: Icon(icon),
+        label: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+}
 
 class HostelDetailLoaderScreen extends StatelessWidget {
   final String hostelId;
-  const HostelDetailLoaderScreen({super.key, required this.hostelId});
+
+  const HostelDetailLoaderScreen({
+    super.key,
+    required this.hostelId,
+  });
+
+  Future<Hostel?> _load() async {
+    try {
+      final remote = await HostelRepository().getHostel(hostelId);
+      if (remote != null) return remote;
+    } catch (_) {
+      // Use local demo data when Firebase is unavailable.
+    }
+
+    for (final hostel in exampleHostels) {
+      if (hostel.id == hostelId) return hostel;
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Hostel?>(
-      future: HostelRepository().getHostel(hostelId),
+      future: _load(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             backgroundColor: AppColors.cream,
-            body: Center(child: CircularProgressIndicator(color: AppColors.primaryGreen)),
+            body: Center(
+              child: CircularProgressIndicator(
+                color: AppColors.primaryGreen,
+              ),
+            ),
           );
         }
+
         final hostel = snapshot.data;
         if (hostel == null) {
           return Scaffold(
             backgroundColor: AppColors.cream,
             appBar: AppBar(title: const Text('Hostel Details')),
             body: const Center(
-              child: Text('Hostel details could not be loaded.', style: TextStyle(color: AppColors.mutedText)),
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Hostel details could not be loaded.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.mutedText),
+                ),
+              ),
             ),
           );
         }
+
         return HostelDetailScreen(hostel: hostel);
       },
     );
