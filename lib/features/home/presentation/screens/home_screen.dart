@@ -112,7 +112,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                   const SizedBox(height: 4),
-                  Expanded(child: _compactBanners(context)),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: _compactBanners(context),
+                    ),
+                  ),
                 ],
               ),
             ),
