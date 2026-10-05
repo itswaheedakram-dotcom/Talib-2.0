@@ -481,7 +481,7 @@ class _HostelsScreenState extends State<HostelsScreen> {
       color: AppColors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        onTap: () => _showDetails(hostel),
+        onTap: () => context.push('/hostel/${hostel.id}', extra: hostel),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(14),
