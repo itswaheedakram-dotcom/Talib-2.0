@@ -11,6 +11,13 @@ class HostelRepository {
   Stream<List<Hostel>> watchHostels() => _collection.snapshots().map((s) => s.docs.map(Hostel.fromDoc).where((h) => h.status == 'approved').toList()..sort((a,b) => a.name.compareTo(b.name)));
   Stream<List<Hostel>> watchOwnerHostels(String ownerId) => _collection.where('ownerId', isEqualTo: ownerId).snapshots().map((s) => s.docs.map(Hostel.fromDoc).toList()..sort((a,b) => a.name.compareTo(b.name)));
 
+  Future<Hostel?> getHostel(String hostelId) async {
+    if (hostelId.trim().isEmpty) return null;
+    final doc = await _collection.doc(hostelId).get();
+    if (!doc.exists) return null;
+    return Hostel.fromDoc(doc);
+  }
+
   Stream<List<HostelReview>> watchReviews(String hostelId) => _collection.doc(hostelId).collection('reviews').orderBy('createdAt', descending: true).snapshots().map((s) => s.docs.map(HostelReview.fromDoc).toList());
 
   Future<HostelReview?> getMyReview(String hostelId, String userId) async {
