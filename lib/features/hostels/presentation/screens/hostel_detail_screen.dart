@@ -102,3 +102,35 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
   Widget _facility(String v)=>Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(10)),child:Text(v,style:const TextStyle(color:AppColors.darkGreen,fontSize:12,fontWeight:FontWeight.w600)));
   Widget _button(IconData i,String label,VoidCallback onPressed)=>SizedBox(width:double.infinity,child:OutlinedButton.icon(onPressed:onPressed,style:OutlinedButton.styleFrom(foregroundColor:AppColors.primaryGreen,side:const BorderSide(color:AppColors.divider),padding:const EdgeInsets.symmetric(vertical:13)),icon:Icon(i),label:Text(label,maxLines:1,overflow:TextOverflow.ellipsis)));
 }
+
+
+class HostelDetailLoaderScreen extends StatelessWidget {
+  final String hostelId;
+  const HostelDetailLoaderScreen({super.key, required this.hostelId});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Hostel?>(
+      future: HostelRepository().getHostel(hostelId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: AppColors.cream,
+            body: Center(child: CircularProgressIndicator(color: AppColors.primaryGreen)),
+          );
+        }
+        final hostel = snapshot.data;
+        if (hostel == null) {
+          return Scaffold(
+            backgroundColor: AppColors.cream,
+            appBar: AppBar(title: const Text('Hostel Details')),
+            body: const Center(
+              child: Text('Hostel details could not be loaded.', style: TextStyle(color: AppColors.mutedText)),
+            ),
+          );
+        }
+        return HostelDetailScreen(hostel: hostel);
+      },
+    );
+  }
+}
