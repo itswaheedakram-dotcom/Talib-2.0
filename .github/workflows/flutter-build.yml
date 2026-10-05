@@ -32,5 +32,17 @@ jobs:
             exit 1
           fi
           sed -i -E 's/(org\.jetbrains\.kotlin\.android.*version ")[^"]+/\12.3.0/' android/settings.gradle.kts
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/build.gradle.kts")
+          s = p.read_text()
+          s = s.replace("import java.util.Properties\n", "import java.util.Properties\nimport org.jetbrains.kotlin.gradle.dsl.JvmTarget\n")
+          s = s.replace("""    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_11.toString()
+    }""", """    compilerOptions {
+        jvmTarget = JvmTarget.JVM_11
+    }""")
+          p.write_text(s)
+          PY
       - name: Build debug APK
         run: flutter build apk --debug
