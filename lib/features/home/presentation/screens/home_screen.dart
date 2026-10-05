@@ -58,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (expanded) ...[
                     const SizedBox(height: 3),
                     SizedBox(
-                      height: 124,
+                      height: 132,
                       child: GridView.builder(
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: items.length,
@@ -111,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 10),
                   Expanded(
                     child: Center(
                       child: FractionallySizedBox(
