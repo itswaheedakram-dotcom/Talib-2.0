@@ -40,7 +40,7 @@ jobs:
           s = p.read_text()
           s = s.replace(
               '    kotlinOptions {\n        jvmTarget = JavaVersion.VERSION_11.toString()\n    }',
-              '    compilerOptions {\n        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n    }'
+              '    kotlin {\n        compilerOptions {\n            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n        }\n    }'
           )
           p.write_text(s)
           PY
