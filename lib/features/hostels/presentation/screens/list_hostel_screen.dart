@@ -47,13 +47,48 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
       Row(children:[Expanded(child:_dropdown('For',_gender,['Male','Female','Both'],(v)=>setState(()=>_gender=v))),const SizedBox(width:10),Expanded(child:_dropdown('Type',_type,['Private','University'],(v)=>setState(()=>_type=v)))]),
       const SizedBox(height:4),_section('Rooms & Pricing'),_field(_price,'Monthly Rent',Icons.payments_outlined,required:true),_field(_security,'Security Fee',Icons.account_balance_wallet_outlined),_field(_room,'Room Type (e.g. 2-Seater)',Icons.bed_outlined,required:true),_field(_availability,'Availability (e.g. 6 beds)',Icons.event_available_outlined),_field(_meals,'Meals / Mess Details',Icons.restaurant_outlined),
       SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Air Conditioning (AC)'),value:_ac,onChanged:(v)=>setState(()=>_ac=v),activeColor:AppColors.primaryGreen),
-      const SizedBox(height:4),_section('Facilities & Contact'),_field(_facilities,'Facilities (comma separated)',Icons.apartment_outlined,maxLines:2),_field(_phone,'Phone / WhatsApp',Icons.phone_outlined,required:true,keyboard:TextInputType.phone),_field(_website,'Website (optional)',Icons.language_outlined,keyboard:TextInputType.url),_field(_imageUrl,'Main Photo URL (optional)',Icons.image_outlined,keyboard:TextInputType.url),_field(_imageUrls,'Additional Photo URLs (comma separated, optional)',Icons.photo_library_outlined,maxLines:2,keyboard:TextInputType.url),_field(_description,'About Your Hostel',Icons.description_outlined,maxLines:4),
+      const SizedBox(height:4),_section('Facilities & Contact'),_field(_facilities,'Facilities (comma separated)',Icons.apartment_outlined,maxLines:2),_field(_phone,'Phone / WhatsApp',Icons.phone_outlined,required:true,keyboard:TextInputType.phone),_field(_website,'Website (optional)',Icons.language_outlined,keyboard:TextInputType.url),_field(_imageUrl,'Main Photo URL (optional)',Icons.image_outlined,keyboard:TextInputType.url,onChanged:(_)=>setState((){})),
+      _imagePreview(),_field(_imageUrls,'Additional Photo URLs (comma separated, optional)',Icons.photo_library_outlined,maxLines:2,keyboard:TextInputType.url),_field(_description,'About Your Hostel',Icons.description_outlined,maxLines:4),
       const SizedBox(height:8),Container(padding:const EdgeInsets.all(13),decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(14)),child:const Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(Icons.verified_user_outlined,color:AppColors.primaryGreen),SizedBox(width:9),Expanded(child:Text('Your listing will stay private until an admin reviews and approves it. You can manage your listing after submission.',style:TextStyle(color:AppColors.darkGreen,height:1.35)))])),
       const SizedBox(height:18),SizedBox(height:50,child:FilledButton.icon(onPressed:_saving?null:_submit,style:FilledButton.styleFrom(backgroundColor:AppColors.primaryGreen,foregroundColor:AppColors.white),icon:_saving?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:AppColors.white)):const Icon(Icons.send_outlined),label:Text(_saving?'Submitting...':'Submit for Approval')))
     ])));
 
   Widget _intro()=>Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:AppColors.white,borderRadius:BorderRadius.circular(16)),child:const Row(children:[CircleAvatar(radius:25,backgroundColor:AppColors.softGreen,child:Icon(Icons.hotel_rounded,color:AppColors.primaryGreen,size:28)),SizedBox(width:12),Expanded(child:Text('Reach students looking for accommodation. Add accurate details so your hostel can be reviewed and listed.',style:TextStyle(color:AppColors.darkGreen,height:1.35)))]));
   Widget _section(String title)=>Padding(padding:const EdgeInsets.only(bottom:10,top:5),child:Text(title,style:const TextStyle(color:AppColors.darkGreen,fontSize:17,fontWeight:FontWeight.w700)));
-  Widget _field(TextEditingController c,String label,IconData icon,{bool required=false,int maxLines=1,TextInputType? keyboard})=>Padding(padding:const EdgeInsets.only(bottom:12),child:TextFormField(controller:c,maxLines:maxLines,keyboardType:keyboard,validator:required?(v)=>v==null||v.trim().isEmpty?'Required':null:null,decoration:InputDecoration(labelText:label,prefixIcon:Icon(icon))));
+  Widget _field(TextEditingController c,String label,IconData icon,{bool required=false,int maxLines=1,TextInputType? keyboard,ValueChanged<String>? onChanged})=>Padding(padding:const EdgeInsets.only(bottom:12),child:TextFormField(controller:c,maxLines:maxLines,keyboardType:keyboard,onChanged:onChanged,validator:required?(v)=>v==null||v.trim().isEmpty?'Required':null:null,decoration:InputDecoration(labelText:label,prefixIcon:Icon(icon))));
+
+  Widget _imagePreview() {
+    final url = _imageUrl.text.trim();
+    if (url.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: AspectRatio(
+          aspectRatio: 16 / 7,
+          child: Image.network(
+            url,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              color: AppColors.softGreen,
+              alignment: Alignment.center,
+              child: const Text(
+                'Image preview unavailable',
+                style: TextStyle(color: AppColors.mutedText),
+              ),
+            ),
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primaryGreen,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
   Widget _dropdown(String label,String value,List<String> items,ValueChanged<String> onChanged)=>DropdownButtonFormField<String>(value:value,decoration:InputDecoration(labelText:label,prefixIcon:const Icon(Icons.tune_outlined)),items:items.map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(),onChanged:(v){if(v!=null)onChanged(v);});
 }
