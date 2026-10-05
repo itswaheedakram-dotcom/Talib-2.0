@@ -41,10 +41,12 @@ jobs:
             exit 1
           fi
 
-          # Do NOT apply Google Services or copy google-services.json in this
-          # diagnostic build. Firebase native auto-initialization is intentionally
-          # isolated so a native Firebase configuration crash cannot terminate launch.
+          # Diagnostic build: keep Firebase native services disabled.
           rm -f android/app/google-services.json
+
+          # Flutter 3.35.2 generates Kotlin 2.1.x by default. Keep the
+          # generated project consistent with its Firebase-free diagnostic build.
+          # No Firebase Auth dependency is applied in this workflow.
 
       - name: Build debug APK
         run: flutter build apk --debug
