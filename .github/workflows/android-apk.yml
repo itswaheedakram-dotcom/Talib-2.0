@@ -29,6 +29,28 @@ jobs:
             echo "Android app Gradle file not found"
             exit 1
           fi
+
+          # Force the final Android application ID and namespace to com.talib.app.
+          # flutter create derives these from --org/--project-name, so set them explicitly.
+          python3 - <<'PY'
+import re
+from pathlib import Path
+
+p = Path("android/app/build.gradle.kts")
+if p.exists():
+    s = p.read_text()
+    s = re.sub(r'(?m)^(\s*namespace\s*=\s*)".*?"', r'\1"com.talib.app"', s, count=1)
+    s = re.sub(r'(?m)^(\s*applicationId\s*=\s*)".*?"', r'\1"com.talib.app"', s, count=1)
+    p.write_text(s)
+else:
+    p = Path("android/app/build.gradle")
+    if not p.exists():
+        raise SystemExit("Android app Gradle file not found")
+    s = p.read_text()
+    s = re.sub(r'(?m)^(\s*namespace\s+)"[^"]+"', r'\1"com.talib.app"', s, count=1)
+    s = re.sub(r'(?m)^(\s*applicationId\s+)"[^"]+"', r'\1"com.talib.app"', s, count=1)
+    p.write_text(s)
+PY
       - name: Get dependencies
         run: flutter pub get
       - name: Analyze Dart code
