@@ -2,91 +2,21 @@ name: Flutter Build
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
-  build:
+  diagnostic:
+    name: GitHub Actions diagnostic
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.35.2'
-          channel: stable
-
-      - run: flutter pub get
-
-      - name: Analyze Dart code
-        continue-on-error: true
-        run: flutter analyze
-
-      - name: Generate Android project
-        run: flutter create --platforms=android --project-name talib_2 --org com.talib2 .
-
-      - name: Configure minimal Android launcher
-        shell: bash
+      - name: Verify runner
         run: |
-          if [ -f android/app/build.gradle.kts ]; then
-            sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' android/app/build.gradle.kts
-            sed -i -E 's/applicationId = "[^"]+"/applicationId = "com.talib.app"/' android/app/build.gradle.kts
-            sed -i -E 's/namespace = "[^"]+"/namespace = "com.talib.app"/' android/app/build.gradle.kts
-          elif [ -f android/app/build.gradle ]; then
-            sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/' android/app/build.gradle
-            sed -i -E 's/applicationId "[^"]+"/applicationId "com.talib.app"/' android/app/build.gradle
-            sed -i -E 's/namespace "[^"]+"/namespace "com.talib.app"/' android/app/build.gradle || true
-          else
-            echo "Android app Gradle file not found"
-            exit 1
-          fi
-
-          # Diagnostic build: keep Firebase native services disabled.
-          rm -f android/app/google-services.json
-
-          # Firebase packages are still resolved by pub, so the generated
-          # Android project must use the Kotlin metadata version required by
-          # the installed Firebase Auth plugin.
-          if [ -f android/settings.gradle.kts ]; then
-            sed -i -E "s/id\\(\\\"org.jetbrains.kotlin.android\\\"\\) version \\\"[^\\\"]+\\\"/id(\\\"org.jetbrains.kotlin.android\\\") version \\\"2.3.0\\\"/" android/settings.gradle.kts
-          fi
-
-      - name: Apply Flutter Android migration
-        shell: bash
-        run: |
-          # Flutter 3.35 upgrades the generated Gradle file on its first
-          # build. Allow that migration to finish, then remove the legacy
-          # kotlinOptions block before the real Gradle build.
-          set +e
-          flutter build apk --debug
-          first_build_exit=$?
-          set -e
-
-          if [ -f android/app/build.gradle.kts ]; then
-            python3 - <<'PY'
-from pathlib import Path
-p = Path("android/app/build.gradle.kts")
-s = p.read_text()
-start = s.find("    kotlinOptions {")
-if start >= 0:
-    end = s.find("    }", start)
-    if end >= 0:
-        end += len("    }")
-        s = s[:start] + s[end:]
-p.write_text(s)
-PY
-          fi
-
-          echo "Initial migration build exit code: $first_build_exit"
-          grep -n -A3 -B2 "kotlinOptions\|jvmTarget" android/app/build.gradle.kts || true
-
-      - name: Build debug APK
-        run: flutter build apk --debug
-
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: talib-launch-diagnostic-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
-          retention-days: 14
+          echo "GitHub Actions runner is working"
+          echo "OS: $(uname -a)"
+          echo "Repo: $GITHUB_REPOSITORY"
+          echo "SHA: $GITHUB_SHA"
