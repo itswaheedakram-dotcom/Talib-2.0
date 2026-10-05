@@ -183,10 +183,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _compactBanners(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(child: _findBanner(context)),
-        const SizedBox(height: 8),
-        Expanded(child: _guidanceBanner(context)),
+        SizedBox(height: 82, child: _findBanner(context)),
+        const SizedBox(height: 7),
+        SizedBox(height: 82, child: _guidanceBanner(context)),
       ],
     );
   }
@@ -196,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => context.push('/find'),
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(15, 9, 10, 9),
+        padding: const EdgeInsets.fromLTRB(13, 6, 8, 6),
         decoration: BoxDecoration(
           color: AppColors.homeGreen,
           borderRadius: BorderRadius.circular(18),
@@ -246,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => context.push('/community'),
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 8, 14, 8),
+        padding: const EdgeInsets.fromLTRB(8, 6, 12, 6),
         decoration: BoxDecoration(
           color: AppColors.homeGreen,
           borderRadius: BorderRadius.circular(18),
