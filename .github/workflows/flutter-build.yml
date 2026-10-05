@@ -55,6 +55,33 @@ jobs:
           grep -n -A5 -B2 "compilerOptions\|jvmTarget\|kotlinOptions" android/app/build.gradle.kts || true
           grep -n "org.jetbrains.kotlin.android" android/settings.gradle.kts || true
 
+      - name: Apply Flutter Gradle migration
+        shell: bash
+        run: |
+          set +e
+          flutter build apk --debug
+          first_build_exit=$?
+          set -e
+
+          python3 - <<'PY'
+from pathlib import Path
+p = Path("android/app/build.gradle.kts")
+s = p.read_text()
+start = s.find("    kotlinOptions {")
+if start >= 0:
+    end = s.find("    }", start)
+    if end >= 0:
+        end += len("    }")
+        s = s[:start] + s[end:]
+p.write_text(s)
+PY
+
+          echo "Initial migration build exit code: $first_build_exit"
+          if grep -n "kotlinOptions\|jvmTarget" android/app/build.gradle.kts; then
+            echo "Legacy Kotlin options still present"
+            exit 1
+          fi
+
       - name: Build debug APK
         run: flutter build apk --debug
 
