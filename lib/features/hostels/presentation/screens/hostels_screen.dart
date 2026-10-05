@@ -494,7 +494,7 @@ class _HostelsScreenState extends State<HostelsScreen> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => context.push('/hostel/${Uri.encodeComponent(hostel.id)}'),
+        onTap: () => context.push('/hostel/${Uri.encodeComponent(hostel.id)}', extra: hostel),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
