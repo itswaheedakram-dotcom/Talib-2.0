@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../app/theme.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -8,9 +9,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const green = Color(0xFF00A878);
-  static const darkGreen = Color(0xFF00543D);
-  static const cream = Color(0xFFF8F8F2);
   bool expanded = true;
 
   static const items = [
@@ -27,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: cream,
+      color: AppColors.legacyCream,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -36,18 +34,27 @@ class _HomeScreenState extends State<HomeScreen> {
             offset: const Offset(0, -1),
             child: Container(
               decoration: const BoxDecoration(
-                color: cream,
+                color: AppColors.legacyCream,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
               ),
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
               child: Column(
                 children: [
                   GestureDetector(
                     onTap: () => setState(() => expanded = !expanded),
-                    child: Icon(
-                      expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                      color: green,
-                      size: 30,
+                    child: Container(
+                      width: 44,
+                      height: 28,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.homeGreen,
+                        size: 24,
+                      ),
                     ),
                   ),
                   AnimatedSize(
@@ -67,22 +74,41 @@ class _HomeScreenState extends State<HomeScreen> {
                               final item = items[i];
                               return InkWell(
                                 onTap: () => context.push(item.route),
-                                borderRadius: BorderRadius.circular(16),
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      width: 74,
-                                      height: 74,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(15),
-                                        boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 10, offset: Offset(0, 4))],
+                                borderRadius: BorderRadius.circular(18),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        width: 68,
+                                        height: 68,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.white,
+                                          borderRadius: BorderRadius.circular(18),
+                                          boxShadow: const [
+                                            BoxShadow(
+                                              color: AppColors.cardShadow,
+                                              blurRadius: 10,
+                                              offset: Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Icon(item.icon, color: AppColors.homeGreen, size: 36),
                                       ),
-                                      child: Icon(item.icon, color: green, size: 39),
-                                    ),
-                                    const SizedBox(height: 7),
-                                    Text(item.title, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xFF8B8B8B))),
-                                  ],
+                                      const SizedBox(height: 7),
+                                      Text(
+                                        item.title,
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.homeMutedText,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
                             },
@@ -104,12 +130,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _hero(BuildContext context) {
     return Container(
-      height: 390,
+      height: 370,
       decoration: const BoxDecoration(
-        color: green,
+        color: AppColors.homeGreen,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(34)),
       ),
-      padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       child: Column(
         children: [
           Row(
@@ -118,35 +144,36 @@ class _HomeScreenState extends State<HomeScreen> {
               Builder(
                 builder: (drawerContext) => IconButton(
                   onPressed: () => Scaffold.of(drawerContext).openDrawer(),
-                  icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 31),
+                  icon: const Icon(Icons.menu_rounded, color: AppColors.white, size: 30),
                 ),
               ),
               IconButton(
                 onPressed: () {},
-                icon: const Icon(Icons.notifications_rounded, color: Colors.white, size: 31),
+                icon: const Icon(Icons.notifications_rounded, color: AppColors.white, size: 30),
               ),
             ],
           ),
           const Spacer(),
-          const Icon(Icons.format_quote_rounded, color: Color(0xFF22F1A5), size: 48),
+          const Icon(Icons.format_quote_rounded, color: AppColors.homeAccent, size: 46),
           const SizedBox(height: 4),
           const Text(
-            'If you cannot do great things, do small things\nin a great way!',
+            'If you cannot do great things, do small things
+in a great way!',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white, fontSize: 19, height: 1.35, fontWeight: FontWeight.w400),
+            style: TextStyle(color: AppColors.white, fontSize: 18, height: 1.35, fontWeight: FontWeight.w400),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 20),
           const Align(
             alignment: Alignment.centerLeft,
-            child: Text('- Napoleon Hill', style: TextStyle(color: Color(0xFF1EF0A1), fontSize: 18, fontWeight: FontWeight.w600)),
+            child: Text('- Napoleon Hill', style: TextStyle(color: AppColors.authorAccent, fontSize: 17, fontWeight: FontWeight.w600)),
           ),
-          const SizedBox(height: 16),
-          Row(
+          const SizedBox(height: 12),
+          const Row(
             mainAxisAlignment: MainAxisAlignment.end,
-            children: const [
-              Icon(Icons.favorite_border_rounded, color: Colors.white, size: 29),
-              SizedBox(width: 26),
-              Icon(Icons.share_rounded, color: Colors.white, size: 29),
+            children: [
+              Icon(Icons.favorite_border_rounded, color: AppColors.white, size: 28),
+              SizedBox(width: 24),
+              Icon(Icons.share_rounded, color: AppColors.white, size: 28),
             ],
           ),
         ],
@@ -159,24 +186,47 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => context.push('/find'),
       borderRadius: BorderRadius.circular(24),
       child: Container(
-        height: 205,
-        padding: const EdgeInsets.fromLTRB(24, 22, 18, 20),
-        decoration: BoxDecoration(color: green, borderRadius: BorderRadius.circular(24)),
+        height: 195,
+        padding: const EdgeInsets.fromLTRB(22, 20, 16, 18),
+        decoration: BoxDecoration(
+          color: AppColors.homeGreen,
+          borderRadius: BorderRadius.circular(24),
+        ),
         child: Row(
           children: [
             const Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text('Finding Institute?', style: TextStyle(color: Colors.white, fontSize: 23, fontWeight: FontWeight.w500)),
-                SizedBox(height: 7),
-                Text('Find an institute that is most suitable\nto your needs and eligibility', style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.25)),
-                SizedBox(height: 15),
-                DecoratedBox(
-                  decoration: BoxDecoration(color: Color(0xFF13E7A2), borderRadius: BorderRadius.all(Radius.circular(25))),
-                  child: Padding(padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.search_rounded, color: Colors.white, size: 18), SizedBox(width: 6), Text('Find Now', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))])),
-                ),
-              ]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Finding Institute?', style: TextStyle(color: AppColors.white, fontSize: 22, fontWeight: FontWeight.w500)),
+                  SizedBox(height: 7),
+                  Text('Find an institute that is most suitable
+to your needs and eligibility', style: TextStyle(color: AppColors.white70, fontSize: 13, height: 1.25)),
+                  SizedBox(height: 15),
+                  DecoratedBox(
+                    decoration: BoxDecoration(color: AppColors.actionAccent, borderRadius: BorderRadius.all(Radius.circular(25))),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.search_rounded, color: AppColors.white, size: 18),
+                          SizedBox(width: 6),
+                          Text('Find Now', style: TextStyle(color: AppColors.white, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            Container(width: 110, height: 150, decoration: const BoxDecoration(color: Color(0x2233FFB0), shape: BoxShape.circle), child: const Icon(Icons.person_search_rounded, color: Colors.white, size: 78)),
+            Container(
+              width: 108,
+              height: 146,
+              decoration: const BoxDecoration(color: AppColors.findBubble, shape: BoxShape.circle),
+              child: const Icon(Icons.person_search_rounded, color: AppColors.white, size: 76),
+            ),
           ],
         ),
       ),
@@ -188,20 +238,51 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => context.push('/community'),
       borderRadius: BorderRadius.circular(24),
       child: Container(
-        height: 190,
-        padding: const EdgeInsets.fromLTRB(20, 20, 22, 20),
-        decoration: BoxDecoration(color: green, borderRadius: BorderRadius.circular(24)),
+        height: 180,
+        padding: const EdgeInsets.fromLTRB(18, 18, 20, 18),
+        decoration: BoxDecoration(
+          color: AppColors.homeGreen,
+          borderRadius: BorderRadius.circular(24),
+        ),
         child: Row(
           children: [
-            Container(width: 105, height: 145, decoration: const BoxDecoration(color: Color(0xFFBFECDD), borderRadius: BorderRadius.all(Radius.circular(70))), child: const Icon(Icons.groups_rounded, color: darkGreen, size: 72)),
+            Container(
+              width: 102,
+              height: 140,
+              decoration: const BoxDecoration(
+                color: AppColors.guidanceBubble,
+                borderRadius: BorderRadius.all(Radius.circular(70)),
+              ),
+              child: const Icon(Icons.groups_rounded, color: AppColors.darkGreen, size: 70),
+            ),
             const SizedBox(width: 16),
-            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text('Need Guidance?', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w500)),
-              SizedBox(height: 7),
-              Text('Ask other people to help you out\nin Community', style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.3)),
-              SizedBox(height: 14),
-              DecoratedBox(decoration: BoxDecoration(color: Color(0xFF13E7A2), borderRadius: BorderRadius.all(Radius.circular(25))), child: Padding(padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.add, color: Colors.white, size: 19), SizedBox(width: 5), Text('Join Now', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))]))),
-            ])),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Need Guidance?', style: TextStyle(color: AppColors.white, fontSize: 20, fontWeight: FontWeight.w500)),
+                  SizedBox(height: 7),
+                  Text('Ask other people to help you out
+in Community', style: TextStyle(color: AppColors.white70, fontSize: 13, height: 1.3)),
+                  SizedBox(height: 14),
+                  DecoratedBox(
+                    decoration: BoxDecoration(color: AppColors.actionAccent, borderRadius: BorderRadius.all(Radius.circular(25))),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add, color: AppColors.white, size: 19),
+                          SizedBox(width: 5),
+                          Text('Join Now', style: TextStyle(color: AppColors.white, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
