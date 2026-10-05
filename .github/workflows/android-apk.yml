@@ -15,7 +15,7 @@ jobs:
           channel: stable
           cache: true
       - name: Generate Android project files
-        run: flutter create --platforms=android --project-name talib_2 --org com.talib2 .
+        run: flutter create --platforms=android --project-name talib_2 --org com.talib .
       - name: Remove generated Flutter sample test
         run: rm -f test/widget_test.dart
       - name: Configure Android SDK compatibility
