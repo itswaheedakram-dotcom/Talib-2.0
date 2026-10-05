@@ -20,6 +20,9 @@ class _HostelsScreenState extends State<HostelsScreen> {
   String _city = 'All';
   String _gender = 'All';
   String _type = 'All';
+  String _roomType = 'All';
+  String _sort = 'Recommended';
+  bool _acOnly = false;
 
   @override
   void initState() {
@@ -65,9 +68,17 @@ class _HostelsScreenState extends State<HostelsScreen> {
       return (query.isEmpty || text.contains(query)) &&
           (_city == 'All' || item.city == _city) &&
           (_gender == 'All' || item.gender == _gender) &&
-          (_type == 'All' || item.type == _type);
+          (_type == 'All' || item.type == _type) &&
+          (_roomType == 'All' || item.roomType == _roomType) &&
+          (!_acOnly || item.ac);
     }).toList();
+    if (_sort == 'Price: Low') result.sort((a, b) => _price(a.price).compareTo(_price(b.price)));
+    if (_sort == 'Nearest') result.sort((a, b) => _distance(a.distance).compareTo(_distance(b.distance)));
+    return result;
   }
+
+  int _price(String value) => int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), '')) ?? 999999999;
+  double _distance(String value) => double.tryParse(value.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 999999;
 
   List<String> _values(List<Hostel> hostels, String Function(Hostel) value) {
     final values = hostels.map(value).where((v) => v.trim().isNotEmpty).toSet().toList()..sort();
@@ -141,6 +152,7 @@ class _HostelsScreenState extends State<HostelsScreen> {
     final cities = _values(allHostels, (h) => h.city);
     final genders = _values(allHostels, (h) => h.gender);
     final types = _values(allHostels, (h) => h.type);
+    final rooms = _values(allHostels, (h) => h.roomType);
     final filtered = _filter(allHostels);
 
     return Scaffold(
@@ -183,6 +195,12 @@ class _HostelsScreenState extends State<HostelsScreen> {
           _chips(cities, _city, (v) => setState(() => _city = v)),
           _chips(genders, _gender, (v) => setState(() => _gender = v)),
           _chips(types, _type, (v) => setState(() => _type = v)),
+          _chips(rooms, _roomType, (v) => setState(() => _roomType = v)),
+          SizedBox(height: 46, child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5), children: [
+            FilterChip(label: const Text('AC only'), selected: _acOnly, onSelected: (v) => setState(() => _acOnly = v)),
+            const SizedBox(width: 7),
+            ...['Recommended', 'Price: Low', 'Nearest'].map((v) => Padding(padding: const EdgeInsets.only(right: 7), child: ChoiceChip(label: Text(v), selected: _sort == v, onSelected: (_) => setState(() => _sort = v)))),
+          ])),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
             child: Row(
@@ -198,6 +216,9 @@ class _HostelsScreenState extends State<HostelsScreen> {
                       _city = 'All';
                       _gender = 'All';
                       _type = 'All';
+                      _roomType = 'All';
+                      _acOnly = false;
+                      _sort = 'Recommended';
                     }),
                     child: const Text('Clear filters'),
                   ),
@@ -238,9 +259,11 @@ class _HostelsScreenState extends State<HostelsScreen> {
           padding: const EdgeInsets.all(14),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Container(
-              width: 58, height: 58,
+              width: 76, height: 76,
               decoration: BoxDecoration(color: AppColors.softGreen, borderRadius: BorderRadius.circular(14)),
-              child: const Icon(Icons.hotel_rounded, color: AppColors.primaryGreen, size: 30),
+              child: hostel.imageUrl.isNotEmpty
+                  ? ClipRRect(borderRadius: BorderRadius.circular(14), child: Image.network(hostel.imageUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.hotel_rounded, color: AppColors.primaryGreen, size: 32)))
+                  : const Icon(Icons.hotel_rounded, color: AppColors.primaryGreen, size: 32),
             ),
             const SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -252,8 +275,16 @@ class _HostelsScreenState extends State<HostelsScreen> {
               const SizedBox(height: 7),
               Wrap(spacing: 6, runSpacing: 4, children: [
                 _smallTag(hostel.type), _smallTag(hostel.gender),
-                if (hostel.price.isNotEmpty) _smallTag(hostel.price),
+                if (hostel.roomType.isNotEmpty) _smallTag(hostel.roomType),
+                if (hostel.ac) _smallTag('AC'),
               ]),
+              if (hostel.price.isNotEmpty || hostel.availability.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Row(children: [
+                  if (hostel.price.isNotEmpty) Expanded(child: Text(hostel.price, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.primaryGreen, fontSize: 12, fontWeight: FontWeight.w700))),
+                  if (hostel.availability.isNotEmpty) Text(hostel.availability, style: const TextStyle(color: AppColors.mutedText, fontSize: 10)),
+                ]),
+              ],
               if (hostel.facilities.isNotEmpty) ...[
                 const SizedBox(height: 7),
                 Text(hostel.facilities.join(' • '), maxLines: 1, overflow: TextOverflow.ellipsis,
