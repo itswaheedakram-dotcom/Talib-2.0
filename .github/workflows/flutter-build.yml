@@ -35,14 +35,14 @@ jobs:
           sed -i -E 's/id\("org\.jetbrains\.kotlin\.android"\) version "[^"]+"/id("org.jetbrains.kotlin.android") version "2.3.0"/' android/settings.gradle.kts
           # Kotlin 2.3 no longer accepts the legacy kotlinOptions.jvmTarget DSL.
           python3 - <<'PY'
-from pathlib import Path
-p = Path("android/app/build.gradle.kts")
-s = p.read_text()
-s = s.replace(
-    '    kotlinOptions {\n        jvmTarget = JavaVersion.VERSION_11.toString()\n    }',
-    '    compilerOptions {\n        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n    }'
-)
-p.write_text(s)
-PY
+          from pathlib import Path
+          p = Path("android/app/build.gradle.kts")
+          s = p.read_text()
+          s = s.replace(
+              '    kotlinOptions {\n        jvmTarget = JavaVersion.VERSION_11.toString()\n    }',
+              '    compilerOptions {\n        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n    }'
+          )
+          p.write_text(s)
+          PY
       - name: Build debug APK
         run: flutter build apk --debug
