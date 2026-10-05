@@ -86,6 +86,214 @@ class _HostelsScreenState extends State<HostelsScreen> {
     return ['All', ...values];
   }
 
+  bool get _hasActiveFilters =>
+      _city != 'All' ||
+      _gender != 'All' ||
+      _type != 'All' ||
+      _roomType != 'All' ||
+      _acOnly ||
+      _sort != 'Recommended';
+
+  void _clearFilters() {
+    setState(() {
+      _city = 'All';
+      _gender = 'All';
+      _type = 'All';
+      _roomType = 'All';
+      _acOnly = false;
+      _sort = 'Recommended';
+    });
+  }
+
+  void _showFilters({
+    required List<String> cities,
+    required List<String> genders,
+    required List<String> types,
+    required List<String> rooms,
+  }) {
+    var city = _city;
+    var gender = _gender;
+    var type = _type;
+    var roomType = _roomType;
+    var acOnly = _acOnly;
+    var sort = _sort;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: AppColors.cream,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Filters',
+                        style: TextStyle(
+                          color: AppColors.darkGreen,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (city != 'All' ||
+                        gender != 'All' ||
+                        type != 'All' ||
+                        roomType != 'All' ||
+                        acOnly ||
+                        sort != 'Recommended')
+                      TextButton(
+                        onPressed: () => setSheetState(() {
+                          city = 'All';
+                          gender = 'All';
+                          type = 'All';
+                          roomType = 'All';
+                          acOnly = false;
+                          sort = 'Recommended';
+                        }),
+                        child: const Text('Clear'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _filterSection(
+                  'City',
+                  cities,
+                  city,
+                  (value) => setSheetState(() => city = value),
+                ),
+                _filterSection(
+                  'Gender',
+                  genders,
+                  gender,
+                  (value) => setSheetState(() => gender = value),
+                ),
+                _filterSection(
+                  'Type',
+                  types,
+                  type,
+                  (value) => setSheetState(() => type = value),
+                ),
+                _filterSection(
+                  'Room type',
+                  rooms,
+                  roomType,
+                  (value) => setSheetState(() => roomType = value),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Other',
+                  style: TextStyle(
+                    color: AppColors.darkGreen,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FilterChip(
+                  label: const Text('AC only'),
+                  selected: acOnly,
+                  onSelected: (value) =>
+                      setSheetState(() => acOnly = value),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Sort by',
+                  style: TextStyle(
+                    color: AppColors.darkGreen,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 7,
+                  runSpacing: 7,
+                  children: ['Recommended', 'Price: Low', 'Nearest']
+                      .map(
+                        (value) => ChoiceChip(
+                          label: Text(value),
+                          selected: sort == value,
+                          onSelected: (_) =>
+                              setSheetState(() => sort = value),
+                        ),
+                      )
+                      .toList(),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen,
+                      foregroundColor: AppColors.white,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _city = city;
+                        _gender = gender;
+                        _type = type;
+                        _roomType = roomType;
+                        _acOnly = acOnly;
+                        _sort = sort;
+                      });
+                      Navigator.pop(sheetContext);
+                    },
+                    child: const Text('Apply filters'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _filterSection(
+    String title,
+    List<String> values,
+    String selected,
+    ValueChanged<String> onChanged,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.darkGreen,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: values
+                .map(
+                  (value) => ChoiceChip(
+                    label: Text(value),
+                    selected: selected == value,
+                    onSelected: (_) => onChanged(value),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showDetails(Hostel hostel) {
     showModalBottomSheet<void>(
       context: context,
@@ -194,19 +402,40 @@ class _HostelsScreenState extends State<HostelsScreen> {
                     },
                     icon: const Icon(Icons.clear_rounded),
                   ),
+                IconButton(
+                  tooltip: 'Filters',
+                  onPressed: () => _showFilters(
+                    cities: cities,
+                    genders: genders,
+                    types: types,
+                    rooms: rooms,
+                  ),
+                  icon: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Icon(Icons.tune_rounded, color: AppColors.primaryGreen),
+                      if (_hasActiveFilters)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            width: 7,
+                            height: 7,
+                            decoration: const BoxDecoration(
+                              color: AppColors.brightGreen,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ],
               onChanged: (_) => setState(() {}),
             ),
           ),
-          _chips(cities, _city, (v) => setState(() => _city = v)),
-          _chips(genders, _gender, (v) => setState(() => _gender = v)),
-          _chips(types, _type, (v) => setState(() => _type = v)),
-          _chips(rooms, _roomType, (v) => setState(() => _roomType = v)),
-          SizedBox(height: 46, child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5), children: [
-            FilterChip(label: const Text('AC only'), selected: _acOnly, onSelected: (v) => setState(() => _acOnly = v)),
-            const SizedBox(width: 7),
-            ...['Recommended', 'Price: Low', 'Nearest'].map((v) => Padding(padding: const EdgeInsets.only(right: 7), child: ChoiceChip(label: Text(v), selected: _sort == v, onSelected: (_) => setState(() => _sort = v)))),
-          ])),
+          // Filters stay hidden until the user opens them from the search area.
+
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
             child: Row(
@@ -216,16 +445,9 @@ class _HostelsScreenState extends State<HostelsScreen> {
                   style: const TextStyle(color: AppColors.darkGreen, fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
-                if (_city != 'All' || _gender != 'All' || _type != 'All')
+                if (_hasActiveFilters)
                   TextButton(
-                    onPressed: () => setState(() {
-                      _city = 'All';
-                      _gender = 'All';
-                      _type = 'All';
-                      _roomType = 'All';
-                      _acOnly = false;
-                      _sort = 'Recommended';
-                    }),
+                    onPressed: _clearFilters,
                     child: const Text('Clear filters'),
                   ),
               ],
@@ -309,20 +531,6 @@ class _HostelsScreenState extends State<HostelsScreen> {
     decoration: BoxDecoration(color: AppColors.softGreen, borderRadius: BorderRadius.circular(10)),
     child: Text(value, style: const TextStyle(color: AppColors.darkGreen, fontSize: 10, fontWeight: FontWeight.w600)),
   );
-
-  Widget _chips(List<String> values, String selected, ValueChanged<String> onChanged) {
-    return SizedBox(
-      height: 46,
-      child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-        scrollDirection: Axis.horizontal,
-        children: values.map((value) => Padding(
-          padding: const EdgeInsets.only(right: 7),
-          child: FilterChip(label: Text(value), selected: selected == value, onSelected: (_) => onChanged(value)),
-        )).toList(),
-      ),
-    );
-  }
 
   Widget _state(IconData icon, String title, String message) => Center(
     child: Padding(
