@@ -25,6 +25,8 @@ jobs:
         run: |
           if [ -f android/app/build.gradle.kts ]; then
             sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' android/app/build.gradle.kts
+            sed -i '/^import java.util.Properties$/a import org.jetbrains.kotlin.gradle.dsl.JvmTarget' android/app/build.gradle.kts
+            sed -i '/kotlinOptions {/,/}/c\    compilerOptions {\n        jvmTarget = JvmTarget.JVM_11\n    }' android/app/build.gradle.kts
           elif [ -f android/app/build.gradle ]; then
             sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/' android/app/build.gradle
           else
@@ -32,17 +34,5 @@ jobs:
             exit 1
           fi
           sed -i -E 's/(org\.jetbrains\.kotlin\.android.*version ")[^"]+/\12.3.0/' android/settings.gradle.kts
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path("android/app/build.gradle.kts")
-          s = p.read_text()
-          s = s.replace("import java.util.Properties\n", "import java.util.Properties\nimport org.jetbrains.kotlin.gradle.dsl.JvmTarget\n")
-          s = s.replace("""    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
-    }""", """    compilerOptions {
-        jvmTarget = JvmTarget.JVM_11
-    }""")
-          p.write_text(s)
-          PY
       - name: Build debug APK
         run: flutter build apk --debug
