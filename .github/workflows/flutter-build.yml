@@ -8,7 +8,7 @@ on:
 
 jobs:
   flutter_setup:
-    name: Flutter Android generation diagnostic
+    name: Flutter Android configuration diagnostic
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,16 +30,31 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android --project-name talib_2 --org com.talib2 .
 
-      - name: Verify Android project
+      - name: Configure Android project
         shell: bash
         run: |
+          set -e
           test -f android/app/build.gradle.kts
           test -f android/settings.gradle.kts
-          echo "Android project generated successfully"
+
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' android/app/build.gradle.kts
+          sed -i -E 's/applicationId = "[^"]+"/applicationId = "com.talib.app"/' android/app/build.gradle.kts
+          sed -i -E 's/namespace = "[^"]+"/namespace = "com.talib.app"/' android/app/build.gradle.kts
+
+      - name: Verify Android configuration
+        shell: bash
+        run: |
+          set -e
           echo "Application Gradle:"
-          sed -n '1,120p' android/app/build.gradle.kts
+          sed -n '1,140p' android/app/build.gradle.kts
           echo "Settings Gradle:"
-          sed -n '1,100p' android/settings.gradle.kts
+          sed -n '1,110p' android/settings.gradle.kts
+          echo "Checking Kotlin legacy settings:"
+          if grep -n "kotlinOptions\|jvmTarget" android/app/build.gradle.kts; then
+            true
+          else
+            echo "No legacy Kotlin jvmTarget settings found"
+          fi
 
       - name: Verify Flutter
         run: flutter --version
