@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../app/theme.dart';
 import '../../data/hostel_repository.dart';
 import '../../data/hostel_seed_data.dart';
@@ -160,6 +161,11 @@ class _HostelsScreenState extends State<HostelsScreen> {
       appBar: AppBar(
         title: const Text('Hostels'),
         actions: [
+          IconButton(
+            tooltip: 'List your hostel',
+            onPressed: () => context.push('/hostels/list'),
+            icon: const Icon(Icons.add_business_outlined, color: AppColors.white),
+          ),
           Center(
             child: Padding(
               padding: const EdgeInsets.only(right: 16),
