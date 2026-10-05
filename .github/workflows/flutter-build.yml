@@ -23,5 +23,8 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Analyze Dart code
+        run: flutter analyze
+
       - name: Verify Flutter
         run: flutter --version
