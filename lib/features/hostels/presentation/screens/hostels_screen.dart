@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../app/theme.dart';
@@ -13,7 +14,9 @@ class HostelsScreen extends StatefulWidget {
 
 class _HostelsScreenState extends State<HostelsScreen> {
   final _searchController = TextEditingController();
-  final _repository = HostelRepository();
+  HostelRepository? _repository;
+  StreamSubscription<List<Hostel>>? _hostelSubscription;
+  List<Hostel> _hostels = List<Hostel>.from(exampleHostels);
   String _city = 'All';
   String _gender = 'All';
   String _type = 'All';
@@ -21,20 +24,33 @@ class _HostelsScreenState extends State<HostelsScreen> {
   @override
   void initState() {
     super.initState();
-    _seedDemoData();
+    _connectToFirestore();
   }
 
-  Future<void> _seedDemoData() async {
+  Future<void> _connectToFirestore() async {
     try {
-      await _repository.seedDemoDataIfEmpty();
+      final repository = HostelRepository();
+      _repository = repository;
+      await repository.seedDemoDataIfEmpty();
+      _hostelSubscription = repository.watchHostels().listen(
+        (hostels) {
+          if (!mounted) return;
+          setState(() {
+            _hostels = hostels.isEmpty
+                ? List<Hostel>.from(exampleHostels)
+                : hostels;
+          });
+        },
+        onError: (_) {},
+      );
     } catch (_) {
-      // Demo seeding is best-effort. The screen remains usable when Firebase
-      // is unavailable or the current user is not permitted to write.
+      // Keep bundled examples visible if Firebase is unavailable.
     }
   }
 
   @override
   void dispose() {
+    _hostelSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -121,79 +137,90 @@ class _HostelsScreenState extends State<HostelsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final allHostels = _hostels;
+    final cities = _values(allHostels, (h) => h.city);
+    final genders = _values(allHostels, (h) => h.gender);
+    final types = _values(allHostels, (h) => h.type);
+    final filtered = _filter(allHostels);
+
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
         title: const Text('Hostels'),
         actions: [
-          StreamBuilder<List<Hostel>>(
-            stream: _repository.watchHostels(),
-            builder: (context, snapshot) {
-              final count = _filter(snapshot.data ?? const <Hostel>[]).length;
-              return Center(child: Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Text('$count', style: const TextStyle(color: AppColors.white, fontWeight: FontWeight.w700)),
-              ));
-            },
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(
+                '${filtered.length}',
+                style: const TextStyle(color: AppColors.white, fontWeight: FontWeight.w700),
+              ),
+            ),
           ),
         ],
       ),
-      body: StreamBuilder<List<Hostel>>(
-        stream: _repository.watchHostels(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) return _state(Icons.cloud_off_outlined, 'Unable to load hostels', 'Please check your connection and try again.');
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
-          }
-
-          // Keep the bundled examples visible even when Firestore is empty or
-          // demo seeding is blocked by permissions/offline state.
-          final firestoreHostels = snapshot.data ?? const <Hostel>[];
-          final allHostels = firestoreHostels.isEmpty ? exampleHostels : firestoreHostels;
-          final cities = _values(allHostels, (h) => h.city);
-          final genders = _values(allHostels, (h) => h.gender);
-          final types = _values(allHostels, (h) => h.type);
-          final filtered = _filter(allHostels);
-
-          return Column(children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-              child: SearchBar(
-                controller: _searchController,
-                hintText: 'Search hostels, cities, areas...',
-                leading: const Icon(Icons.search_rounded, color: AppColors.primaryGreen),
-                trailing: [
-                  if (_searchController.text.isNotEmpty)
-                    IconButton(onPressed: () { _searchController.clear(); setState(() {}); }, icon: const Icon(Icons.clear_rounded)),
-                ],
-                onChanged: (_) => setState(() {}),
-              ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+            child: SearchBar(
+              controller: _searchController,
+              hintText: 'Search hostels, cities, areas...',
+              leading: const Icon(Icons.search_rounded, color: AppColors.primaryGreen),
+              trailing: [
+                if (_searchController.text.isNotEmpty)
+                  IconButton(
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() {});
+                    },
+                    icon: const Icon(Icons.clear_rounded),
+                  ),
+              ],
+              onChanged: (_) => setState(() {}),
             ),
-            _chips(cities, _city, (v) => setState(() => _city = v)),
-            _chips(genders, _gender, (v) => setState(() => _gender = v)),
-            _chips(types, _type, (v) => setState(() => _type = v)),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
-              child: Row(children: [
-                Text('${filtered.length} hostels', style: const TextStyle(color: AppColors.darkGreen, fontWeight: FontWeight.w600)),
+          ),
+          _chips(cities, _city, (v) => setState(() => _city = v)),
+          _chips(genders, _gender, (v) => setState(() => _gender = v)),
+          _chips(types, _type, (v) => setState(() => _type = v)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+            child: Row(
+              children: [
+                Text(
+                  '${filtered.length} hostels',
+                  style: const TextStyle(color: AppColors.darkGreen, fontWeight: FontWeight.w600),
+                ),
                 const Spacer(),
                 if (_city != 'All' || _gender != 'All' || _type != 'All')
-                  TextButton(onPressed: () => setState(() { _city = 'All'; _gender = 'All'; _type = 'All'; }), child: const Text('Clear filters')),
-              ]),
+                  TextButton(
+                    onPressed: () => setState(() {
+                      _city = 'All';
+                      _gender = 'All';
+                      _type = 'All';
+                    }),
+                    child: const Text('Clear filters'),
+                  ),
+              ],
             ),
-            Expanded(
-              child: filtered.isEmpty
-                  ? _state(Icons.hotel_outlined, allHostels.isEmpty ? 'No hostels available' : 'No hostels found',
-                      allHostels.isEmpty ? 'Hostel listings will appear here when they are added.' : 'Try another search or filter.')
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) => _card(filtered[index]),
-                    ),
-            ),
-          ]);
-        },
+          ),
+          Expanded(
+            child: filtered.isEmpty
+                ? _state(
+                    Icons.hotel_outlined,
+                    allHostels.isEmpty ? 'No hostels available' : 'No hostels found',
+                    allHostels.isEmpty
+                        ? 'Hostel listings will appear here when they are added.'
+                        : 'Try another search or filter.',
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) => _card(filtered[index]),
+                  ),
+          ),
+        ],
       ),
     );
   }
