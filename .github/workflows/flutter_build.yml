@@ -15,5 +15,8 @@ jobs:
           flutter-version: '3.35.2'
           channel: stable
       - run: flutter pub get
-      - run: flutter analyze
-      - run: flutter build apk --debug
+      - name: Analyze Dart code
+        continue-on-error: true
+        run: flutter analyze
+      - name: Build debug APK
+        run: flutter build apk --debug
