@@ -44,9 +44,12 @@ jobs:
           # Diagnostic build: keep Firebase native services disabled.
           rm -f android/app/google-services.json
 
-          # Flutter 3.35.2 generates Kotlin 2.1.x by default. Keep the
-          # generated project consistent with its Firebase-free diagnostic build.
-          # No Firebase Auth dependency is applied in this workflow.
+          # Firebase packages are still resolved by pub, so the generated
+          # Android project must use the Kotlin metadata version required by
+          # the installed Firebase Auth plugin.
+          if [ -f android/settings.gradle.kts ]; then
+            sed -i -E "s/id\\(\\\"org.jetbrains.kotlin.android\\\"\\) version \\\"[^\\\"]+\\\"/id(\\\"org.jetbrains.kotlin.android\\\") version \\\"2.3.0\\\"/" android/settings.gradle.kts
+          fi
 
       - name: Build debug APK
         run: flutter build apk --debug
