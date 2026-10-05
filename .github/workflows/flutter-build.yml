@@ -41,17 +41,7 @@ jobs:
           sed -i -E 's/namespace = "[^"]+"/namespace = "com.talib.app"/' android/app/build.gradle.kts
 
           # Firebase Auth 24.2.0 is compiled with Kotlin metadata 2.3.0.
-          python3 - <<'PY'
-from pathlib import Path
-p = Path("android/settings.gradle.kts")
-s = p.read_text()
-lines = s.splitlines()
-for i, line in enumerate(lines):
-    if 'id("org.jetbrains.kotlin.android") version' in line:
-        prefix = line.split('id("org.jetbrains.kotlin.android") version')[0]
-        lines[i] = prefix + 'id("org.jetbrains.kotlin.android") version "2.3.0"'
-p.write_text("\n".join(lines) + "\n")
-PY
+          python3 -c 'from pathlib import Path; p=Path("android/settings.gradle.kts"); s=p.read_text(); lines=s.splitlines(); lines=[(line.split("id(\"org.jetbrains.kotlin.android\") version")[0] + "id(\"org.jetbrains.kotlin.android\") version \"2.3.0\"" if "id(\"org.jetbrains.kotlin.android\") version" in line else line) for line in lines]; p.write_text("\n".join(lines)+"\n")'
 
       - name: Build debug APK
         run: flutter build apk --debug
