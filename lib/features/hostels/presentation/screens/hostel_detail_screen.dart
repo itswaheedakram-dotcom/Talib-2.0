@@ -145,6 +145,16 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
     }
   }
 
+  Future<void> _callPhone() async {
+    final value = hostel.phone.trim();
+    final uri = Uri(scheme: 'tel', path: value);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      await _copyPhone();
+    }
+  }
+
   Future<void> _copyPhone() async {
     await Clipboard.setData(ClipboardData(text: hostel.phone));
     if (!mounted) return;
@@ -286,7 +296,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                 _contactButton(
                   Icons.phone_outlined,
                   hostel.phone,
-                  _copyPhone,
+                  _callPhone,
                 ),
               if (hostel.phone.isNotEmpty && hostel.website.isNotEmpty)
                 const SizedBox(height: 8),
@@ -325,7 +335,10 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                 if (mounted) setState(() => _galleryIndex = index);
               },
               itemBuilder: (_, index) {
-                return Image.network(
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
                   values[index],
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => const Center(
@@ -335,6 +348,30 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                       size: 48,
                     ),
                   ),
+                    if (values.length > 1)
+                      Positioned(
+                        bottom: 10,
+                        left: 0,
+                        right: 0,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(
+                            values.length,
+                            (dot) => Container(
+                              width: dot == _galleryIndex ? 18 : 7,
+                              height: 7,
+                              margin: const EdgeInsets.symmetric(horizontal: 3),
+                              decoration: BoxDecoration(
+                                color: dot == _galleryIndex
+                                    ? AppColors.white
+                                    : AppColors.white70,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 );
               },
             ),
