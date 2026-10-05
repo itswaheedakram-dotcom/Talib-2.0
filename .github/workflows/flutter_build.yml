@@ -31,6 +31,6 @@ jobs:
             echo "Android app Gradle file not found"
             exit 1
           fi
-          sed -i 's/org.jetbrains.kotlin.android" version "[^"]*"/org.jetbrains.kotlin.android" version "2.3.0"/' android/settings.gradle.kts
+          sed -i -E 's/(org\.jetbrains\.kotlin\.android.*version ")[^"]+/\12.3.0/' android/settings.gradle.kts
       - name: Build debug APK
         run: flutter build apk --debug
