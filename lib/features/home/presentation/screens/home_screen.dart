@@ -157,8 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const Icon(Icons.format_quote_rounded, color: AppColors.homeAccent, size: 46),
           const SizedBox(height: 4),
           const Text(
-            'If you cannot do great things, do small things
-in a great way!',
+            'If you cannot do great things, do small things\nin a great way!',
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.white, fontSize: 18, height: 1.35, fontWeight: FontWeight.w400),
           ),
@@ -201,8 +200,7 @@ in a great way!',
                 children: [
                   Text('Finding Institute?', style: TextStyle(color: AppColors.white, fontSize: 22, fontWeight: FontWeight.w500)),
                   SizedBox(height: 7),
-                  Text('Find an institute that is most suitable
-to your needs and eligibility', style: TextStyle(color: AppColors.white70, fontSize: 13, height: 1.25)),
+                  Text('Find an institute that is most suitable\nto your needs and eligibility', style: TextStyle(color: AppColors.white70, fontSize: 13, height: 1.25)),
                   SizedBox(height: 15),
                   DecoratedBox(
                     decoration: BoxDecoration(color: AppColors.actionAccent, borderRadius: BorderRadius.all(Radius.circular(25))),
@@ -263,8 +261,7 @@ to your needs and eligibility', style: TextStyle(color: AppColors.white70, fontS
                 children: [
                   Text('Need Guidance?', style: TextStyle(color: AppColors.white, fontSize: 20, fontWeight: FontWeight.w500)),
                   SizedBox(height: 7),
-                  Text('Ask other people to help you out
-in Community', style: TextStyle(color: AppColors.white70, fontSize: 13, height: 1.3)),
+                  Text('Ask other people to help you out\nin Community', style: TextStyle(color: AppColors.white70, fontSize: 13, height: 1.3)),
                   SizedBox(height: 14),
                   DecoratedBox(
                     decoration: BoxDecoration(color: AppColors.actionAccent, borderRadius: BorderRadius.all(Radius.circular(25))),
