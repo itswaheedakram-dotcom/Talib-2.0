@@ -18,6 +18,21 @@ class _HostelsScreenState extends State<HostelsScreen> {
   String _type = 'All';
 
   @override
+  void initState() {
+    super.initState();
+    _seedDemoData();
+  }
+
+  Future<void> _seedDemoData() async {
+    try {
+      await _repository.seedDemoDataIfEmpty();
+    } catch (_) {
+      // Demo seeding is best-effort. The screen remains usable when Firebase
+      // is unavailable or the current user is not permitted to write.
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
