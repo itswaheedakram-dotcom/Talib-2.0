@@ -33,7 +33,7 @@ jobs:
           fi
           # Firebase Auth 24.x requires Kotlin 2.3.x.
           sed -i -E 's/id\("org\.jetbrains\.kotlin\.android"\) version "[^"]+"/id("org.jetbrains.kotlin.android") version "2.3.0"/' android/settings.gradle.kts
-          # Kotlin 2.3 no longer accepts the legacy kotlinOptions.jvmTarget DSL.
+          # Kotlin 2.3 requires the modern compilerOptions DSL.
           python3 - <<'PY'
           from pathlib import Path
           p = Path("android/app/build.gradle.kts")
@@ -42,6 +42,7 @@ jobs:
               '    kotlinOptions {\n        jvmTarget = JavaVersion.VERSION_11.toString()\n    }',
               '    kotlin {\n        compilerOptions {\n            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n        }\n    }'
           )
+          s = s.replace('JavaVersion.VERSION_11', 'JavaVersion.VERSION_17')
           p.write_text(s)
           PY
       - name: Build debug APK
