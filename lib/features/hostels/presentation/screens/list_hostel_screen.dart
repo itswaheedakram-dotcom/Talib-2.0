@@ -24,6 +24,7 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
   final _availability = TextEditingController();
   final _meals = TextEditingController();
   final _phone = TextEditingController();
+  final _website = TextEditingController();
   final _facilities = TextEditingController();
   final _description = TextEditingController();
   final _imageUrl = TextEditingController();
@@ -36,7 +37,7 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
   @override
   void dispose() {
     for (final c in [_name, _city, _area, _address, _price, _security, _room,
-      _availability, _meals, _phone, _facilities, _description, _imageUrl]) {
+      _availability, _meals, _phone, _website, _facilities, _description, _imageUrl]) {
       c.dispose();
     }
     super.dispose();
@@ -64,6 +65,7 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
         availability: _availability.text.trim(),
         meals: _meals.text.trim(),
         phone: _phone.text.trim(),
+        website: _website.text.trim(),
         facilities: _facilities.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toSet().toList(),
         description: _description.text.trim(),
         imageUrl: _imageUrl.text.trim(),
@@ -134,6 +136,7 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
             _section('Facilities & Contact'),
             _field(_facilities, 'Facilities (comma separated)', Icons.apartment_outlined, maxLines: 2),
             _field(_phone, 'Phone / WhatsApp', Icons.phone_outlined, required: true, keyboard: TextInputType.phone),
+            _field(_website, 'Website (optional)', Icons.language_outlined, keyboard: TextInputType.url),
             _field(_imageUrl, 'Main Photo URL (optional)', Icons.image_outlined, keyboard: TextInputType.url),
             _field(_description, 'About Your Hostel', Icons.description_outlined, maxLines: 4),
             const SizedBox(height: 8),
