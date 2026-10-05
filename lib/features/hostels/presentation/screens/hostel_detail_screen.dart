@@ -145,6 +145,20 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
     }
   }
 
+  Future<void> _openMaps() async {
+    final query = hostel.address.trim().isNotEmpty
+        ? hostel.address.trim()
+        : <String>[hostel.area, hostel.city].where((e) => e.trim().isNotEmpty).join(', ');
+    if (query.isEmpty) return;
+    final uri = Uri.https('www.google.com', '/maps/search/', <String, String>{
+      'api': '1',
+      'query': query,
+    });
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   Future<void> _callPhone() async {
     final value = hostel.phone.trim();
     final uri = Uri(scheme: 'tel', path: value);
@@ -205,6 +219,15 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                 Icons.near_me_outlined,
                 'Distance',
                 hostel.distance,
+              ),
+            if (hostel.address.isNotEmpty || hostel.area.isNotEmpty || hostel.city.isNotEmpty)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _openMaps,
+                  icon: const Icon(Icons.map_outlined),
+                  label: const Text('Open in Maps'),
+                ),
               ),
           ]),
           _sectionTitle('Complete Details'),
