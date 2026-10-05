@@ -20,6 +20,8 @@ jobs:
         run: flutter analyze
       - name: Generate Android project
         run: flutter create --platforms=android --project-name talib_2 --org com.talib .
+      - name: Configure Firebase Android
+        run: cp google-services.json android/app/google-services.json
       - name: Configure Android compatibility
         shell: bash
         run: |
