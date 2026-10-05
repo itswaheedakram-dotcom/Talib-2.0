@@ -329,55 +329,54 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                 size: 72,
               ),
             )
-          : PageView.builder(
-              itemCount: values.length,
-              onPageChanged: (index) {
-                if (mounted) setState(() => _galleryIndex = index);
-              },
-              itemBuilder: (_, index) {
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.network(
-                  values[index],
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Center(
-                    child: Icon(
-                      Icons.broken_image_outlined,
-                      color: AppColors.primaryGreen,
-                      size: 48,
-                    ),
-                  ),
-                    if (values.length > 1)
-                      Positioned(
-                        bottom: 10,
-                        left: 0,
-                        right: 0,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                            values.length,
-                            (dot) => Container(
-                              width: dot == _galleryIndex ? 18 : 7,
-                              height: 7,
-                              margin: const EdgeInsets.symmetric(horizontal: 3),
-                              decoration: BoxDecoration(
-                                color: dot == _galleryIndex
-                                    ? AppColors.white
-                                    : AppColors.white70,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
+          : Stack(
+              children: [
+                PageView.builder(
+                  itemCount: values.length,
+                  onPageChanged: (index) {
+                    if (mounted) setState(() => _galleryIndex = index);
+                  },
+                  itemBuilder: (_, index) {
+                    return Image.network(
+                      values[index],
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Center(
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: AppColors.primaryGreen,
+                          size: 48,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                if (values.length > 1)
+                  Positioned(
+                    bottom: 10,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        values.length,
+                        (dot) => Container(
+                          width: dot == _galleryIndex ? 18 : 7,
+                          height: 7,
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          decoration: BoxDecoration(
+                            color: dot == _galleryIndex
+                                ? AppColors.white
+                                : AppColors.white70,
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
-                  ],
-                );
-              },
+                    ),
+                  ),
+              ],
             ),
     );
   }
-
   Widget _reviewsCard() {
     return StreamBuilder<List<HostelReview>>(
       stream: _reviewStream(),
