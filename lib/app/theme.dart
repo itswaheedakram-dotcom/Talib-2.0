@@ -62,7 +62,7 @@ ThemeData buildTheme() {
       onSecondary: AppColors.darkGreen,
       onSurface: AppColors.darkGreen,
     ),
-    cardTheme: CardThemeData(
+    cardTheme: CardTheme(
       elevation: 0,
       margin: const EdgeInsets.all(6),
       color: AppColors.white,
