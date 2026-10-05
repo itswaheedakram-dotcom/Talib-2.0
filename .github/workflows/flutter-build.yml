@@ -10,22 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.35.2'
           channel: stable
-
       - run: flutter pub get
-
       - name: Analyze Dart code
         continue-on-error: true
         run: flutter analyze
-
       - name: Generate Android project
         run: flutter create --platforms=android --project-name talib_2 --org com.talib2 .
-
-      - name: Configure Android SDK compatibility
+      - name: Configure Android compatibility
         shell: bash
         run: |
           if [ -f android/app/build.gradle.kts ]; then
@@ -36,6 +31,6 @@ jobs:
             echo "Android app Gradle file not found"
             exit 1
           fi
-
+          sed -i -E 's/(org\.jetbrains\.kotlin\.android.*version ")[^"]+/\12.3.0/' android/settings.gradle.kts
       - name: Build debug APK
         run: flutter build apk --debug
