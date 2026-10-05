@@ -13,18 +13,20 @@ class HostelRepository {
 
   Stream<List<Hostel>> watchHostels() {
     return _collection
-        .where('status', isEqualTo: 'approved')
-        .orderBy('name')
         .snapshots()
-        .map((snapshot) => snapshot.docs.map(Hostel.fromDoc).toList());
+        .map((snapshot) => snapshot.docs
+            .map(Hostel.fromDoc)
+            .where((hostel) => hostel.status == 'approved')
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name)));
   }
 
   Stream<List<Hostel>> watchOwnerHostels(String ownerId) {
     return _collection
         .where('ownerId', isEqualTo: ownerId)
-        .orderBy('name')
         .snapshots()
-        .map((snapshot) => snapshot.docs.map(Hostel.fromDoc).toList());
+        .map((snapshot) => snapshot.docs.map(Hostel.fromDoc).toList()
+          ..sort((a, b) => a.name.compareTo(b.name)));
   }
 
   Future<void> seedDemoDataIfEmpty() async {
