@@ -35,11 +35,67 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
 
   Widget _reviewsCard()=>StreamBuilder<List<HostelReview>>(stream:hostel.id.isEmpty?const Stream.empty():_repo.watchReviews(hostel.id),builder:(context,snapshot){final reviews=snapshot.data??const <HostelReview>[];return _card([Row(children:[_ratingSummary(hostel.rating,hostel.reviewCount),const Spacer(),if(FirebaseAuth.instance.currentUser!=null)TextButton(onPressed:_showReviewEditor,child:Text(_myReview==null?'Write review':'Edit review'))]),const SizedBox(height:12),if(reviews.isEmpty)const Text('No reviews yet. Be the first registered member to review this hostel.',style:TextStyle(color:AppColors.mutedText,height:1.4)),...reviews.take(8).map((r)=>Padding(padding:const EdgeInsets.only(top:12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Expanded(child:Text(r.userName,style:const TextStyle(color:AppColors.darkGreen,fontWeight:FontWeight.w700))),_stars(r.rating)]),if(r.comment.isNotEmpty)Padding(padding:const EdgeInsets.only(top:5),child:Text(r.comment,style:const TextStyle(color:AppColors.mutedText,height:1.35)))])))]);});
 
-  Future<void> _showReviewEditor() async { final result=await showModalBottomSheet<bool>(context:context,isScrollControlled:true,showDragHandle:true,backgroundColor:AppColors.cream,builder:(sheet)=>StatefulBuilder(builder:(context,setSheet)=>Padding(padding:EdgeInsets.fromLTRB(20,4,20,MediaQuery.of(context).viewInsets.bottom+20),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Your Review',style:TextStyle(color:AppColors.darkGreen,fontSize:21,fontWeight:FontWeight.w700)),const SizedBox(height:12),Center(child:Wrap(children:List.generate(5,(i)=>IconButton(onPressed:(){setSheet((){_myRating=i+1.0;});},icon:Icon(i<_myRating?Icons.star_rounded:Icons.star_border_rounded,color:AppColors.primaryGreen,size:32))))),TextField(controller:_comment,maxLines:4,decoration:const InputDecoration(labelText:'Review',hintText:'Share your experience')),const SizedBox(height:14),SizedBox(width:double.infinity,child:FilledButton(style:FilledButton.styleFrom(backgroundColor:AppColors.primaryGreen,foregroundColor:AppColors.white),onPressed:_savingReview?null:() async{await _submitReview();if(context.mounted)Navigator.pop(context,true);},child:Text(_savingReview?'Saving...':'Submit review')))])));if(result==true&&mounted)setState((){}); }
+  Future<void> _showReviewEditor() async {
+    final result=await showModalBottomSheet<bool>(
+      context:context,isScrollControlled:true,showDragHandle:true,backgroundColor:AppColors.cream,
+      builder:(sheetContext)=>StatefulBuilder(
+        builder:(context,setSheet)=>Padding(
+          padding:EdgeInsets.fromLTRB(20,8,20,MediaQuery.of(context).viewInsets.bottom+20),
+          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+            const Text('Your Review',style:TextStyle(color:AppColors.darkGreen,fontSize:21,fontWeight:FontWeight.w700)),
+            const SizedBox(height:12),
+            Center(child:Row(mainAxisSize:MainAxisSize.min,children:List.generate(5,(index)=>IconButton(
+              onPressed:()=>setSheet(()=>_myRating=index+1.0),
+              icon:Icon(index<_myRating?Icons.star_rounded:Icons.star_border_rounded,color:AppColors.primaryGreen,size:32),
+            )))),
+            TextField(controller:_comment,maxLines:4,decoration:const InputDecoration(labelText:'Review',hintText:'Share your experience')),
+            const SizedBox(height:14),
+            SizedBox(width:double.infinity,child:FilledButton(
+              style:FilledButton.styleFrom(backgroundColor:AppColors.primaryGreen,foregroundColor:AppColors.white),
+              onPressed:_savingReview?null:() async{
+                await _submitReview();
+                if(sheetContext.mounted)Navigator.of(sheetContext).pop(true);
+              },
+              child:Text(_savingReview?'Saving...':'Submit review'),
+            )),
+          ]),
+        ),
+      ),
+    );
+    if(result==true&&mounted)setState((){});
+  }
 
   Widget _ratingSummary(double rating,int count)=>Row(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.star_rounded,color:AppColors.primaryGreen,size:19),const SizedBox(width:3),Text(rating>0?rating.toStringAsFixed(1):'New',style:const TextStyle(color:AppColors.darkGreen,fontWeight:FontWeight.w700,fontSize:12)),if(count>0)Text(' ($count)',style:const TextStyle(color:AppColors.mutedText,fontSize:11))]);
   Widget _stars(double rating)=>Row(mainAxisSize:MainAxisSize.min,children:List.generate(5,(i)=>Icon(i<rating.round()?Icons.star_rounded:Icons.star_border_rounded,color:AppColors.primaryGreen,size:16)));
-  Widget _gallery(List<String> images)=>Column(children:[Container(margin:const EdgeInsets.symmetric(horizontal:16),height:235,decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(18)),clipBehavior:Clip.antiAlias,child:images.isEmpty?const Center(child:Icon(Icons.hotel_rounded,color:AppColors.primaryGreen,size:72)):PageView.builder(itemCount:images.length,onPageChanged:(i)=>setState(()=>_page=i),itemBuilder:(_,i)=>Image.network(images[i],fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,color:AppColors.primaryGreen,size:48))))),if(images.length>1)Padding(padding:const EdgeInsets.only(top:8),child:Row(mainAxisAlignment:MainAxisAlignment.center,children:List.generate(images.length,(i)=>Container(width:7,height:7,margin:const EdgeInsets.symmetric(horizontal:3),decoration:BoxDecoration(color:i==_page?AppColors.primaryGreen:AppColors.divider,shape:BoxShape.circle))))]);
+  Widget _gallery(List<String> images) {
+    return Column(children:[
+      Container(
+        margin:const EdgeInsets.symmetric(horizontal:16),
+        height:235,
+        decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(18)),
+        clipBehavior:Clip.antiAlias,
+        child:images.isEmpty
+          ? const Center(child:Icon(Icons.hotel_rounded,color:AppColors.primaryGreen,size:72))
+          : PageView.builder(
+              itemCount:images.length,
+              onPageChanged:(index)=>setState(()=>_page=index),
+              itemBuilder:(_,index)=>Image.network(
+                images[index],fit:BoxFit.cover,
+                errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,color:AppColors.primaryGreen,size:48)),
+              ),
+            ),
+      ),
+      if(images.length>1)
+        Padding(
+          padding:const EdgeInsets.only(top:8),
+          child:Row(mainAxisAlignment:MainAxisAlignment.center,children:List.generate(images.length,(index)=>Container(
+            width:7,height:7,margin:const EdgeInsets.symmetric(horizontal:3),
+            decoration:BoxDecoration(color:index==_page?AppColors.primaryGreen:AppColors.divider,shape:BoxShape.circle),
+          ))),
+        ),
+    ]);
+  }
+
   Widget _title(String t)=>Padding(padding:const EdgeInsets.fromLTRB(0,18,0,8),child:Text(t,style:const TextStyle(color:AppColors.darkGreen,fontSize:17,fontWeight:FontWeight.w700)));
   Widget _card(List<Widget> c)=>Container(width:double.infinity,padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:AppColors.white,borderRadius:BorderRadius.circular(16)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:c));
   Widget _row(IconData i,String l,String v)=>Padding(padding:const EdgeInsets.symmetric(vertical:6),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(i,color:AppColors.primaryGreen,size:20),const SizedBox(width:11),Expanded(child:RichText(text:TextSpan(children:[TextSpan(text:'$l\n',style:const TextStyle(color:AppColors.mutedText,fontSize:11,fontWeight:FontWeight.w600)),TextSpan(text:v,style:const TextStyle(color:AppColors.darkGreen,fontSize:14,height:1.25))])))]));
