@@ -55,19 +55,30 @@ jobs:
         shell: bash
         run: |
           # Flutter 3.35 upgrades the generated Gradle file on its first
-          # build. Let that migration run once, then patch the migrated file.
+          # build. Allow that migration to finish, then remove the legacy
+          # kotlinOptions block before the real Gradle build.
           set +e
           flutter build apk --debug
           first_build_exit=$?
           set -e
 
           if [ -f android/app/build.gradle.kts ]; then
-            sed -i 's/jvmTarget = JavaVersion.VERSION_11.toString()/jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11/' android/app/build.gradle.kts
+            python3 - <<'PY'
+from pathlib import Path
+p = Path("android/app/build.gradle.kts")
+s = p.read_text()
+start = s.find("    kotlinOptions {")
+if start >= 0:
+    end = s.find("    }", start)
+    if end >= 0:
+        end += len("    }")
+        s = s[:start] + s[end:]
+p.write_text(s)
+PY
           fi
 
-          # The first build is only for Flutter's project migration.
-          # The real build below must determine the job result.
           echo "Initial migration build exit code: $first_build_exit"
+          grep -n -A3 -B2 "kotlinOptions\|jvmTarget" android/app/build.gradle.kts || true
 
       - name: Build debug APK
         run: flutter build apk --debug
