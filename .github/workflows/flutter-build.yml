@@ -47,3 +47,5 @@ jobs:
           PY
       - name: Build debug APK
         run: flutter build apk --debug
+
+# Fresh Firebase integration verification trigger
