@@ -18,6 +18,7 @@ class Hostel {
   final List<String> imageUrls;
   final String description;
   final String phone;
+  final String website;
   final String imageUrl;
   final String address;
   final String ownerId;
@@ -44,6 +45,7 @@ class Hostel {
     this.imageUrls = const [],
     this.description = '',
     this.phone = '',
+    this.website = '',
     this.imageUrl = '',
     this.address = '',
     this.ownerId = '',
@@ -75,6 +77,7 @@ class Hostel {
       imageUrls: rawImages is List ? List<String>.from(rawImages.map((e) => e.toString())) : const [],
       description: (data['description'] ?? '').toString(),
       phone: (data['phone'] ?? '').toString(),
+      website: (data['website'] ?? '').toString(),
       address: (data['address'] ?? '').toString(),
       ownerId: (data['ownerId'] ?? '').toString(),
       ownerName: (data['ownerName'] ?? '').toString(),
@@ -102,6 +105,7 @@ class Hostel {
     'imageUrls': imageUrls,
     'description': description,
     'phone': phone,
+    'website': website,
     'address': address,
     'ownerId': ownerId,
     'ownerName': ownerName,
