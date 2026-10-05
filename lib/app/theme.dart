@@ -1,15 +1,31 @@
 import 'package:flutter/material.dart';
 
-ThemeData buildTheme() {
-  // Talib reference palette — keep the whole application on this same palette.
-  const primaryGreen = Color(0xFF00A66A);
-  const darkGreen = Color(0xFF00543D);
-  const brightGreen = Color(0xFF00D99A);
-  const cream = Color(0xFFFAF9F2);
-  const softGreen = Color(0xFFEAF8F2);
-  const mutedText = Color(0xFF8B8F8C);
+/// Single source of truth for the Talib reference palette.
+/// Keep these values unchanged; screens should consume these semantic colors.
+abstract final class AppColors {
+  static const primaryGreen = Color(0xFF00A66A);
+  static const darkGreen = Color(0xFF00543D);
+  static const drawerGreen = Color(0xFF00563F);
+  static const brightGreen = Color(0xFF00D99A);
+  static const cream = Color(0xFFFAF9F2);
+  static const legacyCream = Color(0xFFF8F8F2);
+  static const softGreen = Color(0xFFEAF8F2);
+  static const mutedText = Color(0xFF8B8F8C);
+  static const homeGreen = Color(0xFF00A878);
+  static const homeAccent = Color(0xFF22F1A5);
+  static const authorAccent = Color(0xFF1EF0A1);
+  static const actionAccent = Color(0xFF13E7A2);
+  static const guidanceBubble = Color(0xFFBFECDD);
+  static const homeMutedText = Color(0xFF8B8B8B);
+  static const white = Color(0xFFFFFFFF);
+  static const white70 = Color(0xB3FFFFFF);
+  static const drawerDivider = Color(0x29FFFFFF);
+  static const drawerIcon = Color(0xEBFFFFFF);
+  static const cardShadow = Color(0x10000000);
+  static const findBubble = Color(0x2233FFB0);
+  static const divider = Color(0xFFD8E8E1);
 
-  const swatch = MaterialColor(0xFF00A66A, <int, Color>{
+  static const swatch = MaterialColor(0xFF00A66A, <int, Color>{
     50: Color(0xFFEAFBF4),
     100: Color(0xFFC8F3E2),
     200: Color(0xFF9EE9CC),
@@ -21,40 +37,42 @@ ThemeData buildTheme() {
     800: Color(0xFF006B45),
     900: darkGreen,
   });
+}
 
+ThemeData buildTheme() {
   return ThemeData(
     useMaterial3: false,
-    primarySwatch: swatch,
-    primaryColor: primaryGreen,
-    scaffoldBackgroundColor: cream,
+    primarySwatch: AppColors.swatch,
+    primaryColor: AppColors.primaryGreen,
+    scaffoldBackgroundColor: AppColors.cream,
     fontFamily: 'Roboto',
     appBarTheme: const AppBarTheme(
-      backgroundColor: primaryGreen,
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.primaryGreen,
+      foregroundColor: AppColors.white,
       elevation: 0,
       centerTitle: false,
-      iconTheme: IconThemeData(color: Colors.white),
+      iconTheme: IconThemeData(color: AppColors.white),
     ),
     colorScheme: const ColorScheme.light(
-      primary: primaryGreen,
-      secondary: brightGreen,
-      surface: Colors.white,
-      background: cream,
-      onPrimary: Colors.white,
-      onSecondary: darkGreen,
-      onSurface: darkGreen,
+      primary: AppColors.primaryGreen,
+      secondary: AppColors.brightGreen,
+      surface: AppColors.white,
+      background: AppColors.cream,
+      onPrimary: AppColors.white,
+      onSecondary: AppColors.darkGreen,
+      onSurface: AppColors.darkGreen,
     ),
     cardTheme: CardThemeData(
       elevation: 0,
       margin: const EdgeInsets.all(6),
-      color: Colors.white,
+      color: AppColors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: softGreen,
+      fillColor: AppColors.softGreen,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      hintStyle: const TextStyle(color: mutedText),
+      hintStyle: const TextStyle(color: AppColors.mutedText),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide.none,
@@ -65,35 +83,35 @@ ThemeData buildTheme() {
       ),
       focusedBorder: const OutlineInputBorder(
         borderRadius: BorderRadius.all(Radius.circular(10)),
-        borderSide: BorderSide(color: primaryGreen, width: 1.5),
+        borderSide: BorderSide(color: AppColors.primaryGreen, width: 1.5),
       ),
     ),
     chipTheme: const ChipThemeData(
-      backgroundColor: softGreen,
-      selectedColor: primaryGreen,
-      labelStyle: TextStyle(color: darkGreen),
-      secondaryLabelStyle: TextStyle(color: Colors.white),
+      backgroundColor: AppColors.softGreen,
+      selectedColor: AppColors.primaryGreen,
+      labelStyle: TextStyle(color: AppColors.darkGreen),
+      secondaryLabelStyle: TextStyle(color: AppColors.white),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: primaryGreen,
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.primaryGreen,
+      foregroundColor: AppColors.white,
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: Colors.white,
-      selectedItemColor: primaryGreen,
-      unselectedItemColor: mutedText,
+      backgroundColor: AppColors.white,
+      selectedItemColor: AppColors.primaryGreen,
+      unselectedItemColor: AppColors.mutedText,
       type: BottomNavigationBarType.fixed,
       elevation: 8,
     ),
     dividerTheme: const DividerThemeData(
-      color: Color(0xFFD8E8E1),
+      color: AppColors.divider,
       thickness: 1,
     ),
     textTheme: const TextTheme(
-      bodyLarge: TextStyle(color: darkGreen),
-      bodyMedium: TextStyle(color: darkGreen),
-      titleLarge: TextStyle(color: darkGreen, fontWeight: FontWeight.w700),
-      titleMedium: TextStyle(color: darkGreen, fontWeight: FontWeight.w600),
+      bodyLarge: TextStyle(color: AppColors.darkGreen),
+      bodyMedium: TextStyle(color: AppColors.darkGreen),
+      titleLarge: TextStyle(color: AppColors.darkGreen, fontWeight: FontWeight.w700),
+      titleMedium: TextStyle(color: AppColors.darkGreen, fontWeight: FontWeight.w600),
     ),
   );
 }
