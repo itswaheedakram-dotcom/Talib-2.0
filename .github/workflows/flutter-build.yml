@@ -57,6 +57,9 @@ jobs:
             exit 1
           fi
           echo "Legacy Kotlin jvmTarget removed"
+          sed -i 's/JavaVersion.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle.kts
+          grep -q 'sourceCompatibility = JavaVersion.VERSION_17' android/app/build.gradle.kts
+          grep -q 'targetCompatibility = JavaVersion.VERSION_17' android/app/build.gradle.kts
           sed -n '1,80p' android/app/build.gradle.kts
 
       - name: Build debug APK
