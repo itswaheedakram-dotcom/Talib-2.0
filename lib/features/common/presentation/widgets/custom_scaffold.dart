@@ -1,46 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../app/theme.dart';
 
 /// App drawer navigation.
-/// Keeps the existing modules/actions while matching the compact visual
-/// language used throughout the Talib UI.
+/// Existing modules/actions are preserved; only layout and interaction styling
+/// are modernized. Reference palette remains unchanged.
 class TalibDrawer extends StatelessWidget {
   const TalibDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final primary = colors.primary;
-    final onPrimary = colors.onPrimary;
-
     return Drawer(
       width: MediaQuery.sizeOf(context).width * 0.78,
-      backgroundColor: primary,
+      backgroundColor: AppColors.drawerGreen,
       elevation: 0,
       child: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 24, 18, 22),
+              padding: const EdgeInsets.fromLTRB(22, 24, 18, 20),
               child: Row(
                 children: [
-                  Icon(Icons.school_rounded, color: onPrimary, size: 38),
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(
+                      Icons.school_rounded,
+                      color: AppColors.drawerGreen,
+                      size: 29,
+                    ),
+                  ),
                   const SizedBox(width: 14),
-                  Text(
-                    'Taalib',
-                    style: TextStyle(
-                      color: onPrimary,
-                      fontSize: 30,
-                      fontWeight: FontWeight.w700,
-                      height: 1,
+                  const Expanded(
+                    child: Text(
+                      'Taalib',
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.4,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            Divider(
+            const Divider(
               height: 1,
-              color: onPrimary.withValues(alpha: 0.16),
+              color: AppColors.drawerDivider,
               indent: 20,
               endIndent: 20,
             ),
@@ -54,9 +65,9 @@ class TalibDrawer extends StatelessWidget {
                   _item(context, Icons.report_gmailerrorred_rounded, 'Report an issue', null),
                   _item(context, Icons.help_rounded, 'Help & FAQs', null),
                   _item(context, Icons.star_rounded, 'Rate us', null),
-                  const SizedBox(height: 18),
-                  Divider(color: onPrimary.withValues(alpha: 0.16)),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 16),
+                  const Divider(color: AppColors.drawerDivider),
+                  const SizedBox(height: 8),
                   _item(context, Icons.settings_rounded, 'Settings', null),
                   _item(context, Icons.login_rounded, 'Sign in', '/signin'),
                 ],
@@ -74,8 +85,6 @@ class TalibDrawer extends StatelessWidget {
     String label,
     String? route,
   ) {
-    final onPrimary = Theme.of(context).colorScheme.onPrimary;
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Material(
@@ -95,17 +104,22 @@ class TalibDrawer extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
-                  Icon(icon, color: onPrimary.withValues(alpha: 0.92), size: 24),
+                  Icon(icon, color: AppColors.drawerIcon, size: 24),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
                       label,
-                      style: TextStyle(
-                        color: onPrimary,
+                      style: const TextStyle(
+                        color: AppColors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.drawerDivider,
+                    size: 20,
                   ),
                 ],
               ),
