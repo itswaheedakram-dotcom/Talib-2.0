@@ -1,50 +1,21 @@
 import 'package:flutter/material.dart';
-
-class Hostel {
-  final String name;
-  final String city;
-  final String area;
-  final String type;
-  final String gender;
-  final String distance;
-  final String price;
-  final String facilities;
-  final String description;
-
-  const Hostel({
-    required this.name,
-    required this.city,
-    required this.area,
-    required this.type,
-    required this.gender,
-    required this.distance,
-    required this.price,
-    required this.facilities,
-    required this.description,
-  });
-}
+import 'package:flutter/services.dart';
+import '../../../../app/theme.dart';
+import '../../data/hostel_repository.dart';
+import '../../../models/hostel.dart';
 
 class HostelsScreen extends StatefulWidget {
   const HostelsScreen({super.key});
-
   @override
   State<HostelsScreen> createState() => _HostelsScreenState();
 }
 
 class _HostelsScreenState extends State<HostelsScreen> {
   final _searchController = TextEditingController();
+  final _repository = HostelRepository();
   String _city = 'All';
   String _gender = 'All';
   String _type = 'All';
-
-  static const _hostels = <Hostel>[
-    Hostel(name: 'Student Residency Lahore', city: 'Lahore', area: 'Johar Town', type: 'Private', gender: 'Male', distance: '1.2 km from university area', price: 'PKR 18,000 / month', facilities: 'Wi-Fi • Mess • Laundry • Security', description: 'A student-focused residence with furnished rooms and convenient access to major educational institutions.'),
-    Hostel(name: 'Girls Campus Hostel', city: 'Lahore', area: 'Gulberg', type: 'Private', gender: 'Female', distance: '0.8 km from campus', price: 'PKR 20,000 / month', facilities: 'Wi-Fi • Mess • CCTV • Study room', description: 'A secure residence designed for female students, with study spaces and essential daily facilities.'),
-    Hostel(name: 'Punjab University Hostel', city: 'Lahore', area: 'New Campus', type: 'University', gender: 'Male', distance: 'On campus', price: 'PKR 8,500 / month', facilities: 'Mess • Library access • Sports • Security', description: 'University accommodation option for eligible students, subject to institutional admission and hostel policies.'),
-    Hostel(name: 'Bahawalpur Student House', city: 'Bahawalpur', area: 'University Chowk', type: 'Private', gender: 'Male', distance: '2.0 km from university area', price: 'PKR 12,000 / month', facilities: 'Wi-Fi • Mess • Parking • Security', description: 'Affordable student accommodation near the main university area with shared and private room options.'),
-    Hostel(name: 'IUB Girls Residence', city: 'Bahawalpur', area: 'Baghdad-ul-Jadeed', type: 'University', gender: 'Female', distance: 'On campus', price: 'PKR 9,000 / month', facilities: 'Mess • Study area • Security • Laundry', description: 'Campus residence for female students at the university, subject to availability and eligibility.'),
-    Hostel(name: 'Multan Scholars Hostel', city: 'Multan', area: 'Bosan Road', type: 'Private', gender: 'Male', distance: '1.5 km from campus', price: 'PKR 14,000 / month', facilities: 'Wi-Fi • Mess • Generator • CCTV', description: 'A practical residence for students studying around Bosan Road and nearby educational institutions.'),
-  ];
 
   @override
   void dispose() {
@@ -52,10 +23,13 @@ class _HostelsScreenState extends State<HostelsScreen> {
     super.dispose();
   }
 
-  List<Hostel> get _filtered {
+  List<Hostel> _filter(List<Hostel> hostels) {
     final query = _searchController.text.trim().toLowerCase();
-    return _hostels.where((item) {
-      final text = (item.name + ' ' + item.city + ' ' + item.area + ' ' + item.facilities).toLowerCase();
+    return hostels.where((item) {
+      final text = [
+        item.name, item.city, item.area, item.type, item.gender,
+        item.price, item.description, item.address, ...item.facilities,
+      ].join(' ').toLowerCase();
       return (query.isEmpty || text.contains(query)) &&
           (_city == 'All' || item.city == _city) &&
           (_gender == 'All' || item.gender == _gender) &&
@@ -63,149 +37,220 @@ class _HostelsScreenState extends State<HostelsScreen> {
     }).toList();
   }
 
+  List<String> _values(List<Hostel> hostels, String Function(Hostel) value) {
+    final values = hostels.map(value).where((v) => v.trim().isNotEmpty).toSet().toList()..sort();
+    return ['All', ...values];
+  }
+
   void _showDetails(Hostel hostel) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      backgroundColor: AppColors.cream,
       builder: (context) => SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(hostel.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              Wrap(spacing: 8, children: [
-                Chip(label: Text(hostel.type)),
-                Chip(label: Text(hostel.gender)),
-              ]),
-              const SizedBox(height: 12),
-              _row(Icons.location_on_outlined, hostel.area + ', ' + hostel.city),
-              _row(Icons.near_me_outlined, hostel.distance),
-              _row(Icons.payments_outlined, hostel.price),
-              _row(Icons.apartment_outlined, hostel.facilities),
-              const SizedBox(height: 14),
-              Text('About this hostel', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(hostel.name, style: const TextStyle(color: AppColors.darkGreen, fontSize: 22, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, children: [_tag(hostel.type), _tag(hostel.gender)]),
+            const SizedBox(height: 14),
+            _row(Icons.location_on_outlined, hostel.address.isNotEmpty ? hostel.address : '${hostel.area}, ${hostel.city}'),
+            if (hostel.distance.isNotEmpty) _row(Icons.near_me_outlined, hostel.distance),
+            if (hostel.price.isNotEmpty) _row(Icons.payments_outlined, hostel.price),
+            if (hostel.facilities.isNotEmpty) _row(Icons.apartment_outlined, hostel.facilities.join(' • ')),
+            if (hostel.description.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Text('About this hostel', style: TextStyle(color: AppColors.darkGreen, fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 6),
-              Text(hostel.description),
-              const SizedBox(height: 20),
+              Text(hostel.description, style: const TextStyle(color: AppColors.mutedText, height: 1.4)),
+            ],
+            if (hostel.phone.isNotEmpty) ...[
+              const SizedBox(height: 18),
               SizedBox(width: double.infinity, child: FilledButton.icon(
-                onPressed: () => Navigator.pop(context),
+                style: FilledButton.styleFrom(backgroundColor: AppColors.primaryGreen, foregroundColor: AppColors.white),
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: hostel.phone));
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(content: Text('Hostel contact copied')));
+                  }
+                },
                 icon: const Icon(Icons.phone_outlined),
-                label: const Text('Contact Hostel'),
+                label: Text('Copy ${hostel.phone}'),
               )),
             ],
-          ),
+          ]),
         ),
       ),
     );
   }
 
+  Widget _tag(String value) => Chip(
+    label: Text(value),
+    backgroundColor: AppColors.softGreen,
+    labelStyle: const TextStyle(color: AppColors.darkGreen, fontSize: 12),
+    side: BorderSide.none,
+  );
+
   Widget _row(IconData icon, String value) => Padding(
     padding: const EdgeInsets.only(bottom: 10),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Icon(icon, size: 20),
+      Icon(icon, size: 20, color: AppColors.primaryGreen),
       const SizedBox(width: 10),
-      Expanded(child: Text(value)),
+      Expanded(child: Text(value, style: const TextStyle(color: AppColors.darkGreen, height: 1.3))),
     ]),
   );
 
   @override
   Widget build(BuildContext context) {
-    final items = _filtered;
     return Scaffold(
-      appBar: AppBar(title: const Text('Hostels')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-            child: SearchBar(
-              controller: _searchController,
-              hintText: 'Search hostels, cities, areas...',
-              leading: const Icon(Icons.search),
-              trailing: [
-                if (_searchController.text.isNotEmpty)
-                  IconButton(onPressed: () { _searchController.clear(); setState(() {}); }, icon: const Icon(Icons.clear)),
-              ],
-              onChanged: (_) => setState(() {}),
-            ),
-          ),
-          _chips('City', ['All', 'Lahore', 'Bahawalpur', 'Multan'], _city, (v) => setState(() => _city = v)),
-          _chips('Gender', ['All', 'Male', 'Female'], _gender, (v) => setState(() => _gender = v)),
-          _chips('Type', ['All', 'Private', 'University'], _type, (v) => setState(() => _type = v)),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
-            child: Row(children: [
-              Text(items.length.toString() + ' hostels', style: Theme.of(context).textTheme.labelLarge),
-              const Spacer(),
-              if (_city != 'All' || _gender != 'All' || _type != 'All')
-                TextButton(onPressed: () => setState(() { _city = 'All'; _gender = 'All'; _type = 'All'; }), child: const Text('Clear filters')),
-            ]),
-          ),
-          Expanded(
-            child: items.isEmpty
-                ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.hotel_outlined, size: 56),
-                    SizedBox(height: 12),
-                    Text('No hostels found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                    SizedBox(height: 6),
-                    Text('Try another search or filter.'),
-                  ]))
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                    itemCount: items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final hostel = items[index];
-                      return Card(
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: () => _showDetails(hostel),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Row(children: [
-                                Expanded(child: Text(hostel.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold))),
-                                const Icon(Icons.chevron_right),
-                              ]),
-                              const SizedBox(height: 8),
-                              Text(hostel.area + ', ' + hostel.city),
-                              const SizedBox(height: 8),
-                              Wrap(spacing: 8, runSpacing: 8, children: [
-                                Chip(label: Text(hostel.type)),
-                                Chip(label: Text(hostel.gender)),
-                              ]),
-                              const SizedBox(height: 6),
-                              _row(Icons.payments_outlined, hostel.price),
-                              _row(Icons.apartment_outlined, hostel.facilities),
-                            ]),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+      backgroundColor: AppColors.cream,
+      appBar: AppBar(
+        title: const Text('Hostels'),
+        actions: [
+          StreamBuilder<List<Hostel>>(
+            stream: _repository.watchHostels(),
+            builder: (context, snapshot) {
+              final count = _filter(snapshot.data ?? const <Hostel>[]).length;
+              return Center(child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text('$count', style: const TextStyle(color: AppColors.white, fontWeight: FontWeight.w700)),
+              ));
+            },
           ),
         ],
+      ),
+      body: StreamBuilder<List<Hostel>>(
+        stream: _repository.watchHostels(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) return _state(Icons.cloud_off_outlined, 'Unable to load hostels', 'Please check your connection and try again.');
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
+          }
+
+          final allHostels = snapshot.data ?? const <Hostel>[];
+          final cities = _values(allHostels, (h) => h.city);
+          final genders = _values(allHostels, (h) => h.gender);
+          final types = _values(allHostels, (h) => h.type);
+          final filtered = _filter(allHostels);
+
+          return Column(children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+              child: SearchBar(
+                controller: _searchController,
+                hintText: 'Search hostels, cities, areas...',
+                leading: const Icon(Icons.search_rounded, color: AppColors.primaryGreen),
+                trailing: [
+                  if (_searchController.text.isNotEmpty)
+                    IconButton(onPressed: () { _searchController.clear(); setState(() {}); }, icon: const Icon(Icons.clear_rounded)),
+                ],
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            _chips(cities, _city, (v) => setState(() => _city = v)),
+            _chips(genders, _gender, (v) => setState(() => _gender = v)),
+            _chips(types, _type, (v) => setState(() => _type = v)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+              child: Row(children: [
+                Text('${filtered.length} hostels', style: const TextStyle(color: AppColors.darkGreen, fontWeight: FontWeight.w600)),
+                const Spacer(),
+                if (_city != 'All' || _gender != 'All' || _type != 'All')
+                  TextButton(onPressed: () => setState(() { _city = 'All'; _gender = 'All'; _type = 'All'; }), child: const Text('Clear filters')),
+              ]),
+            ),
+            Expanded(
+              child: filtered.isEmpty
+                  ? _state(Icons.hotel_outlined, allHostels.isEmpty ? 'No hostels available' : 'No hostels found',
+                      allHostels.isEmpty ? 'Hostel listings will appear here when they are added.' : 'Try another search or filter.')
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) => _card(filtered[index]),
+                    ),
+            ),
+          ]);
+        },
       ),
     );
   }
 
-  Widget _chips(String label, List<String> values, String selected, ValueChanged<String> onChanged) {
+  Widget _card(Hostel hostel) {
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      color: AppColors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: () => _showDetails(hostel),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(
+              width: 58, height: 58,
+              decoration: BoxDecoration(color: AppColors.softGreen, borderRadius: BorderRadius.circular(14)),
+              child: const Icon(Icons.hotel_rounded, color: AppColors.primaryGreen, size: 30),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(hostel.name, maxLines: 2, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AppColors.darkGreen, fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text('${hostel.area}, ${hostel.city}', maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AppColors.mutedText, fontSize: 12)),
+              const SizedBox(height: 7),
+              Wrap(spacing: 6, runSpacing: 4, children: [
+                _smallTag(hostel.type), _smallTag(hostel.gender),
+                if (hostel.price.isNotEmpty) _smallTag(hostel.price),
+              ]),
+              if (hostel.facilities.isNotEmpty) ...[
+                const SizedBox(height: 7),
+                Text(hostel.facilities.join(' • '), maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: AppColors.mutedText, fontSize: 11)),
+              ],
+            ])),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.mutedText),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _smallTag(String value) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(color: AppColors.softGreen, borderRadius: BorderRadius.circular(10)),
+    child: Text(value, style: const TextStyle(color: AppColors.darkGreen, fontSize: 10, fontWeight: FontWeight.w600)),
+  );
+
+  Widget _chips(List<String> values, String selected, ValueChanged<String> onChanged) {
     return SizedBox(
-      height: 50,
+      height: 46,
       child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
         scrollDirection: Axis.horizontal,
         children: values.map((value) => Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: FilterChip(
-            label: Text(value),
-            selected: selected == value,
-            onSelected: (_) => onChanged(value),
-          ),
+          padding: const EdgeInsets.only(right: 7),
+          child: FilterChip(label: Text(value), selected: selected == value, onSelected: (_) => onChanged(value)),
         )).toList(),
       ),
     );
   }
+
+  Widget _state(IconData icon, String title, String message) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 54, color: AppColors.primaryGreen),
+        const SizedBox(height: 12),
+        Text(title, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.darkGreen, fontSize: 18, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 6),
+        Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.mutedText)),
+      ]),
+    ),
+  );
 }
