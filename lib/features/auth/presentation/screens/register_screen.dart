@@ -17,8 +17,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _busy = false;
   bool _obscure = true;
 
-  @override void dispose() {
-    _name.dispose(); _email.dispose(); _password.dispose(); super.dispose();
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
   }
 
   Future<void> _register() async {
@@ -32,8 +36,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     setState(() => _busy = true);
     try {
-      final result = await AuthService().register(_email.text.trim(), _password.text);
-      await result.user?.updateDisplayName(_name.text.trim());
+      await AuthService().register(
+        _email.text,
+        _password.text,
+        name: _name.text,
+        role: _role == 'Institute' ? 'institute' : 'student',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account created successfully.')));
         context.go('/');
@@ -47,7 +55,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  @override Widget build(BuildContext context) {
+  @override
+  Widget build(BuildContext context) {
     const green = Color(0xFF00A66A);
     const darkGreen = Color(0xFF00543D);
     return Scaffold(
@@ -83,24 +92,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 18),
             _field(_name, 'Full Name', Icons.person_outline),
-            _field(_email, 'Email or Username', Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+            _field(_email, 'Email', Icons.email_outlined, keyboardType: TextInputType.emailAddress),
             TextField(
               controller: _password,
               obscureText: _obscure,
               decoration: InputDecoration(
                 labelText: 'Password',
                 prefixIcon: const Icon(Icons.lock_outline),
-                suffixIcon: IconButton(onPressed: () => setState(() => _obscure = !_obscure), icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined)),
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                  icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                ),
               ),
             ),
             const SizedBox(height: 12),
             Text('By signing up, you agree to our Terms & Conditions and Privacy Policy.', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
             const SizedBox(height: 18),
-            SizedBox(height: 50, child: FilledButton(
-              onPressed: _busy ? null : _register,
-              style: FilledButton.styleFrom(backgroundColor: green),
-              child: Text(_busy ? 'Creating account...' : 'Sign Up'),
-            )),
+            SizedBox(
+              height: 50,
+              child: FilledButton(
+                onPressed: _busy ? null : _register,
+                style: FilledButton.styleFrom(backgroundColor: green),
+                child: Text(_busy ? 'Creating account...' : 'Sign Up'),
+              ),
+            ),
             const SizedBox(height: 15),
             Row(children: [
               Expanded(child: Divider(color: Colors.grey.shade300)),
@@ -132,7 +147,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   );
 
   Widget _social(IconData icon, String label) => OutlinedButton(
-    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label sign-in will be connected later.'))),
+    onPressed: _busy ? null : () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label sign-in requires provider setup in Firebase.'))),
     child: Icon(icon),
   );
 }
