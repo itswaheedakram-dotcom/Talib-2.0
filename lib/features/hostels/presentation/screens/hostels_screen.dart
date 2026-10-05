@@ -85,8 +85,10 @@ class _HostelsScreenState extends State<HostelsScreen> {
       final matchesType = _type == 'All' || hostel.type == _type;
       final matchesRoom = _roomType == 'All' || hostel.roomType == _roomType;
       final matchesAc = !_acOnly || hostel.ac;
+      final isPublic = hostel.status.toLowerCase() == 'approved';
 
-      return matchesSearch &&
+      return isPublic &&
+          matchesSearch &&
           matchesCity &&
           matchesGender &&
           matchesType &&
@@ -521,8 +523,13 @@ class _HostelsScreenState extends State<HostelsScreen> {
                             ),
                           ),
                         ),
+                        if (hostel.isVerified)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: _verifiedBadge(),
+                          ),
                         if (hostel.reviewCount > 0) ...<Widget>[
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 2),
                           _rating(hostel.rating, hostel.reviewCount),
                         ],
                       ],
@@ -608,6 +615,24 @@ class _HostelsScreenState extends State<HostelsScreen> {
     );
   }
 
+  Widget _verifiedBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.softGreen,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.verified_rounded, size: 13, color: AppColors.primaryGreen),
+          SizedBox(width: 3),
+          Text('Verified', style: TextStyle(color: AppColors.darkGreen, fontSize: 9, fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+
   Widget _hostelImage(Hostel hostel) {
     return Container(
       width: 86,
@@ -617,15 +642,28 @@ class _HostelsScreenState extends State<HostelsScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       clipBehavior: Clip.antiAlias,
-      child: hostel.imageUrl.isEmpty
+      child: hostel.imageUrl.trim().isEmpty
           ? const Icon(
               Icons.hotel_rounded,
               color: AppColors.primaryGreen,
               size: 34,
             )
           : Image.network(
-              hostel.imageUrl,
+              hostel.imageUrl.trim(),
               fit: BoxFit.cover,
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.primaryGreen,
+                    ),
+                  ),
+                );
+              },
               errorBuilder: (_, __, ___) => const Icon(
                 Icons.hotel_rounded,
                 color: AppColors.primaryGreen,
