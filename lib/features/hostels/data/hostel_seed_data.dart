@@ -1,4 +1,4 @@
-import '../../../models/hostel.dart';
+import '../../models/hostel.dart';
 
 /// Example records for populating the Firestore `hostels` collection.
 ///
