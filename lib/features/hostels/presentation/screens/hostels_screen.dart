@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../app/theme.dart';
 import '../../data/hostel_repository.dart';
+import '../../data/hostel_seed_data.dart';
 import '../../../models/hostel.dart';
 
 class HostelsScreen extends StatefulWidget {
@@ -145,7 +146,10 @@ class _HostelsScreenState extends State<HostelsScreen> {
             return const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
           }
 
-          final allHostels = snapshot.data ?? const <Hostel>[];
+          // Keep the bundled examples visible even when Firestore is empty or
+          // demo seeding is blocked by permissions/offline state.
+          final firestoreHostels = snapshot.data ?? const <Hostel>[];
+          final allHostels = firestoreHostels.isEmpty ? exampleHostels : firestoreHostels;
           final cities = _values(allHostels, (h) => h.city);
           final genders = _values(allHostels, (h) => h.gender);
           final types = _values(allHostels, (h) => h.type);
