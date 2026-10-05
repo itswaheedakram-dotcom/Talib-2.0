@@ -60,10 +60,10 @@ class _HostelsScreenState extends State<HostelsScreen> {
 
   List<Hostel> _filter(List<Hostel> hostels) {
     final query = _searchController.text.trim().toLowerCase();
-    return hostels.where((item) {
+    final result = hostels.where((item) {
       final text = [
         item.name, item.city, item.area, item.type, item.gender,
-        item.price, item.description, item.address, ...item.facilities,
+        item.price, item.roomType, item.availability, item.meals, item.description, item.address, ...item.facilities,
       ].join(' ').toLowerCase();
       return (query.isEmpty || text.contains(query)) &&
           (_city == 'All' || item.city == _city) &&
