@@ -28,6 +28,7 @@ import '../features/profile/presentation/screens/profile_screen.dart';
 import '../features/profile/presentation/screens/public_profile_screen.dart';
 import '../features/seminars/presentation/screens/seminars_screen.dart';
 import '../features/hostels/presentation/screens/hostels_screen.dart';
+import '../features/hostels/presentation/screens/list_hostel_screen.dart';
 import '../features/internships/presentation/screens/internships_screen.dart';
 import '../features/jobs/presentation/screens/jobs_screen.dart';
 import '../features/groups/presentation/screens/groups_screen.dart';
@@ -64,6 +65,7 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/courses',builder:(_,__)=>const CoursesScreen()),
   GoRoute(path:'/seminars',builder:(_,__)=>const SeminarsScreen()),
   GoRoute(path:'/hostels',builder:(_,__)=>const HostelsScreen()),
+  GoRoute(path:'/hostels/list',builder:(_,__)=>const ListHostelScreen()),
   GoRoute(path:'/internships',builder:(_,__)=>const InternshipsScreen()),
   GoRoute(path:'/jobs',builder:(_,__)=>const JobsScreen()),
   GoRoute(path:'/groups',builder:(_,__)=>const GroupsScreen()),
