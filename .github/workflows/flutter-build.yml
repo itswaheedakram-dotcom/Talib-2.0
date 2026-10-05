@@ -25,53 +25,26 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android --project-name talib_2 --org com.talib2 .
 
-      - name: Configure Android, Firebase and package
+      - name: Configure minimal Android launcher
         shell: bash
         run: |
           if [ -f android/app/build.gradle.kts ]; then
             sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' android/app/build.gradle.kts
+            sed -i -E 's/applicationId = "[^"]+"/applicationId = "com.talib.app"/' android/app/build.gradle.kts
+            sed -i -E 's/namespace = "[^"]+"/namespace = "com.talib.app"/' android/app/build.gradle.kts
           elif [ -f android/app/build.gradle ]; then
             sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/' android/app/build.gradle
+            sed -i -E 's/applicationId "[^"]+"/applicationId "com.talib.app"/' android/app/build.gradle
+            sed -i -E 's/namespace "[^"]+"/namespace "com.talib.app"/' android/app/build.gradle || true
           else
             echo "Android app Gradle file not found"
             exit 1
           fi
 
-          # Keep the Firebase Android app aligned with google-services.json.
-          sed -i -E 's/applicationId = "[^"]+"/applicationId = "com.talib.app"/' android/app/build.gradle.kts || true
-          sed -i -E 's/applicationId "[^"]+"/applicationId "com.talib.app"/' android/app/build.gradle || true
-          sed -i -E 's/namespace = "[^"]+"/namespace = "com.talib.app"/' android/app/build.gradle.kts || true
-          sed -i -E 's/namespace "[^"]+"/namespace "com.talib.app"/' android/app/build.gradle || true
-
-          # Firebase Auth 24.x requires Kotlin 2.3.x.
-          sed -i -E 's/id\("org\.jetbrains\.kotlin\.android"\) version "[^"]+"/id("org.jetbrains.kotlin.android") version "2.3.0"/' android/settings.gradle.kts
-
-          # Apply the Google Services plugin to the generated Android app.
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path("android/settings.gradle.kts")
-          s = p.read_text()
-          marker = 'id("com.google.gms.google-services") version "4.4.4" apply false'
-          if marker not in s:
-              lines = s.splitlines()
-              idx = next((i for i, line in enumerate(lines) if 'plugins {' in line), 0)
-              lines.insert(idx + 1, '    ' + marker)
-              p.write_text('\n'.join(lines) + '\n')
-
-          p = Path("android/app/build.gradle.kts")
-          s = p.read_text()
-          if 'id("com.google.gms.google-services")' not in s:
-              s = s.replace('plugins {', 'plugins {\n    id("com.google.gms.google-services")', 1)
-          s = s.replace(
-              '    kotlinOptions {\n        jvmTarget = JavaVersion.VERSION_11.toString()\n    }',
-              '    kotlin {\n        compilerOptions {\n            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n        }\n    }'
-          )
-          s = s.replace('JavaVersion.VERSION_11', 'JavaVersion.VERSION_17')
-          p.write_text(s)
-          PY
-
-          test -f google-services.json || { echo "google-services.json missing from repository root"; exit 1; }
-          cp google-services.json android/app/google-services.json
+          # Do NOT apply Google Services or copy google-services.json in this
+          # diagnostic build. Firebase native auto-initialization is intentionally
+          # isolated so a native Firebase configuration crash cannot terminate launch.
+          rm -f android/app/google-services.json
 
       - name: Build debug APK
         run: flutter build apk --debug
@@ -79,7 +52,7 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: talib-debug-apk
+          name: talib-launch-diagnostic-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
