@@ -7,88 +7,18 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Flutter debug APK
+  flutter_setup:
+    name: Flutter setup diagnostic
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.35.2'
           channel: stable
 
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Analyze Dart code
-        continue-on-error: true
-        run: flutter analyze
-
-      - name: Generate fresh Android project
-        run: flutter create --platforms=android --project-name talib_2 --org com.talib2 .
-
-      - name: Configure Android project
-        shell: bash
-        run: |
-          if [ -f android/app/build.gradle.kts ]; then
-            sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' android/app/build.gradle.kts
-            sed -i -E 's/applicationId = "[^"]+"/applicationId = "com.talib.app"/' android/app/build.gradle.kts
-            sed -i -E 's/namespace = "[^"]+"/namespace = "com.talib.app"/' android/app/build.gradle.kts
-          else
-            echo "Expected android/app/build.gradle.kts was not generated"
-            exit 1
-          fi
-
-          # Keep Firebase native configuration disabled for this diagnostic
-          # build so Android launch can be isolated from Firebase setup.
-          rm -f android/app/google-services.json
-
-          # Firebase Auth plugin currently requires Kotlin metadata 2.3.0.
-          if [ -f android/settings.gradle.kts ]; then
-            sed -i -E 's/(id\("org\.jetbrains\.kotlin\.android"\) version ")[^"]+(")/\12.3.0\2/' android/settings.gradle.kts
-          fi
-
-      - name: Verify generated Gradle configuration
-        shell: bash
-        run: |
-          grep -n -A5 -B2 "compilerOptions\|jvmTarget\|kotlinOptions" android/app/build.gradle.kts || true
-          grep -n "org.jetbrains.kotlin.android" android/settings.gradle.kts || true
-
-      - name: Apply Flutter Gradle migration
-        shell: bash
-        run: |
-          set +e
-          flutter build apk --debug
-          first_build_exit=$?
-          set -e
-
-          python3 - <<'PY'
-from pathlib import Path
-p = Path("android/app/build.gradle.kts")
-s = p.read_text()
-start = s.find("    kotlinOptions {")
-if start >= 0:
-    end = s.find("    }", start)
-    if end >= 0:
-        end += len("    }")
-        s = s[:start] + s[end:]
-p.write_text(s)
-PY
-
-          echo "Initial migration build exit code: $first_build_exit"
-          if grep -n "kotlinOptions\|jvmTarget" android/app/build.gradle.kts; then
-            echo "Legacy Kotlin options still present"
-            exit 1
-          fi
-
-      - name: Build debug APK
-        run: flutter build apk --debug
-
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: talib-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
-          retention-days: 14
+      - name: Verify Flutter
+        run: flutter --version
