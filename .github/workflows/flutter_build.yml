@@ -19,7 +19,7 @@ jobs:
         continue-on-error: true
         run: flutter analyze
       - name: Generate Android project
-        run: flutter create --platforms=android --project-name talib_2 --org com.talib2 .
+        run: flutter create --platforms=android --project-name talib_2 --org com.talib .
       - name: Configure Android compatibility
         shell: bash
         run: |
