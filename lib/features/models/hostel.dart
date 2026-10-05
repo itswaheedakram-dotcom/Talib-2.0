@@ -20,6 +20,11 @@ class Hostel {
   final String phone;
   final String imageUrl;
   final String address;
+  final String ownerId;
+  final String ownerName;
+  final String status;
+  final bool isVerified;
+  final bool isDemo;
 
   const Hostel({
     required this.id,
@@ -36,15 +41,21 @@ class Hostel {
     this.meals = '',
     this.ac = false,
     this.facilities = const [],
+    this.imageUrls = const [],
     this.description = '',
     this.phone = '',
     this.imageUrl = '',
-    this.imageUrls = const [],
     this.address = '',
+    this.ownerId = '',
+    this.ownerName = '',
+    this.status = 'approved',
+    this.isVerified = false,
+    this.isDemo = false,
   });
 
   factory Hostel.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
+    final rawImages = data['imageUrls'];
     return Hostel(
       id: doc.id,
       name: (data['name'] ?? '').toString(),
@@ -60,11 +71,16 @@ class Hostel {
       meals: (data['meals'] ?? '').toString(),
       ac: data['ac'] == true,
       facilities: List<String>.from((data['facilities'] ?? const []).map((e) => e.toString())),
+      imageUrl: (data['imageUrl'] ?? '').toString(),
+      imageUrls: rawImages is List ? List<String>.from(rawImages.map((e) => e.toString())) : const [],
       description: (data['description'] ?? '').toString(),
       phone: (data['phone'] ?? '').toString(),
-      imageUrl: (data['imageUrl'] ?? '').toString(),
-      imageUrls: data['imageUrls'] is List ? List<String>.from((data['imageUrls'] as List).map((e) => e.toString())) : const [],
       address: (data['address'] ?? '').toString(),
+      ownerId: (data['ownerId'] ?? '').toString(),
+      ownerName: (data['ownerName'] ?? '').toString(),
+      status: (data['status'] ?? 'approved').toString(),
+      isVerified: data['isVerified'] == true,
+      isDemo: data['isDemo'] == true,
     );
   }
 
@@ -82,10 +98,15 @@ class Hostel {
     'meals': meals,
     'ac': ac,
     'facilities': facilities,
-    'description': description,
-    'phone': phone,
     'imageUrl': imageUrl,
     'imageUrls': imageUrls,
+    'description': description,
+    'phone': phone,
     'address': address,
+    'ownerId': ownerId,
+    'ownerName': ownerName,
+    'status': status,
+    'isVerified': isVerified,
+    'isDemo': isDemo,
   };
 }
