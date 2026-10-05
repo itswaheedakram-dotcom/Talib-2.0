@@ -40,6 +40,9 @@ jobs:
           sed -i -E 's/applicationId = "[^"]+"/applicationId = "com.talib.app"/' android/app/build.gradle.kts
           sed -i -E 's/namespace = "[^"]+"/namespace = "com.talib.app"/' android/app/build.gradle.kts
 
+          # Firebase Auth 24.2.0 is compiled with Kotlin metadata 2.3.0.
+          sed -i -E 's/(id\("org\.jetbrains\.kotlin\.android"\) version ")[^"]+("\)/\12.3.0\2/' android/settings.gradle.kts
+
       - name: Build debug APK
         run: flutter build apk --debug
 
