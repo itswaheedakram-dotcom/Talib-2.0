@@ -47,13 +47,37 @@ jobs:
 
           if [ -f android/app/build.gradle.kts ]; then
             sed -i 's/JavaVersion\.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle.kts
-            sed -i 's/jvmTarget = "[0-9]*"/jvmTarget = "17"/g' android/app/build.gradle.kts
-            sed -i "s/jvmTarget = '[0-9]*'/jvmTarget = '17'/g" android/app/build.gradle.kts
+            sed -i '/^[[:space:]]*kotlinOptions[[:space:]]*{[[:space:]]*$/,/^[[:space:]]*}[[:space:]]*$/d' android/app/build.gradle.kts
+            cat >> android/app/build.gradle.kts <<'EOF'
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+EOF
           elif [ -f android/app/build.gradle ]; then
             sed -i 's/JavaVersion\.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle
-            sed -i 's/jvmTarget = "[0-9]*"/jvmTarget = "17"/g' android/app/build.gradle
-            sed -i "s/jvmTarget = '[0-9]*'/jvmTarget = '17'/g" android/app/build.gradle
+            sed -i '/^[[:space:]]*kotlinOptions[[:space:]]*{[[:space:]]*$/,/^[[:space:]]*}[[:space:]]*$/d' android/app/build.gradle
+            cat >> android/app/build.gradle <<'EOF'
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+EOF
           fi
+
+      - name: Verify Android Gradle configuration
+        shell: bash
+        run: |
+          echo "===== android/settings.gradle.kts ====="
+          [ -f android/settings.gradle.kts ] && cat android/settings.gradle.kts || true
+          echo "===== android/app/build.gradle.kts ====="
+          [ -f android/app/build.gradle.kts ] && cat android/app/build.gradle.kts || true
+          echo "===== android/app/build.gradle ====="
+          [ -f android/app/build.gradle ] && cat android/app/build.gradle || true
 
       - name: Get dependencies
         run: flutter pub get
