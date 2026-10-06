@@ -4,6 +4,8 @@ import '../../../../app/theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/active_profile_controller.dart';
+import '../../../../core/services/demo_data_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -35,6 +37,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     try {
+      if (ActiveProfileController.instance.isDemo) {
+        final data=DemoDataService.instance.settings(ActiveProfileController.instance.effectiveUid!);
+        if(!mounted)return;
+        setState((){_notifications=data['notificationsEnabled'] as bool? ?? true;_privateProfile=data['privateProfile'] as bool? ?? false;final a=data['appearanceMode']?.toString();ThemeController.instance.setMode(a=='light'?ThemeMode.light:a=='dark'?ThemeMode.dark:ThemeMode.system);_loadingPreferences=false;});
+        return;
+      }
       final data = (await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
@@ -79,6 +87,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     try {
+      if (ActiveProfileController.instance.isDemo) {
+        DemoDataService.instance.setSetting(ActiveProfileController.instance.effectiveUid!,field,value);
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Test profile setting saved.')));
+        return;
+      }
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         field: value,
         'updatedAt': FieldValue.serverTimestamp(),
