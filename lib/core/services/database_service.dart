@@ -129,5 +129,17 @@ class DatabaseService {
     if(avg>=4.5&&reviews.length>=5)badges.add('Trusted Member');
     return {'score':score,'posts':posts.length,'comments':commentDocs,'likes':likes,'bestAnswers':bestAnswers,'followers':followerCount,'rating':avg,'reviews':reviews.length,'badges':badges};
   }
-  Future<void> markNotificationRead(String uid,String id)=>_db.collection('users').doc(uid).collection('notifications').doc(id).update({'read':true});
+  Stream<List<Map<String,dynamic>>> demoNotificationsStream(String uid)=>_demoStream(DemoDataService.instance.notifications(_uid(uid)),()=>DemoDataService.instance.notifications(_uid(uid)));
+  Future<void> markNotificationRead(String uid,String id){uid=_uid(uid);if(_demo(uid)){DemoDataService.instance.markNotificationRead(uid,id);return Future.value();}return _db.collection('users').doc(uid).collection('notifications').doc(id).update({'read':true});}
+  Stream<List<Map<String,dynamic>>> demoConversationsStream(String uid)=>_demoStream(DemoDataService.instance.conversations(_uid(uid)),()=>DemoDataService.instance.conversations(_uid(uid)));
+  Stream<List<Map<String,dynamic>>> demoMessagesStream(String uid,String otherUid)=>_demoStream(DemoDataService.instance.messages(_uid(uid),_uid(otherUid)),()=>DemoDataService.instance.messages(_uid(uid),_uid(otherUid)));
+  Future<void> sendDemoMessage(String uid,String otherUid,String text){uid=_uid(uid);otherUid=_uid(otherUid);DemoDataService.instance.sendMessage(uid,otherUid,text);return Future.value();}
+  Stream<List<Map<String,dynamic>>> demoResourcesStream(String uid)=>_demoStream(DemoDataService.instance.resources(_uid(uid)),()=>DemoDataService.instance.resources(_uid(uid)));
+  Future<void> addResourceDemo(String uid,String title,String url,String description){DemoDataService.instance.addResource(_uid(uid),title,url,description);return Future.value();}
+  Stream<List<Map<String,dynamic>>> demoReviewsStream(String uid)=>_demoStream(DemoDataService.instance.reviews(uid),()=>DemoDataService.instance.reviews(uid));
+  Future<void> addDemoReview(String target,String reviewer,String reviewerName,int rating,String text){DemoDataService.instance.addReview(target,reviewer,reviewerName,rating,text);return Future.value();}
+  Stream<bool> demoInstituteBookmarkStream(String uid,String instituteId)=>_demoStream(DemoDataService.instance.instituteBookmarked(_uid(uid),instituteId),()=>DemoDataService.instance.instituteBookmarked(_uid(uid),instituteId));
+  Future<void> toggleDemoInstituteBookmark(String uid,String instituteId,bool save){DemoDataService.instance.toggleInstituteBookmark(_uid(uid),instituteId,save);return Future.value();}
+  Future<void> claimDemoInstitute(String uid,String instituteId){DemoDataService.instance.claimInstitute(_uid(uid),instituteId);return Future.value();}
+
 }
