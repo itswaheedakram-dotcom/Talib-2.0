@@ -107,8 +107,6 @@ class DatabaseService {
     },SetOptions(merge:true));
     return id;
   }
-  Stream<bool> followingStream(String uid,String targetId) async* { yield false; }
-  Stream<int> followerCountStream(String uid) async* { yield 0; }
   Future<void> saveApplication({required String collection,required String itemId,required String title,required String applicantId,required String applicantName}) async {}
   Future<void> saveInterest({required String seminarId,required String title,required String userId,required String userName}) async {}
   Stream<bool> applicationExists({required String collection,required String itemId,required String applicantId}) async* { yield false; }
