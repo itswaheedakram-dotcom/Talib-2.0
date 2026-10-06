@@ -26,7 +26,16 @@ class DatabaseService {
   Stream<Set<String>> bookmarkIdsStream(String uid)=>_db.collection('users').doc(uid).collection('bookmarks').snapshots().map((s)=>s.docs.map((d)=>d.id).toSet());
   Stream<List<Post>> bookmarkedPostsStream(String uid)=>_db.collection('users').doc(uid).collection('bookmarks').orderBy('createdAt',descending:true).snapshots().asyncMap((s)async{final posts=<Post>[];for(final b in s.docs){final d=await _db.collection('posts').doc(b.id).get();if(d.exists)posts.add(Post.fromDoc(d));}return posts;});
   Future<void> report({required String reporterId,required String targetId,required String targetType,required String reason})=>_db.collection('reports').add({'reporterId':reporterId,'targetId':targetId,'targetType':targetType,'reason':reason,'createdAt':FieldValue.serverTimestamp(),'status':'open'});
-  Future<void> blockUser(String uid,String blockedId)=>_db.collection('users').doc(uid).collection('blockedUsers').doc(blockedId).set({'blockedId':blockedId,'createdAt':FieldValue.serverTimestamp()});
+  Future<void> blockUser(String uid,String blockedId) async {
+    if(uid==blockedId)return;
+    final batch=_db.batch();
+    batch.set(_db.collection('users').doc(uid).collection('blockedUsers').doc(blockedId),{'blockedId':blockedId,'createdAt':FieldValue.serverTimestamp()});
+    batch.delete(_db.collection('users').doc(uid).collection('following').doc(blockedId));
+    batch.delete(_db.collection('users').doc(blockedId).collection('followers').doc(uid));
+    batch.delete(_db.collection('users').doc(blockedId).collection('following').doc(uid));
+    batch.delete(_db.collection('users').doc(uid).collection('followers').doc(blockedId));
+    await batch.commit();
+  }
   Future<void> unblockUser(String uid,String blockedId)=>_db.collection('users').doc(uid).collection('blockedUsers').doc(blockedId).delete();
   Stream<Set<String>> blockedUserIdsStream(String uid)=>_db.collection('users').doc(uid).collection('blockedUsers').snapshots().map((s)=>s.docs.map((d)=>d.id).toSet());
   Stream<QuerySnapshot<Map<String,dynamic>>> notificationsStream(String uid)=>_db.collection('users').doc(uid).collection('notifications').orderBy('createdAt',descending:true).limit(50).snapshots();
