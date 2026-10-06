@@ -375,6 +375,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _sectionTitle('Account & Security'),
       _tile(Icons.person_outline_rounded, 'Account settings', 'Manage your profile and account information', () => context.push('/profile')),
       _tile(Icons.badge_outlined, 'Account information', 'View your account details', _showAccountInfo),
+      _tile(Icons.science_outlined, 'Temporary profiles', 'Open test profiles for app testing', () => context.push('/temporary-profiles')),
       _tile(Icons.lock_outline_rounded, 'Change password', 'Update your account password', _changePassword),
       _tile(Icons.block_outlined, 'Blocked users', 'Manage users you have blocked', () => context.push('/blocked-users')),
       _tile(Icons.delete_outline_rounded, 'Delete account', 'Permanently remove your account', _deleteAccount),
