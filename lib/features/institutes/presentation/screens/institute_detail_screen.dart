@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../models/institute.dart';
 import '../../data/institute_repository.dart';
 import '../../../../core/services/firebase_service.dart';
+import '../../../../core/services/active_profile_controller.dart';
+import '../../../../core/services/database_service.dart';
 
 class InstituteDetailScreen extends StatelessWidget {
   final String id;
@@ -55,7 +57,9 @@ class InstituteDetailScreen extends StatelessWidget {
               ]),
             ])),
             IconButton(onPressed: () {}, icon: const Icon(Icons.location_on_outlined, color: green)),
-            IconButton(onPressed: () {}, icon: const Icon(Icons.bookmark_border, color: green)),
+            if (ActiveProfileController.instance.isDemo)
+              StreamBuilder<bool>(stream:DatabaseService().demoInstituteBookmarkStream(ActiveProfileController.instance.effectiveUid!,institute.id),builder:(context,s)=>IconButton(onPressed:()=>DatabaseService().toggleDemoInstituteBookmark(ActiveProfileController.instance.effectiveUid!,institute.id,s.data!=true),icon:Icon(s.data==true?Icons.bookmark:Icons.bookmark_border,color:green)))
+            else IconButton(onPressed: () {}, icon: const Icon(Icons.bookmark_border, color: green)),
           ]),
           const SizedBox(height: 10),
           Card(
@@ -141,7 +145,7 @@ class InstituteDetailScreen extends StatelessWidget {
                 subtitle: Text(pending ? 'Waiting for admin verification.' : 'Institute representatives can claim this profile.'),
                 trailing: pending ? null : FilledButton(
                   onPressed: signedIn
-                      ? () => context.push('/institute/' + institute.id + '/claim?name=' + Uri.encodeComponent(institute.name))
+                      ? () async { if (ActiveProfileController.instance.isDemo) { await DatabaseService().claimDemoInstitute(ActiveProfileController.instance.effectiveUid!,institute.id); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Demo claim recorded for the active test profile.'))); } else { context.push('/institute/' + institute.id + '/claim?name=' + Uri.encodeComponent(institute.name)); } }
                       : () => context.push('/signin'),
                   style: FilledButton.styleFrom(backgroundColor: green),
                   child: Text(signedIn ? 'Claim' : 'Sign In'),
