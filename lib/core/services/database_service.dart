@@ -135,6 +135,9 @@ class DatabaseService {
   Stream<List<Map<String,dynamic>>> demoConversationsStream(String uid)=>_demoStream(DemoDataService.instance.conversations(_uid(uid)),()=>DemoDataService.instance.conversations(_uid(uid)));
   Stream<List<Map<String,dynamic>>> demoMessagesStream(String uid,String otherUid)=>_demoStream(DemoDataService.instance.messages(_uid(uid),_uid(otherUid)),()=>DemoDataService.instance.messages(_uid(uid),_uid(otherUid)));
   Future<void> sendDemoMessage(String uid,String otherUid,String text){uid=_uid(uid);otherUid=_uid(otherUid);DemoDataService.instance.sendMessage(uid,otherUid,text);return Future.value();}
+  Stream<List<Map<String,dynamic>>> demoGroupsStream()=>_demoStream(DemoDataService.instance.groups(),()=>DemoDataService.instance.groups());
+  Future<void> createDemoGroup(String uid,String name,String description){DemoDataService.instance.createGroup(_uid(uid),name,description);return Future.value();}
+  Future<void> joinDemoGroup(String id){DemoDataService.instance.joinGroup(id);return Future.value();}
   Stream<List<Map<String,dynamic>>> demoResourcesStream(String uid)=>_demoStream(DemoDataService.instance.resources(_uid(uid)),()=>DemoDataService.instance.resources(_uid(uid)));
   Future<void> addResourceDemo(String uid,String title,String url,String description){DemoDataService.instance.addResource(_uid(uid),title,url,description);return Future.value();}
   Stream<List<Map<String,dynamic>>> demoReviewsStream(String uid)=>_demoStream(DemoDataService.instance.reviews(uid),()=>DemoDataService.instance.reviews(uid));
