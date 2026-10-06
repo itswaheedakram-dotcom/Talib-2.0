@@ -17,7 +17,7 @@ class FirebaseService {
       initializationError = initialized ? null : 'Firebase did not initialize.';
     } on FirebaseException catch (e) {
       initialized = false;
-      initializationError = '\${e.code}: \${e.message ?? 'Firebase initialization failed.'}';
+      initializationError = '${e.code}: ${e.message ?? 'Firebase initialization failed.'}';
     } catch (e) {
       initialized = false;
       initializationError = e.toString();
