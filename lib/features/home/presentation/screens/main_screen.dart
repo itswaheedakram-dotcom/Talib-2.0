@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../search/presentation/screens/search_screen.dart';
 import '../../../community/presentation/screens/community_screen.dart';
-import '../../../common/presentation/screens/bookmarks_screen.dart';
 import '../../../common/presentation/widgets/custom_scaffold.dart';
 import '../../../../app/theme.dart';
 import 'home_screen.dart';
@@ -20,7 +20,6 @@ class _MainScreenState extends State<MainScreen> {
     HomeScreen(),
     SearchScreen(),
     CommunityScreen(),
-    BookmarksScreen(),
   ];
 
   @override
@@ -53,7 +52,6 @@ class _MainScreenState extends State<MainScreen> {
                 BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home_rounded), label: 'Home'),
                 BottomNavigationBarItem(icon: Icon(Icons.search_rounded), label: 'Search'),
                 BottomNavigationBarItem(icon: Icon(Icons.groups_outlined, size: 30), activeIcon: Icon(Icons.groups_rounded, size: 30), label: 'Community'),
-                BottomNavigationBarItem(icon: Icon(Icons.bookmark_border_rounded), activeIcon: Icon(Icons.bookmark_rounded), label: 'Bookmarks'),
               ],
             ),
           ),
