@@ -135,7 +135,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         },
                       );
                     },
-                  ),,
+                  ),
                 ],
               ])),
               const SizedBox(height: 18),
