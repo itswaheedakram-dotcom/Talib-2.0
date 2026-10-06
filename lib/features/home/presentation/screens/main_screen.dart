@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../../search/presentation/screens/search_screen.dart';
 import '../../../community/presentation/screens/community_screen.dart';
 import '../../../common/presentation/widgets/custom_scaffold.dart';
@@ -29,7 +28,7 @@ class _MainScreenState extends State<MainScreen> {
       drawer: const TalibDrawer(),
       body: IndexedStack(index: index, children: pages),
       bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+        minimum: const EdgeInsets.fromLTRB(8, 0, 8, 10),
         child: Material(
           color: AppColors.white,
           elevation: 10,
@@ -47,11 +46,37 @@ class _MainScreenState extends State<MainScreen> {
               unselectedItemColor: AppColors.mutedText,
               showSelectedLabels: false,
               showUnselectedLabels: false,
-              iconSize: 27,
+              iconSize: 25,
               items: const [
-                BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home_rounded), label: 'Home'),
-                BottomNavigationBarItem(icon: Icon(Icons.search_rounded), label: 'Search'),
-                BottomNavigationBarItem(icon: Icon(Icons.groups_outlined, size: 30), activeIcon: Icon(Icons.groups_rounded, size: 30), label: 'Community'),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home_outlined),
+                  activeIcon: Icon(Icons.home_rounded),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.search_rounded),
+                  label: 'Search',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.groups_outlined, size: 28),
+                  activeIcon: Icon(Icons.groups_rounded, size: 28),
+                  label: 'Community',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.chat_bubble_outline_rounded),
+                  activeIcon: Icon(Icons.chat_bubble_rounded),
+                  label: 'Messages',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.group_outlined),
+                  activeIcon: Icon(Icons.group_rounded),
+                  label: 'Groups',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.folder_outlined),
+                  activeIcon: Icon(Icons.folder_rounded),
+                  label: 'Resources',
+                ),
               ],
             ),
           ),
