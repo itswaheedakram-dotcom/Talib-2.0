@@ -108,13 +108,31 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     stream: DatabaseService().followingStream(me!.uid, widget.id),
                     builder: (context, followSnapshot) {
                       final following = followSnapshot.data == true;
-                      return Row(mainAxisAlignment: MainAxisAlignment.center, children:[
-                        FilledButton.icon(onPressed:()=>DatabaseService().toggleFollow(me!.uid, widget.id, !following),icon:Icon(following?Icons.person_remove_outlined:Icons.person_add_outlined),label:Text(following?'Following':'Follow')),
-                        const SizedBox(width:8),
-                        OutlinedButton.icon(onPressed:()=>_reportUser(name),icon:const Icon(Icons.flag_outlined),label:const Text('Report')),
-                        const SizedBox(width:8),
-                        OutlinedButton.icon(onPressed:()=>_blockUser(name),icon:const Icon(Icons.block_outlined),label:const Text('Block')),
-                      ]);
+                      return StreamBuilder<bool>(
+                        stream: DatabaseService().followingStream(widget.id, me!.uid),
+                        builder: (context, reverseFollowSnapshot) {
+                          final mutual = following && reverseFollowSnapshot.data == true;
+                          return Row(mainAxisAlignment: MainAxisAlignment.center, children:[
+                            FilledButton.icon(
+                              onPressed:()=>DatabaseService().toggleFollow(me!.uid, widget.id, !following),
+                              icon:Icon(following?Icons.person_remove_outlined:Icons.person_add_outlined),
+                              label:Text(following?'Following':'Follow'),
+                            ),
+                            if (mutual) ...[
+                              const SizedBox(width:8),
+                              OutlinedButton.icon(
+                                onPressed:()=>context.push('/chat/${DatabaseService().conversationId(me!.uid, widget.id)}?uid=${widget.id}&name=${Uri.encodeComponent(name)}'),
+                                icon:const Icon(Icons.chat_bubble_outline),
+                                label:const Text('Message'),
+                              ),
+                            ],
+                            const SizedBox(width:8),
+                            OutlinedButton.icon(onPressed:()=>_reportUser(name),icon:const Icon(Icons.flag_outlined),label:const Text('Report')),
+                            const SizedBox(width:8),
+                            OutlinedButton.icon(onPressed:()=>_blockUser(name),icon:const Icon(Icons.block_outlined),label:const Text('Block')),
+                          ]);
+                        },
+                      );
                     },
                   ),
                 ],
