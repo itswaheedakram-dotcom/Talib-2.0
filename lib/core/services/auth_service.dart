@@ -51,5 +51,32 @@ class AuthService {
 
   Future<UserCredential> signInAnonymously() => _auth.signInAnonymously();
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'No signed-in account found.',
+      );
+    }
+    final email = user.email;
+    if (email == null || email.trim().isEmpty) {
+      throw FirebaseAuthException(
+        code: 'password-not-supported',
+        message: 'Password change is not available for this account.',
+      );
+    }
+
+    final credential = EmailAuthProvider.credential(
+      email: email,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(credential);
+    await user.updatePassword(newPassword);
+  }
+
   Future<void> signOut() => _auth.signOut();
 }
