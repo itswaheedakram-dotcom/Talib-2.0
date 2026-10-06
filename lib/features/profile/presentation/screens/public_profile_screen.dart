@@ -6,6 +6,7 @@ import '../../../../core/services/database_service.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/services/active_profile_controller.dart';
+import '../../../../core/services/demo_data_service.dart';
 
 class PublicProfileScreen extends StatefulWidget {
   final String id;
@@ -20,7 +21,12 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     final current = me;
     final identity = ActiveProfileController.instance;
     if (identity.isDemo) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please sign in to leave a review.')));
+      var rating = 5;
+      final controller = TextEditingController();
+      final result = await showDialog<bool>(context: context,builder: (dialogContext) => StatefulBuilder(builder: (_, setDialogState) => AlertDialog(title: Text('Review ' + name),content: Column(mainAxisSize: MainAxisSize.min,children:[Row(mainAxisAlignment: MainAxisAlignment.center,children: List.generate(5,(i)=>IconButton(onPressed:()=>setDialogState(()=>rating=i+1),icon:Icon(i<rating?Icons.star:Icons.star_border)))),TextField(controller:controller,maxLines:4,maxLength:300,decoration:const InputDecoration(labelText:'Your review'))]),actions:[TextButton(onPressed:()=>Navigator.pop(dialogContext,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(dialogContext,true),child:const Text('Publish'))])));
+      final text=controller.text.trim();
+      if(result==true&&text.isNotEmpty){await DatabaseService().addDemoReview(widget.id,identity.effectiveUid!,identity.effectiveName??'Student',rating,text);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Review published')));}
+      controller.dispose();
       return;
     }
     if (current == null) {
