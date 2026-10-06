@@ -25,7 +25,8 @@ class _ChatScreenState extends State<ChatScreen>{
       }
       final now=FieldValue.serverTimestamp();final batch=db.batch();final message=conversation.collection('messages').doc();
       batch.set(message,{'senderId':me.uid,'receiverId':widget.otherUid,'text':text,'createdAt':now,'read':false});
-      batch.set(conversation,{'participants':[me.uid,widget.otherUid],'lastMessage':text,'lastMessageAt':now,'updatedAt':now,'unreadCounts':{me.uid:0,widget.otherUid:FieldValue.increment(1)}},SetOptions(merge:true));
+      batch.set(conversation,{'participants':[me.uid,widget.otherUid],'lastMessage':text,'lastMessageAt':now,'updatedAt':now},SetOptions(merge:true));
+      batch.update(conversation,{'unreadCounts.${me.uid}':0,'unreadCounts.${widget.otherUid}':FieldValue.increment(1)});
       await batch.commit();controller.clear();
     }finally{if(mounted)setState(()=>sending=false);}
   }
