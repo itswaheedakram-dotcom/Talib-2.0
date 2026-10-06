@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/database_service.dart';
 
 class Internship {
   final String title, company, location, field, mode, stipend, duration, deadline, description;
@@ -39,9 +41,11 @@ class _InternshipsScreenState extends State<InternshipsScreen> {
       const SizedBox(height: 20), Text('About the internship', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)), const SizedBox(height: 6), Text(x.description),
       const SizedBox(height: 18), Text('Requirements', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)), ...x.requirements.map((r)=>ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.check_circle_outline), title: Text(r))),
       const SizedBox(height: 8), Text('Application deadline: ${x.deadline}', style: const TextStyle(fontWeight: FontWeight.w600)),
-      const SizedBox(height: 16), SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.send_outlined), label: const Text('Apply Now'))),
+      const SizedBox(height: 16), SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: () => _apply(x), icon: const Icon(Icons.send_outlined), label: const Text('Apply Now'))),
     ])))));
   }
+
+  Future<void> _apply(Internship x) async { Navigator.pop(context); final user=AuthService().currentUser; if(user==null){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Please sign in to apply.')));return;} final id=x.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'),'_'); await DatabaseService().saveApplication(collection:'internships',itemId:id,title:x.title,applicantId:user.uid,applicantName:user.displayName??user.email??'Student'); if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Application submitted.'))); }
 
   Widget _chip(IconData icon,String text) => Chip(avatar: Icon(icon,size:17),label: Text(text));
 
