@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/models/post.dart';
+import '../../features/models/news_item.dart';
 
 class DatabaseService {
   static final List<Post> _posts = [
@@ -47,4 +49,16 @@ class DatabaseService {
   Future<void> saveInterest({required String seminarId,required String title,required String userId,required String userName}) async {}
   Stream<bool> applicationExists({required String collection,required String itemId,required String applicantId}) async* { yield false; }
   Stream<bool> interestExists({required String seminarId,required String userId}) async* { yield false; }
+
+  Stream<QuerySnapshot<Map<String,dynamic>>> commentsStream(String postId) {
+    return FirebaseFirestore.instance.collection('posts').doc(postId).collection('comments').snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String,dynamic>>> newsStream() {
+    return FirebaseFirestore.instance.collection('news').orderBy('createdAt', descending:true).snapshots();
+  }
+
+  Future<DocumentSnapshot<Map<String,dynamic>>> newsItem(String id) {
+    return FirebaseFirestore.instance.collection('news').doc(id).get();
+  }
 }
