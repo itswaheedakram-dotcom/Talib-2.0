@@ -17,7 +17,10 @@ class DemoDataService extends ChangeNotifier {
   final Map<String,Set<String>> _following={}; final Map<String,List<Map<String,dynamic>>> _notifications={};
   final Map<String,Set<String>> _bookmarks={}; final Map<String,List<Map<String,dynamic>>> _messages={};
   final Map<String,List<Map<String,dynamic>>> _resources={}; final Map<String,List<Map<String,dynamic>>> _reviews={};
-  final Set<String> _instituteBookmarks={}; final Set<String> _instituteClaims={}; int _seq=0;
+  final Set<String> _instituteBookmarks={}; final Set<String> _instituteClaims={};
+  final Map<String,Map<String,dynamic>> _settings={}; int _seq=0;
+  Map<String,dynamic> settings(String uid)=>_settings.putIfAbsent(uid,()=>{'notificationsEnabled':true,'privateProfile':false,'appearanceMode':'system'});
+  void setSetting(String uid,String field,dynamic value){settings(uid)[field]=value;_emit();}
   void _seedData(){
     final now=DateTime.now(); final names={'demo-user-1':'Ayesha Khan','demo-user-2':'Ali Raza','demo-user-3':'Hira Ahmed','demo-user-4':'Usman Malik'};
     for(final id in names.keys){_following[id]={...names.keys.where((x)=>x!=id)};_notifications[id]=[];_resources[id]=[];_reviews[id]=[];}
