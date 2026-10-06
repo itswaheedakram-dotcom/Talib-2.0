@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../messages/presentation/screens/messages_screen.dart';
-import '../../groups/presentation/screens/groups_screen.dart';
+import 'messages_screen.dart';
+import '../../../groups/presentation/screens/groups_screen.dart';
 
 class MessagesGroupsScreen extends StatelessWidget {
   const MessagesGroupsScreen({super.key});
