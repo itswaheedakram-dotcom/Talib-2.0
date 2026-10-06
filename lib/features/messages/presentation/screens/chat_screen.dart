@@ -28,7 +28,7 @@ class _ChatScreenState extends State<ChatScreen>{
     final b=FirebaseFirestore.instance.batch();var changed=false;
     for(final d in docs){final x=d.data();if(x['receiverId']==uid&&x['read']!=true){b.update(d.reference,{'read':true});changed=true;}}
     if(changed)await b.commit();
-    await FirebaseFirestore.instance.collection('conversations').doc(widget.conversationId).set({'unreadCounts':{uid:0}},SetOptions(merge:true));
+    await FirebaseFirestore.instance.collection('conversations').doc(widget.conversationId).update({'unreadCounts.$uid':0});
   }
   @override Widget build(BuildContext context){
     final me=FirebaseAuth.instance.currentUser;if(me==null)return const Scaffold(body:Center(child:Text('Please sign in.')));
