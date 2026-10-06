@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/database_service.dart';
 
 class CoursesScreen extends StatefulWidget {
   const CoursesScreen({super.key});
@@ -42,6 +44,7 @@ class _CoursesScreenState extends State<CoursesScreen>{
       ]),
     );
   }
+  Future<void> _enroll(_C c) async { Navigator.pop(context); final user=AuthService().currentUser; if(user==null){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Please sign in to save a course.')));return;} await DatabaseService().saveApplication(collection:'courses',itemId:c.name,title:c.name,applicantId:user.uid,applicantName:user.displayName??user.email??'Student'); if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Course saved to your interests.'))); }
   void showFilters()=>showModalBottomSheet(context:context,showDragHandle:true,builder:(_)=>StatefulBuilder(builder:(context,setSheet)=>Padding(
     padding:const EdgeInsets.fromLTRB(20,8,20,28),child:Wrap(runSpacing:16,children:[
       Text('Course filters',style:Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight:FontWeight.w800)),
@@ -58,7 +61,7 @@ class _CoursesScreenState extends State<CoursesScreen>{
     padding:const EdgeInsets.fromLTRB(20,8,20,30),child:Wrap(runSpacing:12,children:[
       Text(c.name,style:Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight:FontWeight.w800)),
       Text('Study level: ${c.level}'),Text('Field: ${c.field}'),Text('Mode: ${c.mode}'),Text('Duration: ${c.duration}'),
-      FilledButton.icon(onPressed:()=>Navigator.pop(context),icon:const Icon(Icons.school_outlined),label:const Text('View course')),
+      FilledButton.icon(onPressed:()=>_enroll(c),icon:const Icon(Icons.school_outlined),label:const Text('Enroll / Save Interest')),
     ]),
   ));
 }
