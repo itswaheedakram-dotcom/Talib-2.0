@@ -67,7 +67,7 @@ class TalibDrawer extends StatelessWidget {
                   const SizedBox(height: 4),
                   const Divider(color: AppColors.drawerDivider),
                   const SizedBox(height: 4),
-                  _item(context, Icons.settings_rounded, 'Settings', null),
+                  _item(context, Icons.settings_rounded, 'Settings', '/settings'),
                   _item(context, Icons.login_rounded, 'Sign in', '/signin'),
                   _item(context, Icons.person_add_rounded, 'Sign up', '/register'),
                 ],
