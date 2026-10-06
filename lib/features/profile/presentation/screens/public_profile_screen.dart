@@ -109,9 +109,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     builder: (context, followSnapshot) {
                       final following = followSnapshot.data == true;
                       return StreamBuilder<bool>(
-                        stream: DatabaseService().mutualFollowStream(me!.uid, widget.id),
-                        builder: (context, mutualSnapshot) {
-                          final mutual = mutualSnapshot.data == true;
+                        stream: DatabaseService().followingStream(widget.id, me!.uid),
+                        builder: (context, reverseFollowSnapshot) {
+                          final mutual = following && reverseFollowSnapshot.data == true;
                           return Wrap(
                             alignment: WrapAlignment.center,
                             spacing: 8,
@@ -135,7 +135,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         },
                       );
                     },
-                  ),
+                  ),,
                 ],
               ])),
               const SizedBox(height: 18),
