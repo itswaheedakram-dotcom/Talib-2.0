@@ -11,6 +11,14 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/users/$(otherUid)/following/$(uid));
     }
 
+    function isBlocked(String uid, String otherUid) {
+      return exists(/databases/$(database)/documents/users/$(uid)/blockedUsers/$(otherUid));
+    }
+
+    function notBlocked(String uid, String otherUid) {
+      return !isBlocked(uid, otherUid) && !isBlocked(otherUid, uid);
+    }
+
     function isParticipant(List participants) {
       return signedIn()
         && participants.size() == 2
@@ -53,7 +61,8 @@ service cloud.firestore {
     }
 
     match /conversations/{conversationId} {
-      allow read: if signedIn() && resource.data.participants.hasAny([request.auth.uid]);
+      allow read: if signedIn() && resource.data.participants.hasAny([request.auth.uid])
+        && notBlocked(resource.data.participants[0], resource.data.participants[1]);
 
       allow create: if signedIn()
         && request.resource.data.participants is list
@@ -61,6 +70,10 @@ service cloud.firestore {
         && request.resource.data.participants.hasAny([request.auth.uid])
         && request.resource.data.participants[0] != request.resource.data.participants[1]
         && mutualFollow(
+          request.resource.data.participants[0],
+          request.resource.data.participants[1]
+        )
+        && notBlocked(
           request.resource.data.participants[0],
           request.resource.data.participants[1]
         );
@@ -71,6 +84,10 @@ service cloud.firestore {
         && mutualFollow(
           resource.data.participants[0],
           resource.data.participants[1]
+        )
+        && notBlocked(
+          resource.data.participants[0],
+          resource.data.participants[1]
         );
 
       allow delete: if false;
@@ -78,6 +95,10 @@ service cloud.firestore {
       match /messages/{messageId} {
         allow read: if isParticipant(
           get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants
+        )
+        && notBlocked(
+          get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants[0],
+          get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants[1]
         );
 
         allow create: if signedIn()
@@ -89,6 +110,10 @@ service cloud.firestore {
           && request.resource.data.receiverId in
              get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants
           && mutualFollow(
+            request.resource.data.senderId,
+            request.resource.data.receiverId
+          )
+          && notBlocked(
             request.resource.data.senderId,
             request.resource.data.receiverId
           )
