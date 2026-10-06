@@ -1,24 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/services/database_service.dart';
+import '../../../../core/services/active_profile_controller.dart';
 
 class ResourcesScreen extends StatelessWidget{
-  const ResourcesScreen({super.key});
-  @override Widget build(BuildContext context){
-    final user=FirebaseAuth.instance.currentUser;
-    final ref=FirebaseFirestore.instance.collection('resources');
-    return Scaffold(appBar:AppBar(title:const Text('Study Resources')),floatingActionButton:user==null?null:FloatingActionButton.extended(onPressed:()=>_add(context,user.uid,ref),icon:const Icon(Icons.add_link),label:const Text('Share Resource')),body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ref.orderBy('createdAt',descending:true).limit(50).snapshots(),builder:(context,s){
-      if(s.hasError)return const Center(child:Text('Unable to load resources.'));
-      if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
-      final docs=s.data?.docs??[];
-      if(docs.isEmpty)return const Center(child:Text('No resources shared yet.'));
-      return ListView.builder(padding:const EdgeInsets.all(12),itemCount:docs.length,itemBuilder:(context,i){final d=docs[i].data();return Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.menu_book_outlined)),title:Text((d['title']??'Resource').toString()),subtitle:Text((d['description']??'').toString()),onTap:()=>_showLink(context,(d['url']??'').toString())));});
-    }));
-  }
-  static Future<void> _add(BuildContext context,String uid,CollectionReference<Map<String,dynamic>> ref)async{
-    final title=TextEditingController(),url=TextEditingController(),desc=TextEditingController();
-    final ok=await showDialog<bool>(context:context,builder:(_)=>AlertDialog(title:const Text('Share Resource'),content:SingleChildScrollView(child:Column(children:[TextField(controller:title,decoration:const InputDecoration(labelText:'Title')),TextField(controller:url,decoration:const InputDecoration(labelText:'URL')),TextField(controller:desc,decoration:const InputDecoration(labelText:'Description'))])),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Share'))]));
-    if(ok==true&&title.text.trim().isNotEmpty&&url.text.trim().isNotEmpty)await ref.add({'title':title.text.trim(),'url':url.text.trim(),'description':desc.text.trim(),'authorId':uid,'createdAt':FieldValue.serverTimestamp()});
-  }
-  static void _showLink(BuildContext context,String url)=>showDialog(context:context,builder:(_)=>AlertDialog(title:const Text('Resource Link'),content:SelectableText(url),actions:[TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Close'))]));
+ const ResourcesScreen({super.key});
+ @override Widget build(BuildContext context){final real=FirebaseAuth.instance.currentUser;if(real==null)return const Scaffold(body:Center(child:Text('Please sign in to share resources.')));final identity=ActiveProfileController.instance;final db=DatabaseService();if(identity.isDemo)return Scaffold(appBar:AppBar(title:const Text('Study Resources')),floatingActionButton:FloatingActionButton.extended(onPressed:()=>_addDemo(context,real.uid),icon:const Icon(Icons.add_link),label:const Text('Share Resource')),body:StreamBuilder<List<Map<String,dynamic>>>(stream:db.demoResourcesStream(real.uid),builder:(context,s)=>_list(context,s.data??const [])));final ref=FirebaseFirestore.instance.collection('resources');return Scaffold(appBar:AppBar(title:const Text('Study Resources')),floatingActionButton:FloatingActionButton.extended(onPressed:()=>_addFirebase(context,real.uid,ref),icon:const Icon(Icons.add_link),label:const Text('Share Resource')),body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ref.orderBy('createdAt',descending:true).limit(50).snapshots(),builder:(context,s){if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());final docs=s.data?.docs??[];return ListView.builder(padding:const EdgeInsets.all(12),itemCount:docs.length,itemBuilder:(context,i){final d=docs[i].data();return Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.menu_book_outlined)),title:Text((d['title']??'Resource').toString()),subtitle:Text((d['description']??'').toString()),onTap:()=>_showLink(context,(d['url']??'').toString())));});}));}
+ Widget _list(BuildContext context,List<Map<String,dynamic>> docs)=>docs.isEmpty?const Center(child:Text('No resources shared yet.')):ListView.builder(padding:const EdgeInsets.all(12),itemCount:docs.length,itemBuilder:(context,i){final d=docs[i];return Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.menu_book_outlined)),title:Text(d['title'].toString()),subtitle:Text(d['description'].toString()),onTap:()=>_showLink(context,d['url'].toString())));});
+ Future<void> _addDemo(BuildContext context,String uid)async{final v=await _form(context);if(v!=null)await DatabaseService().addResourceDemo(uid,v.$1,v.$2,v.$3);}
+ Future<void> _addFirebase(BuildContext context,String uid,CollectionReference<Map<String,dynamic>> ref)async{final v=await _form(context);if(v!=null)await ref.add({'title':v.$1,'url':v.$2,'description':v.$3,'authorId':uid,'createdAt':FieldValue.serverTimestamp()});}
+ Future<(String,String,String)?> _form(BuildContext context)async{final t=TextEditingController(),u=TextEditingController(),d=TextEditingController();final ok=await showDialog<bool>(context:context,builder:(_)=>AlertDialog(title:const Text('Share Resource'),content:SingleChildScrollView(child:Column(children:[TextField(controller:t,decoration:const InputDecoration(labelText:'Title')),TextField(controller:u,decoration:const InputDecoration(labelText:'URL')),TextField(controller:d,decoration:const InputDecoration(labelText:'Description'))])),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Share'))]));final r=ok==true&&t.text.trim().isNotEmpty&&u.text.trim().isNotEmpty?(t.text.trim(),u.text.trim(),d.text.trim()):null;t.dispose();u.dispose();d.dispose();return r;}
+ static void _showLink(BuildContext context,String url)=>showDialog(context:context,builder:(_)=>AlertDialog(title:const Text('Resource Link'),content:SelectableText(url),actions:[TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Close'))]));
 }
