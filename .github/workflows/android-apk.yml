@@ -35,18 +35,18 @@ jobs:
         run: |
           if [ -f android/app/build.gradle.kts ]; then
             python3 - <<'PY'
-from pathlib import Path
-import re
-p = Path("android/app/build.gradle.kts")
-s = p.read_text()
-s = re.sub(
-    r'\n\s*kotlinOptions\s*\{\s*jvmTarget\s*=\s*[^\n]+\s*\}',
-    '\n    kotlin {\n        compilerOptions {\n            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n        }\n    }',
-    s,
-    count=1,
-)
-p.write_text(s)
-PY
+            from pathlib import Path
+            import re
+            p = Path("android/app/build.gradle.kts")
+            s = p.read_text()
+            s = re.sub(
+                r'\n\s*kotlinOptions\s*\{\s*jvmTarget\s*=\s*[^\n]+\s*\}',
+                '\n    kotlin {\n        compilerOptions {\n            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n        }\n    }',
+                s,
+                count=1,
+            )
+            p.write_text(s)
+            PY
           elif [ -f android/app/build.gradle ]; then
             sed -i 's/JavaVersion.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle
           fi
