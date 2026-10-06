@@ -17,10 +17,39 @@ service cloud.firestore {
         && participants.hasAny([request.auth.uid]);
     }
 
-    // Existing app collections remain authenticated-user accessible for now.
-    // Messaging paths are explicitly excluded from this fallback rule below.
-    match /{document=**} {
-      allow read, write: if signedIn() && document[0] != 'conversations';
+    // Existing app data paths. Messaging is intentionally NOT covered
+    // by a broad authenticated catch-all.
+    match /users/{userId} {
+      allow read, write: if signedIn();
+      match /{subcollection}/{documentId} {
+        allow read, write: if signedIn();
+      }
+    }
+
+    match /posts/{postId} {
+      allow read, write: if signedIn();
+      match /comments/{commentId} {
+        allow read, write: if signedIn();
+      }
+    }
+
+    match /institutes/{instituteId} {
+      allow read, write: if signedIn();
+    }
+
+    match /hostels/{hostelId} {
+      allow read, write: if signedIn();
+      match /reviews/{reviewId} {
+        allow read, write: if signedIn();
+      }
+    }
+
+    match /resources/{resourceId} {
+      allow read, write: if signedIn();
+    }
+
+    match /reports/{reportId} {
+      allow read, write: if signedIn();
     }
 
     match /conversations/{conversationId} {
