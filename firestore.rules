@@ -5,13 +5,13 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function mutualFollow(string uid, string otherUid) {
+    function mutualFollow(String uid, String otherUid) {
       return uid != otherUid
         && exists(/databases/$(database)/documents/users/$(uid)/following/$(otherUid))
         && exists(/databases/$(database)/documents/users/$(otherUid)/following/$(uid));
     }
 
-    function isParticipant(list participants) {
+    function isParticipant(List participants) {
       return signedIn()
         && participants.size() == 2
         && participants.hasAny([request.auth.uid]);
