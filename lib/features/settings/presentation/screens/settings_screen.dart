@@ -16,7 +16,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notifications = true;
   bool _privateProfile = false;
   bool _loadingPreferences = true;
-  bool _savingPreference = false;
+  bool _savingNotifications = false;
+  bool _savingPrivateProfile = false;
 
   User? get _user => FirebaseAuth.instance.currentUser;
 
@@ -44,6 +45,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _notifications = data?['notificationsEnabled'] as bool? ?? true;
         _privateProfile = data?['privateProfile'] as bool? ?? false;
+        final savedAppearance = data?['appearanceMode']?.toString();
+        if (savedAppearance == 'light') {
+          ThemeController.instance.setMode(ThemeMode.light);
+        } else if (savedAppearance == 'dark') {
+          ThemeController.instance.setMode(ThemeMode.dark);
+        } else {
+          ThemeController.instance.setMode(ThemeMode.system);
+        }
         _loadingPreferences = false;
       });
     } catch (_) {
@@ -53,26 +62,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _savePreference(String field, bool value) async {
     final user = _user;
-    if (user == null || _savingPreference) return;
+    if (user == null) return;
 
-    setState(() => _savingPreference = true);
+    final savingNotifications = field == 'notificationsEnabled';
+    final savingPrivateProfile = field == 'privateProfile';
+    if ((savingNotifications && _savingNotifications) ||
+        (savingPrivateProfile && _savingPrivateProfile)) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        if (savingNotifications) _savingNotifications = true;
+        if (savingPrivateProfile) _savingPrivateProfile = true;
+      });
+    }
+
     try {
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         field: value,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+
+      final saved = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final savedValue = saved.data()?[field];
+      if (savedValue is! bool || savedValue != value) {
+        throw StateError('Setting was not confirmed by Firestore.');
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Setting saved.')),
+        );
+      }
     } catch (_) {
       if (!mounted) return;
-      if (field == 'notificationsEnabled') {
-        setState(() => _notifications = !value);
-      } else {
-        setState(() => _privateProfile = !value);
-      }
+      setState(() {
+        if (field == 'notificationsEnabled') _notifications = !value;
+        if (field == 'privateProfile') _privateProfile = !value;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not save this setting. Please try again.')),
       );
     } finally {
-      if (mounted) setState(() => _savingPreference = false);
+      if (mounted) {
+        setState(() {
+          if (savingNotifications) _savingNotifications = false;
+          if (savingPrivateProfile) _savingPrivateProfile = false;
+        });
+      }
     }
   }
 
@@ -242,6 +283,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _setAppearance() async {
+    final previous = ThemeController.instance.mode;
     final selected = await showDialog<ThemeMode>(
       context: context,
       builder: (context) => SimpleDialog(
@@ -253,7 +295,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
-    if (selected != null) ThemeController.instance.setMode(selected);
+    if (selected == null || selected == previous) return;
+    final user = _user;
+    if (user == null) return;
+    ThemeController.instance.setMode(selected);
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'appearanceMode': selected.name,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      if (mounted) setState(() {});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Appearance saved.')),
+        );
+      }
+    } catch (_) {
+      ThemeController.instance.setMode(previous);
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not save appearance. Please try again.')),
+        );
+      }
+    }
   }
 
   Widget _modeTile(ThemeMode mode, String title, IconData icon) => SimpleDialogOption(
@@ -321,10 +386,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _tile(Icons.delete_outline_rounded, 'Delete account', 'Permanently remove your account', _deleteAccount),
       const SizedBox(height: 18),
       _sectionTitle('Privacy'),
-      _switchTile(Icons.visibility_off_outlined, 'Private profile', 'Limit who can view your profile', _privateProfile, _loadingPreferences ? null : _setPrivateProfile),
+      _switchTile(Icons.visibility_off_outlined, 'Private profile', 'Limit who can view your profile', _privateProfile, _loadingPreferences || _savingPrivateProfile ? null : _setPrivateProfile),
       const SizedBox(height: 18),
       _sectionTitle('Notifications'),
-      _switchTile(Icons.notifications_none_rounded, 'Notifications', 'Receive app notifications', _notifications, _loadingPreferences ? null : _setNotifications),
+      _switchTile(Icons.notifications_none_rounded, 'Notifications', 'Receive app notifications', _notifications, _loadingPreferences || _savingNotifications ? null : _setNotifications),
       const SizedBox(height: 18),
       _sectionTitle('Appearance'),
       _tile(Icons.palette_outlined, 'Appearance', _appearanceLabel, _setAppearance),
