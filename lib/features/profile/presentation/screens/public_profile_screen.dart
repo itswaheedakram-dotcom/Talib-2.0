@@ -5,6 +5,7 @@ import '../../../../core/services/firebase_service.dart';
 import '../../../../core/services/database_service.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
+import '../../../../core/services/active_profile_controller.dart';
 
 class PublicProfileScreen extends StatefulWidget {
   final String id;
@@ -122,6 +123,30 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   if (verified) const Padding(padding: EdgeInsets.only(left: 6), child: Icon(Icons.verified, size: 20, color: Color(0xFF2E7D32))),
                 ]),
                 if (city.isNotEmpty) Text(city, style: const TextStyle(color: Colors.grey)),
+                if (widget.id.startsWith('demo-user-'))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: AnimatedBuilder(
+                      animation: ActiveProfileController.instance,
+                      builder: (context, _) {
+                        final active = ActiveProfileController.instance.active?.id == widget.id;
+                        return SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: active ? null : () {
+                              final profile = temporaryProfiles.firstWhere((p) => p.id == widget.id);
+                              ActiveProfileController.instance.activate(profile);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(profile.name + ' is now the active test profile.')),
+                              );
+                            },
+                            icon: Icon(active ? Icons.check_circle : Icons.play_circle_outline),
+                            label: Text(active ? 'Active Profile' : 'Activate This Profile'),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 if (me != null && me!.uid != widget.id) ...[
                   const SizedBox(height: 10),
                   StreamBuilder<bool>(
