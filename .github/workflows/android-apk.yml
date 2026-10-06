@@ -38,20 +38,38 @@ jobs:
           elif [ -f android/settings.gradle ]; then
             sed -i -E 's/(id "org\.jetbrains\.kotlin\.android" version ")[^"]+(")/\12.3.0\2/' android/settings.gradle
           fi
-      - name: Force Gradle JVM target 17
-        shell: bash
-        run: |
-          mkdir -p "$HOME/.gradle/init.d"
-          cat > "$HOME/.gradle/init.d/talib-jvm-target.gradle" <<'GRADLE'
-          allprojects { project ->
-              project.tasks.withType(JavaCompile).configureEach {
-                  options.release = 17
-              }
-              project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-                  compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-              }
-          }
-          GRADLE
+          if [ -f android/app/build.gradle.kts ]; then
+            python3 - <<'PY'
+from pathlib import Path
+p = Path("android/app/build.gradle.kts")
+s = p.read_text()
+if "compileOptions {" in s:
+    s = s.replace("JavaVersion.VERSION_11", "JavaVersion.VERSION_17")
+else:
+    marker = "\nflutter {"
+    block = """
+android {
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+"""
+    s = s.replace(marker, block + marker)
+p.write_text(s)
+PY
+          elif [ -f android/app/build.gradle ]; then
+            sed -i 's/JavaVersion.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle
+            if ! grep -q 'jvmTarget.*17' android/app/build.gradle; then
+              printf '\nkotlinOptions { jvmTarget = "17" }\n' >> android/app/build.gradle
+            fi
+          fi
       - name: Get dependencies
         run: flutter pub get
       - name: Analyze Dart code
