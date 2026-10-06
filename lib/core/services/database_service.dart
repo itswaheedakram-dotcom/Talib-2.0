@@ -31,6 +31,7 @@ class DatabaseService {
   Stream<Set<String>> blockedUserIdsStream(String uid)=>_db.collection('users').doc(uid).collection('blockedUsers').snapshots().map((s)=>s.docs.map((d)=>d.id).toSet());
   Stream<QuerySnapshot<Map<String,dynamic>>> notificationsStream(String uid)=>_db.collection('users').doc(uid).collection('notifications').orderBy('createdAt',descending:true).limit(50).snapshots();
   Future<void> toggleFollow(String uid,String targetId,bool follow)async{final following=_db.collection('users').doc(uid).collection('following').doc(targetId);final follower=_db.collection('users').doc(targetId).collection('followers').doc(uid);final batch=_db.batch();if(follow){batch.set(following,{'userId':targetId,'createdAt':FieldValue.serverTimestamp()});batch.set(follower,{'userId':uid,'createdAt':FieldValue.serverTimestamp()});final n=_db.collection('users').doc(targetId).collection('notifications').doc();batch.set(n,{'type':'follow','text':'started following you','fromId':uid,'createdAt':FieldValue.serverTimestamp(),'read':false});}else{batch.delete(following);batch.delete(follower);}await batch.commit();}
+  DocumentReference<Map<String,dynamic>> _followingRef(String uid,String targetId) => _db.collection('users').doc(uid).collection('following').doc(targetId);
   String conversationId(String a,String b) { final ids=[a,b]..sort(); return '${ids[0]}_${ids[1]}'; }
   Future<bool> isMutualFollow(String uid,String targetId) async {
     if(uid==targetId)return false;
