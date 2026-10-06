@@ -89,3 +89,5 @@ jobs:
           retention-days: 14
 
 # Trigger verification build after Firebase isolation.
+
+# Build verification after restoring compile-time compatibility.
