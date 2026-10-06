@@ -10,6 +10,7 @@ class ChatScreen extends StatefulWidget{
   @override State<ChatScreen> createState()=>_ChatScreenState();
 }
 class _ChatScreenState extends State<ChatScreen>{
+  String _formatTime(Timestamp timestamp){final d=timestamp.toDate().toLocal();final h=d.hour.toString().padLeft(2,'0');final m=d.minute.toString().padLeft(2,'0');return '$h:$m';}
   final controller=TextEditingController();bool sending=false;
   Future<void> _send()async{
     final me=FirebaseAuth.instance.currentUser;final text=controller.text.trim();
@@ -18,7 +19,10 @@ class _ChatScreenState extends State<ChatScreen>{
     try{
       if(!await DatabaseService().isMutualFollow(me.uid,widget.otherUid)){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('You can message only when both users follow each other.')));return;}
       final db=FirebaseFirestore.instance;final conversation=db.collection('conversations').doc(widget.conversationId);
-      if(!(await conversation.get()).exists){if(await DatabaseService().createConversation(uid:me.uid,otherUid:widget.otherUid,otherName:widget.otherName)==null)return;}
+      if(!(await conversation.get()).exists){
+        final currentName=(me.displayName?.trim().isNotEmpty==true?me.displayName!.trim():'Student');
+        if(await DatabaseService().createConversation(uid:me.uid,otherUid:widget.otherUid,otherName:widget.otherName,uidName:currentName)==null)return;
+      }
       final now=FieldValue.serverTimestamp();final batch=db.batch();final message=conversation.collection('messages').doc();
       batch.set(message,{'senderId':me.uid,'receiverId':widget.otherUid,'text':text,'createdAt':now,'read':false});
       batch.set(conversation,{'participants':[me.uid,widget.otherUid],'lastMessage':text,'lastMessageAt':now,'updatedAt':now,'unreadCounts':{me.uid:0,widget.otherUid:FieldValue.increment(1)}},SetOptions(merge:true));
@@ -42,7 +46,13 @@ class _ChatScreenState extends State<ChatScreen>{
         if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
         final docs=s.data?.docs??[];WidgetsBinding.instance.addPostFrameCallback((_)=>_read(docs,me.uid));
         if(docs.isEmpty)return const Center(child:Text('No messages yet. Say hello!'));
-        return ListView.builder(padding:const EdgeInsets.all(12),itemCount:docs.length,itemBuilder:(context,i){final d=docs[i].data();final mine=d['senderId']==me.uid;return Align(alignment:mine?Alignment.centerRight:Alignment.centerLeft,child:Container(constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),decoration:BoxDecoration(color:mine?AppColors.primaryGreen:AppColors.softGreen,borderRadius:BorderRadius.circular(16)),child:Text((d['text']??'').toString(),style:TextStyle(color:mine?AppColors.white:AppColors.darkGreen))));});
+        return ListView.builder(padding:const EdgeInsets.all(12),itemCount:docs.length,itemBuilder:(context,i){final d=docs[i].data();final mine=d['senderId']==me.uid;return Align(alignment:mine?Alignment.centerRight:Alignment.centerLeft,child:Container(constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),decoration:BoxDecoration(color:mine?AppColors.primaryGreen:AppColors.softGreen,borderRadius:BorderRadius.circular(16)),child:Column(crossAxisAlignment:mine?CrossAxisAlignment.end:CrossAxisAlignment.start,children:[
+            Text((d['text']??'').toString(),style:TextStyle(color:mine?AppColors.white:AppColors.darkGreen)),
+            if(d['createdAt'] is Timestamp)...[
+              const SizedBox(height:3),
+              Text(_formatTime(d['createdAt'] as Timestamp),style:TextStyle(fontSize:10,color:mine?AppColors.white.withOpacity(.75):AppColors.mutedText)),
+            ],
+          ])));});
       })),
       SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(10,6,10,10),child:Row(children:[Expanded(child:TextField(controller:controller,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:const InputDecoration(hintText:'Write a message...',border:OutlineInputBorder()))),const SizedBox(width:8),IconButton(onPressed:sending?null:_send,icon:const Icon(Icons.send))])))
     ]));
