@@ -38,13 +38,6 @@ jobs:
           fi
           if [ -f android/app/build.gradle.kts ]; then
             sed -i 's/JavaVersion.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle.kts
-            python3 - <<'PY'
-from pathlib import Path
-p = Path('android/app/build.gradle.kts')
-s = p.read_text()
-s = s.replace('    kotlinOptions {\n        jvmTarget = JavaVersion.VERSION_11.toString()\n    }', '    kotlin {\n        compilerOptions {\n            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n        }\n    }')
-p.write_text(s)
-PY
           elif [ -f android/app/build.gradle ]; then
             sed -i 's/JavaVersion.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle
           fi
