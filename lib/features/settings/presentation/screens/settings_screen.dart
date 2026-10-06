@@ -346,7 +346,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String title,
     required String subtitle,
     required bool value,
-    required ValueChanged<bool> onChanged,
+    required ValueChanged<bool>? onChanged,
   }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -366,7 +366,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         trailing: Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: AppColors.primaryGreen,
+          activeThumbColor: AppColors.primaryGreen,
         ),
       ),
     );
