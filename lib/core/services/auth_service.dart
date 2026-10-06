@@ -1,55 +1,39 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+
+class AppUser {
+  final String uid;
+  final String email;
+  String? displayName;
+  AppUser({required this.uid, required this.email, this.displayName});
+}
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static AppUser? _currentUser;
+  static final StreamController<AppUser?> _controller = StreamController<AppUser?>.broadcast();
+  Stream<AppUser?> get authStateChanges => _controller.stream;
+  AppUser? get currentUser => _currentUser;
 
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
-  User? get currentUser => _auth.currentUser;
-
-  Future<UserCredential> signIn(String email, String password) =>
-      _auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
-
-  Future<UserCredential> register(
-    String email,
-    String password, {
-    required String name,
-    String role = 'student',
-  }) async {
-    final result = await _auth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
-    final user = result.user;
-    if (user == null) {
-      throw FirebaseAuthException(
-        code: 'user-not-created',
-        message: 'Account could not be created.',
-      );
-    }
-
-    await user.updateDisplayName(name.trim());
-    await _db.collection('users').doc(user.uid).set({
-      'uid': user.uid,
-      'name': name.trim(),
-      'email': user.email ?? email.trim(),
-      'role': role,
-      'isVerified': false,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-
-    return result;
+  Future<AppUser> signIn(String email, String password) async {
+    final value = email.trim();
+    if (value.isEmpty || password.isEmpty) throw Exception('Enter your email and password.');
+    final user = AppUser(uid: 'local-${value.toLowerCase()}', email: value, displayName: value.split('@').first);
+    _currentUser = user; _controller.add(user); return user;
   }
 
-  Future<void> sendPasswordReset(String email) =>
-      _auth.sendPasswordResetEmail(email: email.trim());
+  Future<AppUser> register(String email, String password, {required String name, String role = 'student'}) async {
+    if (name.trim().isEmpty || email.trim().isEmpty || password.length < 6) throw Exception('Enter valid account details.');
+    final user = AppUser(uid: 'local-${email.trim().toLowerCase()}', email: email.trim(), displayName: name.trim());
+    _currentUser = user; _controller.add(user); return user;
+  }
 
-  Future<UserCredential> signInAnonymously() => _auth.signInAnonymously();
+  Future<void> sendPasswordReset(String email) async {
+    if (email.trim().isEmpty) throw Exception('Enter your email first.');
+  }
 
-  Future<void> signOut() => _auth.signOut();
+  Future<AppUser> signInAnonymously() async {
+    final user = AppUser(uid: 'guest-local', email: '', displayName: 'Guest');
+    _currentUser = user; _controller.add(user); return user;
+  }
+
+  Future<void> signOut() async { _currentUser = null; _controller.add(null); }
 }
