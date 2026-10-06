@@ -3,22 +3,27 @@ on:
   push:
     branches: [main, firestore-from-78c6-stable]
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.35.2'
           channel: stable
           cache: true
+
       - name: Generate Android project files
         run: flutter create --platforms=android --project-name talib_2 --org com.talib2 .
+
       - name: Remove generated Flutter sample test
         run: rm -f test/widget_test.dart
+
       - name: Configure Android SDK compatibility
         shell: bash
         run: |
@@ -30,6 +35,7 @@ jobs:
             echo "Android app Gradle file not found"
             exit 1
           fi
+
       - name: Configure Kotlin and Java compatibility
         shell: bash
         run: |
@@ -38,45 +44,27 @@ jobs:
           elif [ -f android/settings.gradle ]; then
             sed -i -E 's/(id "org\.jetbrains\.kotlin\.android" version ")[^"]+(")/\12.3.0\2/' android/settings.gradle
           fi
-          if [ -f android/app/build.gradle.kts ]; then
-            python3 - <<'PY'
-from pathlib import Path
-p = Path("android/app/build.gradle.kts")
-s = p.read_text()
-if "compileOptions {" in s:
-    s = s.replace("JavaVersion.VERSION_11", "JavaVersion.VERSION_17")
-else:
-    marker = "\nflutter {"
-    block = """
-android {
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-}
 
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-    }
-}
-"""
-    s = s.replace(marker, block + marker)
-p.write_text(s)
-PY
+          if [ -f android/app/build.gradle.kts ]; then
+            sed -i 's/JavaVersion\.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle.kts
+            sed -i 's/jvmTarget = "[0-9]*"/jvmTarget = "17"/g' android/app/build.gradle.kts
+            sed -i "s/jvmTarget = '[0-9]*'/jvmTarget = '17'/g" android/app/build.gradle.kts
           elif [ -f android/app/build.gradle ]; then
-            sed -i 's/JavaVersion.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle
-            if ! grep -q 'jvmTarget.*17' android/app/build.gradle; then
-              printf '\nkotlinOptions { jvmTarget = "17" }\n' >> android/app/build.gradle
-            fi
+            sed -i 's/JavaVersion\.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle
+            sed -i 's/jvmTarget = "[0-9]*"/jvmTarget = "17"/g' android/app/build.gradle
+            sed -i "s/jvmTarget = '[0-9]*'/jvmTarget = '17'/g" android/app/build.gradle
           fi
+
       - name: Get dependencies
         run: flutter pub get
+
       - name: Analyze Dart code
         continue-on-error: true
         run: flutter analyze
+
       - name: Build release APK
         run: flutter build apk --release
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
