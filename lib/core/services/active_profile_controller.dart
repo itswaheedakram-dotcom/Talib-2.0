@@ -16,6 +16,7 @@ class ActiveProfileController extends ChangeNotifier {
   ActiveDemoProfile? _active;
   ActiveDemoProfile? get active=>_active;
   bool get isDemoActive=>_active!=null;
+  bool get isDemo=>_active!=null;
   String? get effectiveUid => _active?.id;
   String? get effectiveName => _active?.name;
   String? get effectiveCity => _active?.city;
