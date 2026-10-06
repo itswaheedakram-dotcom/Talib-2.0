@@ -18,6 +18,11 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
   Future<void> _review(String name) async {
     final current = me;
+    final identity = ActiveProfileController.instance;
+    if (identity.isDemo) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please sign in to leave a review.')));
+      return;
+    }
     if (current == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please sign in to leave a review.')));
       return;
@@ -85,6 +90,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
             );
           },
         ),
+        const SizedBox(height:12),
+        AnimatedBuilder(animation: ActiveProfileController.instance,builder:(context,_) { final active=ActiveProfileController.instance.active; if(active==null||active.id==widget.id)return const SizedBox.shrink(); return StreamBuilder<bool>(stream:DatabaseService().followingStream(active.id,widget.id),builder:(context,s){final following=s.data==true;return Row(children:[Expanded(child:FilledButton.icon(onPressed:()=>DatabaseService().toggleFollow(active.id,widget.id,!following),icon:Icon(following?Icons.person_remove_outlined:Icons.person_add_outlined),label:Text(following?'Following':'Follow'))),const SizedBox(width:8),Expanded(child:OutlinedButton.icon(onPressed:()=>context.push('/chat/${DatabaseService().conversationId(active.id,widget.id)}?uid=${widget.id}&name=${Uri.encodeComponent(name)}'),icon:const Icon(Icons.chat_bubble_outline),label:const Text('Message')))]);});}),
         const SizedBox(height:18),Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           const Text('Profile Information',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),const SizedBox(height:10),_InfoTile(Icons.school_outlined,'Education level',demo['level']!),if(demo['institute']!.isNotEmpty)_InfoTile(Icons.account_balance_outlined,'Institute',demo['institute']!),if(demo['program']!.isNotEmpty)_InfoTile(Icons.menu_book_outlined,'Program / Degree',demo['program']!)
         ]))),const SizedBox(height:12),const Card(child:Padding(padding:EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Community Activity',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),SizedBox(height:8),Text('This profile is participating in the Talib community.',style:TextStyle(color:Colors.grey))])))
