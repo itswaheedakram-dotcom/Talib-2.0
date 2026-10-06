@@ -52,6 +52,14 @@ class DatabaseService {
     return id;
   }
   Stream<bool> followingStream(String uid,String targetId)=>_db.collection('users').doc(uid).collection('following').doc(targetId).snapshots().map((s)=>s.exists);
+  Stream<bool> mutualFollowStream(String uid,String targetId) {
+    if (uid == targetId) return Stream<bool>.value(false);
+    return followingStream(uid, targetId).asyncMap((following) async {
+      if (!following) return false;
+      final reverse = await _db.collection('users').doc(targetId).collection('following').doc(uid).get();
+      return reverse.exists;
+    });
+  }
   Stream<int> followerCountStream(String uid)=>_db.collection('users').doc(uid).collection('followers').snapshots().map((s)=>s.size);
   Future<void> notifyMention({required String targetId,required String fromId,required String postId})=>_db.collection('users').doc(targetId).collection('notifications').add({'type':'mention','text':'mentioned you in a community post','postId':postId,'fromId':fromId,'createdAt':FieldValue.serverTimestamp(),'read':false});
   Future<void> votePoll({required String postId,required String uid,required int option})async{final ref=_db.collection('posts').doc(postId);await _db.runTransaction((tx)async{final s=await tx.get(ref);if(!s.exists)return;final d=s.data()??{};final voters=Map<String,dynamic>.from(d['pollVoters']??{});final old=voters[uid];final votes=Map<String,dynamic>.from(d['pollVotes']??{});if(old!=null){final k=old.toString();votes[k]=((votes[k]??0) as num).toInt()-1;}voters[uid]=option;final k=option.toString();votes[k]=((votes[k]??0) as num).toInt()+1;tx.update(ref,{'pollVoters':voters,'pollVotes':votes});});}
