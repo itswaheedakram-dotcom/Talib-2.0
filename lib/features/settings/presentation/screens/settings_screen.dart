@@ -181,6 +181,96 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _showAccountInfo() async {
+    final u = _user;
+    if (u == null) return;
+    final providers = u.providerData.map((p) => p.providerId == 'password' ? 'Email & password' : p.providerId).join(', ');
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Account information'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _infoRow('Name', u.displayName?.trim().isNotEmpty == true ? u.displayName! : 'Not set'),
+          _infoRow('Email', u.email ?? 'Not available'),
+          _infoRow('Sign-in method', providers.isEmpty ? 'Unknown' : providers),
+        ]),
+        actions: [TextButton(onPressed: () => context.pop(), child: const Text('Close'))],
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SizedBox(width: 105, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700))),
+      Expanded(child: Text(value)),
+    ]),
+  );
+
+  Future<void> _deleteAccount() async {
+    final u = _user;
+    if (u == null) return;
+    final confirm = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete account?'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('This permanently deletes your account. This action cannot be undone.'),
+          const SizedBox(height: 14),
+          TextField(controller: confirm, decoration: const InputDecoration(labelText: 'Type DELETE to confirm')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => context.pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => context.pop(confirm.text.trim().toUpperCase() == 'DELETE'), child: const Text('Delete')),
+        ],
+      ),
+    );
+    confirm.dispose();
+    if (confirmed != true) return;
+    try {
+      await u.delete();
+      if (mounted) context.go('/signin');
+    } on FirebaseAuthException catch (e) {
+      final message = e.code == 'requires-recent-login'
+          ? 'Please sign in again, then delete your account.'
+          : (e.message ?? 'Could not delete the account.');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not delete the account. Please try again.')));
+    }
+  }
+
+  Future<void> _setAppearance() async {
+    final selected = await showDialog<ThemeMode>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Appearance'),
+        children: [
+          _modeTile(ThemeMode.system, 'System default', Icons.brightness_auto_outlined),
+          _modeTile(ThemeMode.light, 'Light', Icons.light_mode_outlined),
+          _modeTile(ThemeMode.dark, 'Dark', Icons.dark_mode_outlined),
+        ],
+      ),
+    );
+    if (selected != null) ThemeController.instance.setMode(selected);
+  }
+
+  Widget _modeTile(ThemeMode mode, String title, IconData icon) => SimpleDialogOption(
+    onPressed: () => Navigator.of(context).pop(mode),
+    child: Row(children: [Icon(icon, color: AppColors.primaryGreen), const SizedBox(width: 14), Text(title)]),
+  );
+
+  Future<void> _setPrivateProfile(bool value) async {
+    setState(() => _privateProfile = value);
+    await _savePreference('privateProfile', value);
+  }
+
+  Future<void> _setNotifications(bool value) async {
+    setState(() => _notifications = value);
+    await _savePreference('notificationsEnabled', value);
+  }
+
   Future<void> _signOut() async {
     await AuthService().signOut();
     if (mounted) context.go('/signin');
@@ -208,167 +298,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-        children: [
-          _sectionTitle('Account'),
-          _tile(
-            icon: Icons.person_outline_rounded,
-            title: 'Account settings',
-            subtitle: 'Manage your profile and account information',
-            onTap: () => context.push('/profile'),
-          ),
-          _tile(
-            icon: Icons.lock_outline_rounded,
-            title: 'Change password',
-            subtitle: 'Update your account password',
-            onTap: _changePassword,
-          ),
-          const SizedBox(height: 18),
-          _sectionTitle('Notifications & privacy'),
-          _switchTile(
-            icon: Icons.notifications_none_rounded,
-            title: 'Notifications',
-            subtitle: 'Receive app notifications',
-            value: _notifications,
-            onChanged: _loadingPreferences
-                ? null
-                : (value) {
-                    setState(() => _notifications = value);
-                    _savePreference('notificationsEnabled', value);
-                  },
-          ),
-          _switchTile(
-            icon: Icons.visibility_off_outlined,
-            title: 'Private profile',
-            subtitle: 'Limit who can view your profile',
-            value: _privateProfile,
-            onChanged: _loadingPreferences
-                ? null
-                : (value) {
-                    setState(() => _privateProfile = value);
-                    _savePreference('privateProfile', value);
-                  },
-          ),
-          const SizedBox(height: 18),
-          _sectionTitle('App'),
-          _tile(
-            icon: Icons.palette_outlined,
-            title: 'Appearance',
-            subtitle: 'Theme and display preferences',
-            onTap: () => _comingSoon('Appearance'),
-          ),
-          _tile(
-            icon: Icons.language_rounded,
-            title: 'Language',
-            subtitle: 'English',
-            onTap: () => _comingSoon('Language'),
-          ),
-          const SizedBox(height: 18),
-          _sectionTitle('Support'),
-          _tile(
-            icon: Icons.help_outline_rounded,
-            title: 'Help & FAQs',
-            subtitle: 'Get help with Taalib',
-            onTap: () => _comingSoon('Help & FAQs'),
-          ),
-          _tile(
-            icon: Icons.info_outline_rounded,
-            title: 'About Taalib',
-            subtitle: 'Version 1.0.0',
-            onTap: () => _comingSoon('About Taalib'),
-          ),
-          const SizedBox(height: 22),
-          OutlinedButton.icon(
-            onPressed: _confirmSignOut,
-            icon: const Icon(Icons.logout_rounded),
-            label: const Text('Sign out'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.darkGreen,
-              side: const BorderSide(color: AppColors.divider),
-              padding: const EdgeInsets.symmetric(vertical: 13),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Settings')),
+    body: ListView(padding: const EdgeInsets.fromLTRB(16, 18, 16, 28), children: [
+      _sectionTitle('Account & Security'),
+      _tile(Icons.person_outline_rounded, 'Account settings', 'Manage your profile and account information', () => context.push('/profile')),
+      _tile(Icons.badge_outlined, 'Account information', 'View your account details', _showAccountInfo),
+      _tile(Icons.lock_outline_rounded, 'Change password', 'Update your account password', _changePassword),
+      _tile(Icons.delete_outline_rounded, 'Delete account', 'Permanently remove your account', _deleteAccount),
+      const SizedBox(height: 18),
+      _sectionTitle('Privacy'),
+      _switchTile(Icons.visibility_off_outlined, 'Private profile', 'Limit who can view your profile', _privateProfile, _loadingPreferences ? null : _setPrivateProfile),
+      const SizedBox(height: 18),
+      _sectionTitle('Notifications'),
+      _switchTile(Icons.notifications_none_rounded, 'Notifications', 'Receive app notifications', _notifications, _loadingPreferences ? null : _setNotifications),
+      const SizedBox(height: 18),
+      _sectionTitle('Appearance'),
+      _tile(Icons.palette_outlined, 'Appearance', _appearanceLabel, _setAppearance),
+      const SizedBox(height: 18),
+      _sectionTitle('Session'),
+      _tile(Icons.logout_rounded, 'Sign out', 'Sign out of this account', _confirmSignOut),
+    ]),
+  );
 
-  Widget _sectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: AppColors.primaryGreen,
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.3,
-        ),
-      ),
-    );
-  }
+  String get _appearanceLabel => switch (ThemeController.instance.mode) {
+    ThemeMode.light => 'Light',
+    ThemeMode.dark => 'Dark',
+    ThemeMode.system => 'System default',
+  };
 
-  Widget _tile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
-        leading: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: AppColors.softGreen,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: AppColors.primaryGreen),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.mutedText),
-        onTap: onTap,
-      ),
-    );
-  }
+  Widget _sectionTitle(String title) => Padding(
+    padding: const EdgeInsets.only(left: 4, bottom: 8),
+    child: Text(title, style: const TextStyle(color: AppColors.primaryGreen, fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: .3)),
+  );
 
-  Widget _switchTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool>? onChanged,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
-        leading: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: AppColors.softGreen,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: AppColors.primaryGreen),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle),
-        trailing: Switch(
-          value: value,
-          onChanged: onChanged,
-          activeThumbColor: AppColors.primaryGreen,
-        ),
-      ),
-    );
-  }
+  Widget _tile(IconData icon, String title, String subtitle, VoidCallback onTap) => Card(
+    margin: const EdgeInsets.only(bottom: 8),
+    child: ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+      leading: Container(width: 42, height: 42, decoration: BoxDecoration(color: AppColors.softGreen, borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: AppColors.primaryGreen)),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(subtitle),
+      trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.mutedText),
+      onTap: onTap,
+    ),
+  );
+
+  Widget _switchTile(IconData icon, String title, String subtitle, bool value, ValueChanged<bool>? onChanged) => Card(
+    margin: const EdgeInsets.only(bottom: 8),
+    child: ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+      leading: Container(width: 42, height: 42, decoration: BoxDecoration(color: AppColors.softGreen, borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: AppColors.primaryGreen)),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(subtitle),
+      trailing: Switch(value: value, onChanged: onChanged, activeThumbColor: AppColors.primaryGreen),
+    ),
+  );
 }
