@@ -21,12 +21,49 @@ class MessagesScreen extends StatelessWidget {
       final docs=[...(s.data?.docs??[])];
       docs.sort((a,b){final at=a.data()['updatedAt'],bt=b.data()['updatedAt'];if(at is Timestamp&&bt is Timestamp)return bt.compareTo(at);return 0;});
       if(docs.isEmpty)return const Center(child:Text('No conversations yet. Follow each other to start messaging.'));
-      return Column(children:[
-        if(displayName!=null) Padding(padding:const EdgeInsets.fromLTRB(16,10,16,6),child:Align(alignment:Alignment.centerLeft,child:Text('Test profile: $displayName',style:const TextStyle(fontWeight:FontWeight.w700)))),
-        Expanded(child:ListView.separated(padding:const EdgeInsets.symmetric(vertical:8),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(context,i){
-        final d=docs[i].data();final otherId=_otherId(d,user.uid);final names=Map<String,dynamic>.from(d['participantNames']??{});final name=(names[otherId]??'Student').toString();final unread=Map<String,dynamic>.from(d['unreadCounts']??{})[user.uid];final n=unread is num?unread.toInt():0;
-        return ListTile(leading:const CircleAvatar(child:Icon(Icons.person_outline)),title:Text(name,style:const TextStyle(fontWeight:FontWeight.w600)),subtitle:Text((d['lastMessage']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis),trailing:n>0?Column(mainAxisAlignment:MainAxisAlignment.center,children:[CircleAvatar(radius:12,child:Text(n>99?'99+':n.toString(),style:const TextStyle(fontSize:10))),const SizedBox(height:3),Text(_formatTime(d['updatedAt']),style:const TextStyle(fontSize:10))]):Column(mainAxisAlignment:MainAxisAlignment.center,children:[Text(_formatTime(d['updatedAt']),style:const TextStyle(fontSize:10)),const SizedBox(height:4),const Icon(Icons.chevron_right)]),onTap:otherId.isEmpty?null:()=>context.push('/chat/${docs[i].id}?uid=$otherId&name=${Uri.encodeComponent(name)}'));
-      }));
-    });
+      return Column(
+        children: [
+          if (displayName != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Test profile: ' + displayName, style: const TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: docs.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, i) {
+                final data = docs[i].data();
+                final otherId = _otherId(data, user.uid);
+                final names = Map<String, dynamic>.from(data['participantNames'] ?? {});
+                final name = (names[otherId] ?? 'Student').toString();
+                final unread = Map<String, dynamic>.from(data['unreadCounts'] ?? {})[user.uid];
+                final n = unread is num ? unread.toInt() : 0;
+                return ListTile(
+                  leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+                  title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text((data['lastMessage'] ?? '').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  trailing: n > 0
+                      ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          CircleAvatar(radius: 12, child: Text(n > 99 ? '99+' : n.toString(), style: const TextStyle(fontSize: 10))),
+                          const SizedBox(height: 3),
+                          Text(_formatTime(data['updatedAt']), style: const TextStyle(fontSize: 10)),
+                        ])
+                      : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          Text(_formatTime(data['updatedAt']), style: const TextStyle(fontSize: 10)),
+                          const SizedBox(height: 4),
+                          const Icon(Icons.chevron_right),
+                        ]),
+                  onTap: otherId.isEmpty ? null : () => context.push('/chat/' + docs[i].id + '?uid=' + otherId + '&name=' + Uri.encodeComponent(name)),
+                );
+              },
+            ),
+          ),
+        ],
+      );    });
   }
 }
