@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import '../features/home/presentation/screens/main_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 import '../features/newsfeed/presentation/screens/news_feed_screen.dart';
+import '../features/newsfeed/presentation/screens/news_detail_screen.dart';
 import '../features/institutes/presentation/screens/all_institutes_screen.dart';
 import '../features/institutes/presentation/screens/institute_list_screen.dart';
 import '../features/institutes/presentation/screens/institute_detail_screen.dart';
@@ -41,6 +42,7 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/',builder:(_,__)=>const MainScreen()),
   GoRoute(path:'/home',builder:(_,__)=>const HomeScreen()),
   GoRoute(path:'/newsfeed',builder:(_,__)=>const NewsFeedScreen()),
+  GoRoute(path:'/news/:id',builder:(_,s)=>NewsDetailScreen(id:s.pathParameters['id']!)),
   GoRoute(path:'/institutes',builder:(_,__)=>const AllInstitutesScreen()),
   GoRoute(path:'/institutes/:type',builder:(_,s)=>InstituteListScreen(type:s.pathParameters['type']!)),
   GoRoute(path:'/institute/:id',builder:(_,s)=>InstituteDetailScreen(id:s.pathParameters['id']!)),
