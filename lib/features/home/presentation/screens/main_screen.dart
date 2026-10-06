@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../search/presentation/screens/search_screen.dart';
 import '../../../community/presentation/screens/community_screen.dart';
 import '../../../common/presentation/widgets/custom_scaffold.dart';
+import '../../../messages/presentation/screens/messages_screen.dart';
 import '../../../../app/theme.dart';
 import 'home_screen.dart';
 
@@ -19,6 +20,7 @@ class _MainScreenState extends State<MainScreen> {
     HomeScreen(),
     SearchScreen(),
     CommunityScreen(),
+    MessagesScreen(),
   ];
 
   @override
@@ -65,17 +67,7 @@ class _MainScreenState extends State<MainScreen> {
                 BottomNavigationBarItem(
                   icon: Icon(Icons.chat_bubble_outline_rounded),
                   activeIcon: Icon(Icons.chat_bubble_rounded),
-                  label: 'Messages',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.group_outlined),
-                  activeIcon: Icon(Icons.group_rounded),
-                  label: 'Groups',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.folder_outlined),
-                  activeIcon: Icon(Icons.folder_rounded),
-                  label: 'Resources',
+                  label: 'Messages & Groups',
                 ),
               ],
             ),
