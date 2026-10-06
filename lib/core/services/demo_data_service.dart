@@ -17,7 +17,7 @@ class DemoDataService extends ChangeNotifier {
   final Map<String,Set<String>> _following={}; final Map<String,List<Map<String,dynamic>>> _notifications={};
   final Map<String,Set<String>> _bookmarks={}; final Map<String,List<Map<String,dynamic>>> _messages={};
   final Map<String,List<Map<String,dynamic>>> _resources={}; final Map<String,List<Map<String,dynamic>>> _reviews={};
-  final Set<String> _instituteBookmarks={}; final Set<String> _instituteClaims={};
+  final Set<String> _instituteBookmarks={}; final Set<String> _instituteClaims={}; final List<Map<String,dynamic>> _groups=[];
   final Map<String,Map<String,dynamic>> _settings={}; int _seq=0;
   Map<String,dynamic> settings(String uid)=>_settings.putIfAbsent(uid,()=>{'notificationsEnabled':true,'privateProfile':false,'appearanceMode':'system'});
   void setSetting(String uid,String field,dynamic value){settings(uid)[field]=value;_emit();}
@@ -28,6 +28,8 @@ class DemoDataService extends ChangeNotifier {
     _posts['demo-post-2']=Post(id:'demo-post-2',text:'Which institute is best for your next education program? Share your experience.',authorId:'demo-user-2',authorName:'Ali Raza',createdAt:now.subtract(const Duration(hours:2)),category:'Institute Reviews',likesCount:1,likedBy:['demo-user-1'],commentsCount:1);
     _comments['demo-post-1']=[DemoComment(id:'c1',authorId:'demo-user-2',authorName:'Ali Raza',text:'This is helpful. Thanks!',createdAt:now.subtract(const Duration(minutes:8)))];
     _comments['demo-post-2']=[DemoComment(id:'c2',authorId:'demo-user-1',authorName:'Ayesha Khan',text:'I would compare programs and admission requirements.',createdAt:now.subtract(const Duration(hours:1)))];
+    _groups.add({'id':'demo-group-1','name':'Computer Science Students','description':'Discuss CS subjects, assignments and guidance.','memberCount':4});
+    _groups.add({'id':'demo-group-2','name':'Admission Help 2026','description':'Share admission updates and institute guidance.','memberCount':4});
     for(final id in names.keys){_resources[id]!.add({'id':'resource-$id','title':'Study guidance','url':'https://example.com','description':'Temporary test resource shared by $id','authorId':id,'createdAt':now});}
   }
   void _emit(){notifyListeners();_changes.add(null);}
@@ -52,6 +54,9 @@ class DemoDataService extends ChangeNotifier {
   List<Map<String,dynamic>> conversations(String uid){final result=<Map<String,dynamic>>[];for(final e in _messages.entries){final parts=e.key.split('|');if(parts.contains(uid)){final other=parts.firstWhere((x)=>x!=uid,orElse:()=>uid);final list=e.value;final last=list.isEmpty?null:list.last;result.add({'id':e.key,'otherUid':other,'otherName':_name(other),'lastMessage':last?['text']??'','updatedAt':last?['createdAt']??DateTime.now()});}}return result..sort((a,b)=>(b['updatedAt'] as DateTime).compareTo(a['updatedAt'] as DateTime));}
   List<Map<String,dynamic>> messages(String a,String b)=>List.unmodifiable(_messages[_conversation(a,b)]??const []);
   void sendMessage(String from,String to,String text){if(!isMutual(from,to))return;final key=_conversation(from,to);(_messages[key]??=[]).add({'id':'demo-message-${++_seq}','senderId':from,'receiverId':to,'text':text,'createdAt':DateTime.now(),'read':false});_addNotification(to,{'type':'message','text':'sent you a message','fromId':from,'createdAt':DateTime.now(),'read':false});_emit();}
+  List<Map<String,dynamic>> groups()=>List.unmodifiable(_groups);
+  void createGroup(String uid,String name,String description){_groups.insert(0,{'id':'demo-group-${++_seq}','name':name,'description':description,'memberCount':1,'ownerId':uid});_emit();}
+  void joinGroup(String id){final g=_groups.cast<Map<String,dynamic>>().firstWhere((x)=>x['id']==id,orElse:()=>{});if(g.isNotEmpty)g['memberCount']=((g['memberCount']??0) as num).toInt()+1;_emit();}
   List<Map<String,dynamic>> resources(String uid)=>List.unmodifiable(_resources[uid]??const []);
   void addResource(String uid,String title,String url,String description){(_resources[uid]??=[]).insert(0,{'id':'demo-resource-${++_seq}','title':title,'url':url,'description':description,'authorId':uid,'createdAt':DateTime.now()});_emit();}
   List<Map<String,dynamic>> reviews(String uid)=>List.unmodifiable(_reviews[uid]??const []);
