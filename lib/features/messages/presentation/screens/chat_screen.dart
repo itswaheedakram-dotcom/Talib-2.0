@@ -27,6 +27,13 @@ class _ChatScreenState extends State<ChatScreen> {
       }
       final db=FirebaseFirestore.instance;
       final conversation=db.collection('conversations').doc(widget.conversationId);
+      if (!(await conversation.get()).exists) {
+        final created=await DatabaseService().createConversation(uid:me.uid,otherUid:widget.otherUid,otherName:widget.otherName);
+        if (created == null) {
+          if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Messaging is available only for mutual follows.')));
+          return;
+        }
+      }
       final message=conversation.collection('messages').doc();
       final now=FieldValue.serverTimestamp();
       final batch=db.batch();
@@ -36,7 +43,7 @@ class _ChatScreenState extends State<ChatScreen> {
       batch.set(conversation,{
         'participants':[me.uid,widget.otherUid],
         'participantNames':{me.uid:me.displayName?.trim().isNotEmpty==true?me.displayName!.trim():'Student',widget.otherUid:widget.otherName},
-        'lastMessage':text,'lastMessageAt':now,'updatedAt':now,
+        'lastMessage':text,'lastMessageAt':now,'updatedAt':now,'unreadCounts':{me.uid:0,widget.otherUid:FieldValue.increment(1)},
       },SetOptions(merge:true));
       await batch.commit();
       controller.clear();
@@ -55,6 +62,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if(x['receiverId']==uid && x['read']!=true) { batch.update(d.reference,{'read':true}); changed=true; }
     }
     if(changed) await batch.commit();
+    await FirebaseFirestore.instance.collection('conversations').doc(widget.conversationId).set({'unreadCounts':{uid:0}},SetOptions(merge:true));
   }
 
   @override Widget build(BuildContext context) {
