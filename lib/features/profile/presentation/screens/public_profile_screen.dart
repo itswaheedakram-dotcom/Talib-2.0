@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../../../core/services/database_service.dart';
 import 'package:flutter/material.dart';
+import '../../../../app/theme.dart';
 
 class PublicProfileScreen extends StatefulWidget {
   final String id;
@@ -82,6 +83,25 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         final program = (data['program'] ?? '').toString();
         final level = (data['educationLevel'] ?? '').toString();
         final verified = data['verified'] == true;
+        final isOwner = me?.uid == widget.id;
+        final isPrivate = data['privateProfile'] == true;
+        if (isPrivate && !isOwner) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.lock_outline_rounded, size: 52, color: AppColors.primaryGreen),
+                  SizedBox(height: 12),
+                  Text('Private profile', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700)),
+                  SizedBox(height: 6),
+                  Text('This user has limited profile visibility.', textAlign: TextAlign.center),
+                ],
+              ),
+            ),
+          );
+        }
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance.collection('users').doc(widget.id).collection('reviews').orderBy('createdAt', descending: true).snapshots(),
           builder: (context, reviewsSnapshot) {
