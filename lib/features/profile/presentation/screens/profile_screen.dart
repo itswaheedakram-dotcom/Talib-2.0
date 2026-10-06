@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../../../core/services/database_service.dart';
+import '../../../../core/services/active_profile_controller.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -66,6 +67,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override void dispose() { for (final c in [name, level, institute, program, city]) c.dispose(); super.dispose(); }
 
   @override Widget build(BuildContext context) {
+    final active = ActiveProfileController.instance.active;
+    if (active != null) {
+      return AnimatedBuilder(
+        animation: ActiveProfileController.instance,
+        builder: (context, _) {
+          final p = ActiveProfileController.instance.active!;
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Profile'),
+              actions: [
+                IconButton(
+                  tooltip: 'Exit test profile',
+                  onPressed: () => ActiveProfileController.instance.clear(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            body: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 28),
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(color: lightGreen, borderRadius: BorderRadius.circular(14)),
+                  child: Row(children: [
+                    CircleAvatar(
+                      radius: 38,
+                      backgroundColor: green,
+                      child: Text(p.name.substring(0, 1), style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700)),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        Expanded(child: Text(p.name, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: darkGreen))),
+                        const Icon(Icons.verified, color: green),
+                      ]),
+                      const SizedBox(height: 4),
+                      Text(p.city, style: const TextStyle(color: Colors.black54)),
+                      const SizedBox(height: 7),
+                      const Text('Active temporary test profile', style: TextStyle(color: green, fontWeight: FontWeight.w600)),
+                    ])),
+                  ]),
+                ),
+                const SizedBox(height: 14),
+                _section('Profile Information', Column(children: [
+                  _demoInfo(Icons.school_outlined, 'Education Level', p.level),
+                  _demoInfo(Icons.account_balance_outlined, 'Institute', p.institute),
+                  _demoInfo(Icons.menu_book_outlined, 'Program / Degree', p.program),
+                  _demoInfo(Icons.location_on_outlined, 'City', p.city),
+                ])),
+                const SizedBox(height: 12),
+                _section('Test Mode', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('The app is currently using this temporary profile for profile-related testing.'),
+                  const SizedBox(height: 10),
+                  FilledButton.icon(
+                    onPressed: () => context.push('/temporary-profiles'),
+                    icon: const Icon(Icons.swap_horiz_rounded),
+                    label: const Text('Switch Test Profile'),
+                  ),
+                ])),
+              ],
+            ),
+          );
+        },
+      );
+    }
     final u = user;
     final display = name.text.trim().isEmpty ? 'Student' : name.text.trim();
 
@@ -295,6 +361,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     const SizedBox(height: 10),
     child
   ])));
+
+  static Widget _demoInfo(IconData icon, String label, String value) => ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.circle, size: 8, color: green), title: Text(value), subtitle: Text(label));
 
   static Widget _field(TextEditingController c, String label, IconData icon) => Padding(padding: const EdgeInsets.only(bottom: 10), child: TextField(controller: c, decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon, color: green))));
 
