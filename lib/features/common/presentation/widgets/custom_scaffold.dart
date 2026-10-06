@@ -57,9 +57,9 @@ class TalibDrawer extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 children: [
-                  _item(context, Icons.home_rounded, 'Home', '/'),
                   _item(context, Icons.person_rounded, 'Profile', '/profile'),
                   _item(context, Icons.bookmark_rounded, 'Bookmarks', '/bookmarks'),
+                  _item(context, Icons.folder_rounded, 'Resources', '/resources'),
                   _item(context, Icons.person_add_alt_1_rounded, 'Invite a friend', null),
                   _item(context, Icons.report_gmailerrorred_rounded, 'Report an issue', null),
                   _item(context, Icons.help_rounded, 'Help & FAQs', null),
@@ -69,6 +69,7 @@ class TalibDrawer extends StatelessWidget {
                   const SizedBox(height: 4),
                   _item(context, Icons.settings_rounded, 'Settings', null),
                   _item(context, Icons.login_rounded, 'Sign in', '/signin'),
+                  _item(context, Icons.person_add_rounded, 'Sign up', '/register'),
                 ],
               ),
             ),
