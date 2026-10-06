@@ -3,8 +3,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme.dart';
 
 /// App drawer navigation.
-/// Existing modules/actions are preserved; only layout and interaction styling
-/// are modernized. Reference palette remains unchanged.
 class TalibDrawer extends StatelessWidget {
   const TalibDrawer({super.key});
 
@@ -61,6 +59,7 @@ class TalibDrawer extends StatelessWidget {
                 children: [
                   _item(context, Icons.home_rounded, 'Home', '/'),
                   _item(context, Icons.person_rounded, 'Profile', '/profile'),
+                  _item(context, Icons.bookmark_rounded, 'Bookmarks', '/bookmarks'),
                   _item(context, Icons.person_add_alt_1_rounded, 'Invite a friend', null),
                   _item(context, Icons.report_gmailerrorred_rounded, 'Report an issue', null),
                   _item(context, Icons.help_rounded, 'Help & FAQs', null),
