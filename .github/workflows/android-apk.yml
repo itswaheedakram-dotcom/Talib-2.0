@@ -33,17 +33,17 @@ jobs:
       - name: Configure Kotlin and Java compatibility
         shell: bash
         run: |
-          if [ -f android/settings.gradle.kts ]; then
-            sed -i -E 's/id\("org\.jetbrains\.kotlin\.android"\) version "[^"]+"/id("org.jetbrains.kotlin.android") version "2.3.0"/' android/settings.gradle.kts
-          fi
           if [ -f android/app/build.gradle.kts ]; then
             python3 - <<'PY'
 from pathlib import Path
+import re
 p = Path("android/app/build.gradle.kts")
 s = p.read_text()
-s = s.replace(
-    '    kotlinOptions {\n        jvmTarget = JavaVersion.VERSION_17.toString()\n    }',
-    '    kotlin {\n        compilerOptions {\n            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n        }\n    }'
+s = re.sub(
+    r'\n\s*kotlinOptions\s*\{\s*jvmTarget\s*=\s*[^\n]+\s*\}',
+    '\n    kotlin {\n        compilerOptions {\n            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n        }\n    }',
+    s,
+    count=1,
 )
 p.write_text(s)
 PY
