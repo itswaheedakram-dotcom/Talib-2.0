@@ -129,6 +129,7 @@ class DatabaseService {
     if(avg>=4.5&&reviews.length>=5)badges.add('Trusted Member');
     return {'score':score,'posts':posts.length,'comments':commentDocs,'likes':likes,'bestAnswers':bestAnswers,'followers':followerCount,'rating':avg,'reviews':reviews.length,'badges':badges};
   }
+  Stream<List<Map<String,dynamic>>> demoCommentsStream(String postId)=>_demoStream(DemoDataService.instance.comments(postId),()=>DemoDataService.instance.comments(postId).map((x)=>{'id':x.id,'authorId':x.authorId,'authorName':x.authorName,'text':x.text,'createdAt':x.createdAt}).toList());
   Stream<List<Map<String,dynamic>>> demoNotificationsStream(String uid)=>_demoStream(DemoDataService.instance.notifications(_uid(uid)),()=>DemoDataService.instance.notifications(_uid(uid)));
   Future<void> markNotificationRead(String uid,String id){uid=_uid(uid);if(_demo(uid)){DemoDataService.instance.markNotificationRead(uid,id);return Future.value();}return _db.collection('users').doc(uid).collection('notifications').doc(id).update({'read':true});}
   Stream<List<Map<String,dynamic>>> demoConversationsStream(String uid)=>_demoStream(DemoDataService.instance.conversations(_uid(uid)),()=>DemoDataService.instance.conversations(_uid(uid)));
