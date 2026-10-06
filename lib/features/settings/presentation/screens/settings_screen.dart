@@ -312,6 +312,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final user = _user;
     if (user == null) return;
     ThemeController.instance.setMode(selected);
+    if (ActiveProfileController.instance.isDemo) {
+      DemoDataService.instance.setSetting(ActiveProfileController.instance.effectiveUid!, 'appearanceMode', selected.name);
+      if (mounted) setState(() {});
+      return;
+    }
     try {
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'appearanceMode': selected.name,
