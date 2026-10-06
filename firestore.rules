@@ -61,8 +61,7 @@ service cloud.firestore {
     }
 
     match /conversations/{conversationId} {
-      allow read: if signedIn() && resource.data.participants.hasAny([request.auth.uid])
-        && notBlocked(resource.data.participants[0], resource.data.participants[1]);
+      allow read: if signedIn() && resource.data.participants.hasAny([request.auth.uid]);
 
       allow create: if signedIn()
         && request.resource.data.participants is list
@@ -82,10 +81,6 @@ service cloud.firestore {
         && isParticipant(resource.data.participants)
         && request.resource.data.participants == resource.data.participants
         && mutualFollow(
-          resource.data.participants[0],
-          resource.data.participants[1]
-        )
-        && notBlocked(
           resource.data.participants[0],
           resource.data.participants[1]
         );
