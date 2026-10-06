@@ -37,6 +37,7 @@ import '../features/jobs/presentation/screens/jobs_screen.dart';
 import '../features/groups/presentation/screens/groups_screen.dart';
 import '../features/resources/presentation/screens/resources_screen.dart';
 import '../features/messages/presentation/screens/messages_screen.dart';
+import '../features/messages/presentation/screens/chat_screen.dart';
 
 final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/',builder:(_,__)=>const MainScreen()),
@@ -76,4 +77,5 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/groups',builder:(_,__)=>const GroupsScreen()),
   GoRoute(path:'/resources',builder:(_,__)=>const ResourcesScreen()),
   GoRoute(path:'/messages',builder:(_,__)=>const MessagesScreen()),
+  GoRoute(path:'/chat/:id',builder:(_,s)=>ChatScreen(conversationId:s.pathParameters['id']!,otherUid:s.uri.queryParameters['uid']!,otherName:s.uri.queryParameters['name']??'Student')),
 ]);
