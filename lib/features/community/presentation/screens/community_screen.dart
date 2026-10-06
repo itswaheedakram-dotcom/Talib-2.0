@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../models/post.dart';
 import '../../../../core/services/database_service.dart';
 import '../../../../core/services/firebase_service.dart';
+import '../../../../core/services/active_profile_controller.dart';
 
 class CommunityScreen extends StatefulWidget{final String? instituteId;final String? instituteName;const CommunityScreen({super.key,this.instituteId,this.instituteName});@override State<CommunityScreen> createState()=>_CommunityScreenState();}
 class _CommunityScreenState extends State<CommunityScreen>{
@@ -11,7 +12,9 @@ class _CommunityScreenState extends State<CommunityScreen>{
  final cats=const ['All','General','Admission Help','Career','Scholarships','Study Help','Institute Reviews','Jobs/Internships','Announcements'];
  @override void dispose(){_search.dispose();super.dispose();}
  void login()=>ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Please sign in to create, like or save posts.')));
- @override Widget build(BuildContext context){final ready=FirebaseService.initialized;if(ready&&_db==null)_db=DatabaseService();final user=ready?FirebaseAuth.instance.currentUser:null;return Scaffold(
+ @override Widget build(BuildContext context){final ready=FirebaseService.initialized;if(ready&&_db==null)_db=DatabaseService();final realUser=ready?FirebaseAuth.instance.currentUser:null;
+ final identity=ActiveProfileController.instance;
+ final user=realUser;return Scaffold(
  appBar:AppBar(title:Text(widget.instituteName==null?'Community':widget.instituteName!+' Community'),actions:[IconButton(tooltip:'Notifications',icon:const Icon(Icons.notifications_none),onPressed:()=>context.push('/notifications')),PopupMenuButton<bool>(onSelected:(v)=>setState(()=>popular=v),itemBuilder:(_)=>const[PopupMenuItem(value:false,child:Text('Latest')),PopupMenuItem(value:true,child:Text('Popular'))])]),
  floatingActionButton:FloatingActionButton.extended(backgroundColor:green,onPressed:user==null?login:()=>context.push('/community/create?instituteId='+(widget.instituteId??'')+'&instituteName='+Uri.encodeComponent(widget.instituteName??'')),icon:const Icon(Icons.add),label:const Text('Post')),
  body:Column(children:[Container(margin:const EdgeInsets.fromLTRB(12,10,12,6),padding:const EdgeInsets.all(13),decoration:BoxDecoration(color:light,borderRadius:BorderRadius.circular(12)),child:const Row(children:[Icon(Icons.groups_rounded,color:dark,size:28),SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Need Guidance?',style:TextStyle(color:dark,fontWeight:FontWeight.w700)),Text('Ask students and professionals for guidance.',style:TextStyle(fontSize:12,color:Colors.black54))]))])),
