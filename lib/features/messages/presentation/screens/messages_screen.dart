@@ -6,6 +6,7 @@ import '../../../../core/services/database_service.dart';
 
 class MessagesScreen extends StatelessWidget {
   const MessagesScreen({super.key});
+  String _formatTime(dynamic value){if(value is! Timestamp)return '';final d=value.toDate().toLocal();final h=d.hour.toString().padLeft(2,'0');final min=d.minute.toString().padLeft(2,'0');return '$h:$min';}
   String _otherId(Map<String,dynamic> d,String uid){final p=List<String>.from(d['participants']??const[]);return p.firstWhere((x)=>x!=uid,orElse:()=> '');}
   @override Widget build(BuildContext context){
     final user=FirebaseAuth.instance.currentUser;
@@ -19,7 +20,7 @@ class MessagesScreen extends StatelessWidget {
       if(docs.isEmpty)return const Center(child:Text('No conversations yet. Follow each other to start messaging.'));
       return ListView.separated(padding:const EdgeInsets.symmetric(vertical:8),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(context,i){
         final d=docs[i].data();final otherId=_otherId(d,user.uid);final names=Map<String,dynamic>.from(d['participantNames']??{});final name=(names[otherId]??'Student').toString();final unread=Map<String,dynamic>.from(d['unreadCounts']??{})[user.uid];final n=unread is num?unread.toInt():0;
-        return ListTile(leading:const CircleAvatar(child:Icon(Icons.person_outline)),title:Text(name,style:const TextStyle(fontWeight:FontWeight.w600)),subtitle:Text((d['lastMessage']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis),trailing:n>0?CircleAvatar(radius:12,child:Text(n>99?'99+':n.toString(),style:const TextStyle(fontSize:10))):const Icon(Icons.chevron_right),onTap:otherId.isEmpty?null:()=>context.push('/chat/${docs[i].id}?uid=$otherId&name=${Uri.encodeComponent(name)}'));
+        return ListTile(leading:const CircleAvatar(child:Icon(Icons.person_outline)),title:Text(name,style:const TextStyle(fontWeight:FontWeight.w600)),subtitle:Text((d['lastMessage']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis),trailing:n>0?Column(mainAxisAlignment:MainAxisAlignment.center,children:[CircleAvatar(radius:12,child:Text(n>99?'99+':n.toString(),style:const TextStyle(fontSize:10))),const SizedBox(height:3),Text(_formatTime(d['updatedAt']),style:const TextStyle(fontSize:10))]):Column(mainAxisAlignment:MainAxisAlignment.center,children:[Text(_formatTime(d['updatedAt']),style:const TextStyle(fontSize:10)),const SizedBox(height:4),const Icon(Icons.chevron_right)]),onTap:otherId.isEmpty?null:()=>context.push('/chat/${docs[i].id}?uid=$otherId&name=${Uri.encodeComponent(name)}'));
       });
     });
   }
