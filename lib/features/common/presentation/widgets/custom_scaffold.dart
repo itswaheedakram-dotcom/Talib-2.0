@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme.dart';
 
-/// App drawer navigation.
-/// Existing modules/actions are preserved; only layout and interaction styling
-/// are modernized. Reference palette remains unchanged.
+/// App drawer contains secondary/options actions only.
+/// Primary navigation stays in the bottom navigation bar.
 class TalibDrawer extends StatelessWidget {
   const TalibDrawer({super.key});
 
@@ -59,17 +58,19 @@ class TalibDrawer extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 children: [
-                  _item(context, Icons.home_rounded, 'Home', '/'),
                   _item(context, Icons.person_rounded, 'Profile', '/profile'),
+                  _item(context, Icons.login_rounded, 'Sign in', '/signin'),
+                  _item(context, Icons.person_add_alt_1_rounded, 'Sign up', '/register'),
+                  _item(context, Icons.bookmark_rounded, 'Bookmarks', '/bookmarks'),
+                  _item(context, Icons.menu_book_rounded, 'Resources', '/resources'),
+                  const SizedBox(height: 4),
+                  const Divider(color: AppColors.drawerDivider),
+                  const SizedBox(height: 4),
                   _item(context, Icons.person_add_alt_1_rounded, 'Invite a friend', null),
                   _item(context, Icons.report_gmailerrorred_rounded, 'Report an issue', null),
                   _item(context, Icons.help_rounded, 'Help & FAQs', null),
                   _item(context, Icons.star_rounded, 'Rate us', null),
-                  const SizedBox(height: 4),
-                  const Divider(color: AppColors.drawerDivider),
-                  const SizedBox(height: 4),
                   _item(context, Icons.settings_rounded, 'Settings', null),
-                  _item(context, Icons.login_rounded, 'Sign in', '/signin'),
                 ],
               ),
             ),
