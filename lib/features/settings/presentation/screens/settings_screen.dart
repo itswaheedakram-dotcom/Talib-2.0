@@ -299,7 +299,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Settings')),
+    appBar: AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_rounded),
+        onPressed: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/home');
+          }
+        },
+      ),
+      title: const Text('Settings'),
+    ),
     body: ListView(padding: const EdgeInsets.fromLTRB(16, 18, 16, 28), children: [
       _sectionTitle('Account & Security'),
       _tile(Icons.person_outline_rounded, 'Account settings', 'Manage your profile and account information', () => context.push('/profile')),
