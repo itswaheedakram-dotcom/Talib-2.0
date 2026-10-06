@@ -42,7 +42,71 @@ class DatabaseService {
   Future<Map<String,dynamic>> reputation(String uid) async => {'score':0,'posts':0,'comments':0,'likes':0,'bestAnswers':0,'followers':0,'rating':0.0,'reviews':0,'badges':<String>[]};
   Stream<List<Map<String,dynamic>>> notificationsStream(String uid) async* { yield const []; }
   Future<void> markNotificationRead(String uid,String id) async {}
-  Future<void> toggleFollow(String uid,String targetId,bool follow) async {}
+  DocumentReference<Map<String,dynamic>> _followingRef(String uid,String targetId) => FirebaseFirestore.instance.collection('users').doc(uid).collection('following').doc(targetId);
+  DocumentReference<Map<String,dynamic>> _followersRef(String uid,String followerId) => FirebaseFirestore.instance.collection('users').doc(uid).collection('followers').doc(followerId);
+
+  String conversationId(String a,String b) {
+    final ids=[a,b]..sort();
+    return '${ids[0]}_${ids[1]}';
+  }
+
+  Future<bool> isFollowing(String uid,String targetId) async {
+    if (uid == targetId) return false;
+    return (await _followingRef(uid,targetId).get()).exists;
+  }
+
+  Future<bool> isMutualFollow(String uid,String targetId) async {
+    if (uid == targetId) return false;
+    final results=await Future.wait([
+      _followingRef(uid,targetId).get(),
+      _followingRef(targetId,uid).get(),
+    ]);
+    return results[0].exists && results[1].exists;
+  }
+
+  Future<void> toggleFollow(String uid,String targetId,bool follow) async {
+    if (uid == targetId) return;
+    final batch=FirebaseFirestore.instance.batch();
+    final following=_followingRef(uid,targetId);
+    final followers=_followersRef(targetId,uid);
+    if (follow) {
+      batch.set(following,{'uid':uid,'targetId':targetId,'createdAt':FieldValue.serverTimestamp()});
+      batch.set(followers,{'uid':uid,'createdAt':FieldValue.serverTimestamp()});
+    } else {
+      batch.delete(following);
+      batch.delete(followers);
+    }
+    await batch.commit();
+  }
+
+  Stream<bool> followingStream(String uid,String targetId) {
+    if (uid == targetId) return Stream<bool>.value(false);
+    return _followingRef(uid,targetId).snapshots().map((s)=>s.exists);
+  }
+
+  Stream<bool> mutualFollowStream(String uid,String targetId) {
+    if (uid == targetId) return Stream<bool>.value(false);
+    return _followingRef(uid,targetId).snapshots().asyncMap((_) async => isMutualFollow(uid,targetId));
+  }
+
+  Stream<int> followerCountStream(String uid) {
+    return FirebaseFirestore.instance.collection('users').doc(uid).collection('followers').snapshots().map((s)=>s.size);
+  }
+
+  Future<String?> createConversation({required String uid,required String otherUid,required String otherName}) async {
+    if (uid == otherUid || !await isMutualFollow(uid,otherUid)) return null;
+    final id=conversationId(uid,otherUid);
+    await FirebaseFirestore.instance.collection('conversations').doc(id).set({
+      'id':id,
+      'participants':[uid,otherUid],
+      'participantNames':{uid:'You',otherUid:otherName},
+      'lastMessage':'',
+      'lastMessageAt':FieldValue.serverTimestamp(),
+      'updatedAt':FieldValue.serverTimestamp(),
+      'createdAt':FieldValue.serverTimestamp(),
+    },SetOptions(merge:true));
+    return id;
+  }
   Stream<bool> followingStream(String uid,String targetId) async* { yield false; }
   Stream<int> followerCountStream(String uid) async* { yield 0; }
   Future<void> saveApplication({required String collection,required String itemId,required String title,required String applicantId,required String applicantName}) async {}
