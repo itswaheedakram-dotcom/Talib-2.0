@@ -39,6 +39,7 @@ import '../features/messages/presentation/screens/messages_screen.dart';
 import '../features/messages/presentation/screens/chat_screen.dart';
 import '../features/settings/presentation/screens/settings_screen.dart';
 import '../features/settings/presentation/screens/blocked_users_screen.dart';
+import '../features/settings/presentation/screens/temporary_profiles_screen.dart';
 
 final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/',builder:(_,__)=>const MainScreen()),
@@ -79,5 +80,6 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/messages',builder:(_,__)=>const MessagesScreen()),
   GoRoute(path:'/settings',builder:(_,__)=>const SettingsScreen()),
   GoRoute(path:'/blocked-users',builder:(_,__)=>const BlockedUsersScreen()),
+  GoRoute(path:'/temporary-profiles',builder:(_,__)=>const TemporaryProfilesScreen()),
   GoRoute(path:'/chat/:id',builder:(_,s)=>ChatScreen(conversationId:s.pathParameters['id']!,otherUid:s.uri.queryParameters['uid']!,otherName:s.uri.queryParameters['name']??'Student')),
 ]);
