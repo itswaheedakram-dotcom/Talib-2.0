@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme.dart';
+import '../../../../core/services/active_profile_controller.dart';
 
 class TemporaryProfilesScreen extends StatelessWidget {
   const TemporaryProfilesScreen({super.key});
 
-  static const profiles = <Map<String, String>>[
-    {'id':'demo-user-1','name':'Ayesha Khan','city':'Lahore, Punjab','level':'BS Computer Science','institute':'University of the Punjab','program':'Computer Science'},
-    {'id':'demo-user-2','name':'Ali Raza','city':'Multan, Punjab','level':'BS Software Engineering','institute':'BZU Multan','program':'Software Engineering'},
-    {'id':'demo-user-3','name':'Hira Ahmed','city':'Islamabad','level':'MS Education','institute':'NUST Islamabad','program':'Education'},
-    {'id':'demo-user-4','name':'Usman Malik','city':'Faisalabad, Punjab','level':'BS Business Administration','institute':'University of Agriculture Faisalabad','program':'Business Administration'},
-  ];
+  static const profiles = temporaryProfiles;
+
 
   @override
   Widget build(BuildContext context) => Scaffold(
