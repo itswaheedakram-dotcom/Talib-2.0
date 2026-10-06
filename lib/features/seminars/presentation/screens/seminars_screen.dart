@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/database_service.dart';
 
 class Seminar {
   final String title;
@@ -52,9 +54,11 @@ class _SeminarsScreenState extends State<SeminarsScreen> {
       const SizedBox(height: 14),
       Text('About this seminar', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
       const SizedBox(height: 6), Text(seminar.description), const SizedBox(height: 20),
-      SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.how_to_reg_outlined), label: const Text('Register Interest'))),
+      SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: () => _registerInterest(seminar), icon: const Icon(Icons.how_to_reg_outlined), label: const Text('Register Interest'))),
     ]))));
   }
+
+  Future<void> _registerInterest(Seminar seminar) async { Navigator.pop(context); final user=AuthService().currentUser; if(user==null){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Please sign in to register.')));return;} final id=seminar.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'),'_'); await DatabaseService().saveInterest(seminarId:id,title:seminar.title,userId:user.uid,userName:user.displayName??user.email??'Student'); if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Interest registered successfully.'))); }
 
   Widget _detailRow(IconData icon, String text) => Padding(padding: const EdgeInsets.only(bottom: 10), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, size: 20), const SizedBox(width: 10), Expanded(child: Text(text))]));
 
