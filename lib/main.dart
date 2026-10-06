@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
+import 'app/app.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: Scaffold(
-      body: Center(child: Text('Talib 2.0 starting...')),
-    ),
-  ));
+  runApp(const TalibApp());
 }
