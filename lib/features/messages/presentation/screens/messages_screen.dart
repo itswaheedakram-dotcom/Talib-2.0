@@ -5,65 +5,16 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/services/database_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
 
-class MessagesScreen extends StatelessWidget {
+class MessagesScreen extends StatelessWidget{
   const MessagesScreen({super.key});
-  String _formatTime(dynamic value){if(value is! Timestamp)return '';final d=value.toDate().toLocal();final h=d.hour.toString().padLeft(2,'0');final min=d.minute.toString().padLeft(2,'0');return '$h:$min';}
-  String _otherId(Map<String,dynamic> d,String uid){final p=List<String>.from(d['participants']??const[]);return p.firstWhere((x)=>x!=uid,orElse:()=> '');}
+  String _time(dynamic v){if(v is Timestamp){final d=v.toDate();return '${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';}if(v is DateTime)return '${v.hour.toString().padLeft(2,'0')}:${v.minute.toString().padLeft(2,'0')}';return '';}
   @override Widget build(BuildContext context){
-    final user=FirebaseAuth.instance.currentUser;
-    final active=ActiveProfileController.instance.active;
-    if(user==null)return const Center(child:Text('Please sign in to use messages.'));
-    final displayName=active?.name;
-    final ref=FirebaseFirestore.instance.collection('conversations').where('participants',arrayContains:user.uid);
-    return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ref.snapshots(),builder:(context,s){
-      if(s.hasError)return const Center(child:Text('Unable to load messages.'));
-      if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
-      final docs=[...(s.data?.docs??[])];
-      docs.sort((a,b){final at=a.data()['updatedAt'],bt=b.data()['updatedAt'];if(at is Timestamp&&bt is Timestamp)return bt.compareTo(at);return 0;});
-      if(docs.isEmpty)return const Center(child:Text('No conversations yet. Follow each other to start messaging.'));
-      return Column(
-        children: [
-          if (displayName != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('Test profile: ' + displayName, style: const TextStyle(fontWeight: FontWeight.w700)),
-              ),
-            ),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: docs.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, i) {
-                final data = docs[i].data();
-                final otherId = _otherId(data, user.uid);
-                final names = Map<String, dynamic>.from(data['participantNames'] ?? {});
-                final name = (names[otherId] ?? 'Student').toString();
-                final unread = Map<String, dynamic>.from(data['unreadCounts'] ?? {})[user.uid];
-                final n = unread is num ? unread.toInt() : 0;
-                return ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.person_outline)),
-                  title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text((data['lastMessage'] ?? '').toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  trailing: n > 0
-                      ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                          CircleAvatar(radius: 12, child: Text(n > 99 ? '99+' : n.toString(), style: const TextStyle(fontSize: 10))),
-                          const SizedBox(height: 3),
-                          Text(_formatTime(data['updatedAt']), style: const TextStyle(fontSize: 10)),
-                        ])
-                      : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                          Text(_formatTime(data['updatedAt']), style: const TextStyle(fontSize: 10)),
-                          const SizedBox(height: 4),
-                          const Icon(Icons.chevron_right),
-                        ]),
-                  onTap: otherId.isEmpty ? null : () => context.push('/chat/' + docs[i].id + '?uid=' + otherId + '&name=' + Uri.encodeComponent(name)),
-                );
-              },
-            ),
-          ),
-        ],
-      );    });
+    final real=FirebaseAuth.instance.currentUser; final identity=ActiveProfileController.instance; final db=DatabaseService();
+    if(real==null)return const Center(child:Text('Please sign in to use messages.'));
+    if(identity.isDemo)return StreamBuilder<List<Map<String,dynamic>>>(stream:db.demoConversationsStream(real.uid),builder:(context,s)=>_demoList(context,s.data??const []));
+    final ref=FirebaseFirestore.instance.collection('conversations').where('participants',arrayContains:real.uid);
+    return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ref.snapshots(),builder:(context,s){if(s.hasError)return const Center(child:Text('Unable to load messages.'));if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());final docs=[...(s.data?.docs??[])];docs.sort((a,b){final at=a.data()['updatedAt'],bt=b.data()['updatedAt'];if(at is Timestamp&&bt is Timestamp)return bt.compareTo(at);return 0;});return _firebaseList(context,docs,real.uid);});
   }
+  Widget _demoList(BuildContext context,List<Map<String,dynamic>> items)=>Column(children:[Padding(padding:const EdgeInsets.fromLTRB(16,10,16,6),child:Align(alignment:Alignment.centerLeft,child:Text('Test profile: ${ActiveProfileController.instance.effectiveName}',style:const TextStyle(fontWeight:FontWeight.w700)))),Expanded(child:items.isEmpty?const Center(child:Text('No conversations yet.')):ListView.separated(itemCount:items.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(context,i){final x=items[i];return ListTile(leading:const CircleAvatar(child:Icon(Icons.person_outline)),title:Text(x['otherName'].toString(),style:const TextStyle(fontWeight:FontWeight.w600)),subtitle:Text(x['lastMessage'].toString(),maxLines:1,overflow:TextOverflow.ellipsis),trailing:Text(_time(x['updatedAt']),style:const TextStyle(fontSize:11)),onTap:()=>context.push('/chat/${x['id']}?uid=${x['otherUid']}&name=${Uri.encodeComponent(x['otherName'].toString())}'));}))]);
+  Widget _firebaseList(BuildContext context,List<QueryDocumentSnapshot<Map<String,dynamic>>> docs,String uid)=>Column(children:[Expanded(child:docs.isEmpty?const Center(child:Text('No conversations yet. Follow each other to start messaging.')):ListView.separated(itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(context,i){final d=docs[i].data();final p=List<String>.from(d['participants']??const[]);final other=p.firstWhere((x)=>x!=uid,orElse:()=> '');final names=Map<String,dynamic>.from(d['participantNames']??{});final name=(names[other]??'Student').toString();return ListTile(leading:const CircleAvatar(child:Icon(Icons.person_outline)),title:Text(name),subtitle:Text((d['lastMessage']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis),onTap:other.isEmpty?null:()=>context.push('/chat/${docs[i].id}?uid=$other&name=${Uri.encodeComponent(name)}'));}))]);
 }
