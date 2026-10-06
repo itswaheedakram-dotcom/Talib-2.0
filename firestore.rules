@@ -53,7 +53,7 @@ service cloud.firestore {
     }
 
     match /conversations/{conversationId} {
-      allow read: if isParticipant(resource.data.participants);
+      allow read: if signedIn() && resource.data.participants.hasAny([request.auth.uid]);
 
       allow create: if signedIn()
         && request.resource.data.participants is list
