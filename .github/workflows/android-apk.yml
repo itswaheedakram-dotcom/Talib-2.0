@@ -1,7 +1,7 @@
 name: Build Android APK
 on:
   push:
-    branches: [main]
+    branches: [main, firestore-from-78c6-stable]
   workflow_dispatch:
 jobs:
   build:
