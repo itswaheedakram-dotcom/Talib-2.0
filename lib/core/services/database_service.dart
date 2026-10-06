@@ -33,8 +33,19 @@ class DatabaseService {
   Future<void> toggleFollow(String uid,String targetId,bool follow)async{final following=_db.collection('users').doc(uid).collection('following').doc(targetId);final follower=_db.collection('users').doc(targetId).collection('followers').doc(uid);final batch=_db.batch();if(follow){batch.set(following,{'userId':targetId,'createdAt':FieldValue.serverTimestamp()});batch.set(follower,{'userId':uid,'createdAt':FieldValue.serverTimestamp()});final n=_db.collection('users').doc(targetId).collection('notifications').doc();batch.set(n,{'type':'follow','text':'started following you','fromId':uid,'createdAt':FieldValue.serverTimestamp(),'read':false});}else{batch.delete(following);batch.delete(follower);}await batch.commit();}
   DocumentReference<Map<String,dynamic>> _followingRef(String uid,String targetId) => _db.collection('users').doc(uid).collection('following').doc(targetId);
   String conversationId(String a,String b) { final ids=[a,b]..sort(); return '${ids[0]}_${ids[1]}'; }
+  Future<bool> isBlocked(String uid,String targetId) async {
+    if(uid==targetId)return false;
+    final r=await _db.collection('users').doc(uid).collection('blockedUsers').doc(targetId).get();
+    return r.exists;
+  }
+  Future<bool> isEitherBlocked(String uid,String targetId) async {
+    if(uid==targetId)return false;
+    final r=await Future.wait([isBlocked(uid,targetId),isBlocked(targetId,uid)]);
+    return r[0] || r[1];
+  }
   Future<bool> isMutualFollow(String uid,String targetId) async {
     if(uid==targetId)return false;
+    if(await isEitherBlocked(uid,targetId))return false;
     final r=await Future.wait([
       _followingRef(uid,targetId).get(),
       _followingRef(targetId,uid).get(),
