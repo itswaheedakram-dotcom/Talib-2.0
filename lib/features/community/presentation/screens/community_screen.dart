@@ -198,7 +198,7 @@ class _CommunityScreenState extends State<CommunityScreen>{
       if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
       var posts=s.data??const <Post>[];
       if(instituteFilterId!=null){
-        posts=posts.where((p)=>p.instituteId==instituteFilterId).toList();
+        posts=posts.where((p)=>p.instituteIds.contains(instituteFilterId)||p.instituteId==instituteFilterId).toList();
       }else if(timelineTab==0){
         // No user-selected tags is valid: For You becomes the fallback feed.
         if(topics.isNotEmpty){
@@ -207,10 +207,10 @@ class _CommunityScreenState extends State<CommunityScreen>{
             return values.any((tag)=>topics.any((selected)=>TimelineTopics.matches(selected,tag)));
           }).toList();
         }
-      }else{
+      }else if(timelineTab==1){
         posts=posts.where((p)=>following?.contains(p.authorId)==true).toList();
       }
-      if(widget.instituteId!=null)posts=posts.where((p)=>p.instituteId==widget.instituteId).toList();
+      if(widget.instituteId!=null)posts=posts.where((p)=>p.instituteIds.contains(widget.instituteId)||p.instituteId==widget.instituteId).toList();
       return _postList(posts,user);
     });
   }
