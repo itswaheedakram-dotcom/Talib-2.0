@@ -79,29 +79,34 @@ class _CommunityScreenState extends State<CommunityScreen>{
               Text('Ask students and professionals for guidance.',style:TextStyle(fontSize:12,color:AppColors.homeMutedText)),
             ])),
           ])),
-        SizedBox(
-          height:48,
-          child:StreamBuilder<Set<String>>(
-            stream:(uid.isEmpty&&!demo)?const Stream<Set<String>>.empty():_db.timelineTopicsStream(uid),
-            builder:(context,pref){
-              final topics=pref.data??_topics;
-              _topics=topics;
-              final tabs=<Widget>[
-                _timelineTab('For You',0),
-                _timelineTab('Following',1),
-                ...topics.map(_topicTab),
-                ...InstituteRepository.instance.items.map(_instituteTab),
-                InkWell(
-                  onTap:()=>context.push('/community/add-to-timeline').then((_)=>(mounted?setState((){}):null)),
-                  child:const Padding(
-                    padding:EdgeInsets.symmetric(horizontal:12,vertical:12),
-                    child:Text('+ Add',style:TextStyle(fontWeight:FontWeight.w800,color:AppColors.primaryGreen)),
-                  ),
-                ),
-              ];
-              return ListView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:4),children:tabs);
-            },
-          ),
+        AnimatedBuilder(
+          animation:InstituteRepository.instance,
+          builder:(context,_){
+            return SizedBox(
+              height:48,
+              child:StreamBuilder<Set<String>>(
+                stream:(uid.isEmpty&&!demo)?const Stream<Set<String>>.empty():_db.timelineTopicsStream(uid),
+                builder:(context,pref){
+                  final topics=pref.data??_topics;
+                  _topics=topics;
+                  final tabs=<Widget>[
+                    _timelineTab('For You',0),
+                    _timelineTab('Following',1),
+                    ...topics.map(_topicTab),
+                    ...InstituteRepository.instance.items.map(_instituteTab),
+                    InkWell(
+                      onTap:()=>context.push('/community/add-to-timeline').then((_)=>(mounted?setState((){}):null)),
+                      child:const Padding(
+                        padding:EdgeInsets.symmetric(horizontal:12,vertical:12),
+                        child:Text('+ Add',style:TextStyle(fontWeight:FontWeight.w800,color:AppColors.primaryGreen)),
+                      ),
+                    ),
+                  ];
+                  return ListView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:4),children:tabs);
+                },
+              ),
+            );
+          },
         ),
         Padding(padding:const EdgeInsets.fromLTRB(12,0,12,6),child:TextField(
           controller:_search,onChanged:(v)=>setState(()=>query=v.trim()),
