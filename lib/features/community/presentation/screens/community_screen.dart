@@ -103,7 +103,7 @@ class _CommunityScreenState extends State<CommunityScreen>{
   }
 
   Widget _timelineTab(String label,int index)=>InkWell(
-    onTap:()=>setState(()=>{timelineTab=index;category='All';}),
+    onTap:()=>setState((){timelineTab=index;category='All';}),
     child:Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Center(
       child:Text(label,style:TextStyle(fontWeight:FontWeight.w800,color:timelineTab==index?AppColors.primaryGreen:AppColors.homeMutedText)))),
   );
