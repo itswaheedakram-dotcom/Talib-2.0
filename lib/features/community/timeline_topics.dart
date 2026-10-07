@@ -44,7 +44,16 @@ abstract final class TimelineTopics {
     TimelineTopic('Institute Updates','🏛️'),
   ];
 
-  static List<String> get names => all.map((x)=>x.name).toList(growable:false);\n\n  static String canonical(String value) {\n    const aliases=<String,String>{'Admission Help':'Admissions','Jobs/Internships':'Jobs','General':'General Discussion'};\n    return aliases[value.trim()]??value.trim();\n  }\n\n  static bool matches(String selected,String value) => canonical(selected)==canonical(value);\n\n  static TimelineTopic? byName(String name) {
+  static List<String> get names => all.map((x)=>x.name).toList(growable:false);
+
+  static String canonical(String value) {
+    const aliases=<String,String>{'Admission Help':'Admissions','Jobs/Internships':'Jobs','General':'General Discussion'};
+    return aliases[value.trim()]??value.trim();
+  }
+
+  static bool matches(String selected,String value) => canonical(selected)==canonical(value);
+
+  static TimelineTopic? byName(String name) {
     for (final topic in all) {
       if (topic.name == name) return topic;
     }
