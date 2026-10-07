@@ -12,8 +12,19 @@ class MessagesScreen extends StatelessWidget{
   @override Widget build(BuildContext context){
     final identity=ActiveProfileController.instance;
     if(identity.isDemo){
-      final uid=identity.effectiveUid!;
-      return StreamBuilder<void>(stream:DemoDataService.instance.changes,builder:(context,s)=>_demoList(context,DemoDataService.instance.conversations(uid)));
+      final uid=identity.effectiveUid;
+      if(uid == null){
+        return const Center(
+          child: Text('Open a demo profile and tap "Activate This Profile" to use messages.'),
+        );
+      }
+      return StreamBuilder<void>(
+        stream: DemoDataService.instance.changes,
+        builder: (context, s) => _demoList(
+          context,
+          DemoDataService.instance.conversations(uid),
+        ),
+      );
     }
     final real=FirebaseAuth.instance.currentUser;
     if(real==null)return const Center(child:Text('Please sign in to use messages.'));
