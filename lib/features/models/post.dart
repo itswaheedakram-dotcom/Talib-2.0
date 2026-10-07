@@ -61,7 +61,7 @@ class Post {
     'text':text,'authorId':authorId,'authorName':authorName,'category':category,
     'createdAt':Timestamp.fromDate(createdAt),'likesCount':likesCount,'likedBy':likedBy,
     'commentsCount':commentsCount,'isQuestion':isQuestion,'bestAnswerId':bestAnswerId,
-    if(instituteId!=null)'instituteId':instituteId,'pollOptions':pollOptions,'pollVotes':pollVotes,
+    if(instituteId!=null)'instituteId':instituteId,'tags':tags,'pollOptions':pollOptions,'pollVotes':pollVotes,
     'attachments':attachments,
   };
 }
