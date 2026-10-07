@@ -136,20 +136,23 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Builder(
-                builder: (drawerContext) => IconButton(
-                  onPressed: () => Scaffold.of(drawerContext).openDrawer(),
-                  icon: const Icon(Icons.menu_rounded, color: AppColors.white, size: 27),
+          SafeArea(
+            top: true,
+            bottom: false,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Builder(
+                  builder: (drawerContext) => IconButton(
+                    onPressed: () => Scaffold.of(drawerContext).openDrawer(),
+                    icon: const Icon(Icons.menu_rounded, color: AppColors.white, size: 27),
+                  ),
                 ),
-              ),
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.notifications_rounded, color: AppColors.white, size: 27),
-              ),
-            ],
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.notifications_rounded, color: AppColors.white, size: 27),
+                ),
+              ],
             ),
           ),
           const Spacer(),
