@@ -9,9 +9,14 @@ class MessagesScreen extends StatelessWidget{
   const MessagesScreen({super.key});
   String _time(dynamic v){if(v is Timestamp){final d=v.toDate();return '${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';}if(v is DateTime)return '${v.hour.toString().padLeft(2,'0')}:${v.minute.toString().padLeft(2,'0')}';return '';}
   @override Widget build(BuildContext context){
-    final real=FirebaseAuth.instance.currentUser; final identity=ActiveProfileController.instance; final db=DatabaseService();
+    final real=FirebaseAuth.instance.currentUser; final identity=ActiveProfileController.instance;
+    if(identity.isDemo){
+      final uid=identity.effectiveUid!;
+      final db=DatabaseService();
+      return StreamBuilder<List<Map<String,dynamic>>>(stream:db.demoConversationsStream(uid),builder:(context,s)=>_demoList(context,s.data??const []));
+    }
     if(real==null)return const Center(child:Text('Please sign in to use messages.'));
-    if(identity.isDemo)return StreamBuilder<List<Map<String,dynamic>>>(stream:db.demoConversationsStream(real.uid),builder:(context,s)=>_demoList(context,s.data??const []));
+    final db=DatabaseService();
     final ref=FirebaseFirestore.instance.collection('conversations').where('participants',arrayContains:real.uid);
     return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ref.snapshots(),builder:(context,s){if(s.hasError)return const Center(child:Text('Unable to load messages.'));if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());final List<QueryDocumentSnapshot<Map<String,dynamic>>> docs = List<QueryDocumentSnapshot<Map<String,dynamic>>>.from(s.data?.docs ?? const <QueryDocumentSnapshot<Map<String,dynamic>>>[]);docs.sort((a,b){final at=a.data()['updatedAt'],bt=b.data()['updatedAt'];if(at is Timestamp&&bt is Timestamp)return bt.compareTo(at);return 0;});return _firebaseList(context,docs,real.uid);});
   }
