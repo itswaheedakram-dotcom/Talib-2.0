@@ -136,6 +136,8 @@ class DemoDataService extends ChangeNotifier {
 
   Set<String> timelineTopics(String uid)=>Set.unmodifiable(_timelineTopics[uid]??TimelineTopics.defaults.toSet());
   void setTimelineTopics(String uid,Set<String> topics){_timelineTopics[uid]=topics.toSet();_emit();}
+  Set<String> followingIds(String uid)=>Set.unmodifiable(_following[uid]??const <String>{});
+
   bool isFollowing(String uid,String target)=>_following[uid]?.contains(target)==true;
   bool isMutual(String a,String b)=>a!=b&&isFollowing(a,b)&&isFollowing(b,a);
   void toggleFollow(String uid,String target,bool follow){(_following[uid]??={});if(follow){_following[uid]!.add(target);_addNotification(target,{'type':'follow','text':'started following you','fromId':uid,'createdAt':DateTime.now(),'read':false});}else{_following[uid]!.remove(target);}_emit();}
