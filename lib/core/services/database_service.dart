@@ -103,7 +103,7 @@ class DatabaseService {
     return _db.collection('users').doc(uid).snapshots().map((s){
       final data=s.data()??{};
       final raw=data['timelineTopics'];
-      if(raw is List && raw.isNotEmpty) return raw.map((x)=>x.toString()).toSet();
+      if(raw is List) return raw.map((x)=>x.toString()).toSet();
       return TimelineTopics.defaults.toSet();
     });
   }
@@ -189,3 +189,18 @@ class DatabaseService {
   Future<void> claimDemoInstitute(String uid,String instituteId){DemoDataService.instance.claimInstitute(_uid(uid),instituteId);return Future.value();}
 
 }
+  Stream<Set<String>> timelineInstitutesStream(String uid){
+    uid=_uid(uid);
+    if(_demo(uid)) return _demoStream(DemoDataService.instance.timelineInstitutes(uid),()=>DemoDataService.instance.timelineInstitutes(uid));
+    return _db.collection('users').doc(uid).snapshots().map((s){
+      final raw=(s.data()??{})['timelineInstitutes'];
+      if(raw is List) return raw.map((x)=>x.toString()).toSet();
+      return const <String>{};
+    });
+  }
+
+  Future<void> setTimelineInstitutes(String uid,Set<String> ids) async {
+    uid=_uid(uid);
+    if(_demo(uid)){DemoDataService.instance.setTimelineInstitutes(uid,ids);return;}
+    await _db.collection('users').doc(uid).set({'timelineInstitutes':ids.toList()},SetOptions(merge:true));
+  }
