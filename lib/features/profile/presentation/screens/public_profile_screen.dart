@@ -20,6 +20,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   Future<void> _review(String name) async {
     final current = me;
     final identity = ActiveProfileController.instance;
+    if (identity.isDemo && identity.effectiveUid == widget.id) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You cannot rate your own profile.')));
+      return;
+    }
     if (identity.isDemo) {
       var rating = 5;
       final controller = TextEditingController();
@@ -162,9 +166,36 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
             );
           },
         ),
-        const SizedBox(height:18),Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        const SizedBox(height:18),
+        Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           const Text('Profile Information',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),const SizedBox(height:10),_InfoTile(Icons.school_outlined,'Education level',demo['level']!),if(demo['institute']!.isNotEmpty)_InfoTile(Icons.account_balance_outlined,'Institute',demo['institute']!),if(demo['program']!.isNotEmpty)_InfoTile(Icons.menu_book_outlined,'Program / Degree',demo['program']!)
-        ]))),const SizedBox(height:12),const Card(child:Padding(padding:EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Community Activity',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),SizedBox(height:8),Text('This profile is participating in the Talib community.',style:TextStyle(color:Colors.grey))])))
+        ]))),
+        const SizedBox(height:12),
+        AnimatedBuilder(
+          animation: ActiveProfileController.instance,
+          builder: (context, _) {
+            final currentId=ActiveProfileController.instance.effectiveUid;
+            final canReview=currentId!=null&&currentId!=widget.id;
+            return StreamBuilder<List<Map<String,dynamic>>>(
+              stream:DatabaseService().demoReviewsStream(widget.id),
+              builder:(context,snap){
+                final reviews=snap.data??const <Map<String,dynamic>>[];
+                var total=0;var sum=0;
+                for(final r in reviews){final rating=(r['rating'] as num?)?.toInt()??0;if(rating>=1&&rating<=5){total++;sum+=rating;}}
+                final average=total==0?0.0:sum/total;
+                return Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  Row(children:[const Expanded(child:Text('Ratings & Reviews',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700))),if(total>0)Text(average.toStringAsFixed(1)+'/5',style:const TextStyle(fontWeight:FontWeight.w700))]),
+                  const SizedBox(height:8),
+                  if(total>0)Row(children:[...List.generate(5,(i)=>Icon(i<average.round()?Icons.star:Icons.star_border,size:19,color:AppColors.primaryGreen)),const SizedBox(width:6),Text(total.toString()+' review'+(total==1?'':'s'))]) else const Text('No ratings yet.'),
+                  if(canReview) ...[const SizedBox(height:12),SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:()=>_review(name),icon:const Icon(Icons.star_outline),label:const Text('Rate & Comment')))],
+                  if(reviews.isNotEmpty) ...[const SizedBox(height:12),...reviews.map((r){final reviewer=(r['reviewerName']??'Student').toString();final rating=(r['rating'] as num?)?.toInt()??0;return Card(margin:const EdgeInsets.only(top:8),child:ListTile(leading:CircleAvatar(child:Text(reviewer.isEmpty?'?':reviewer[0].toUpperCase())),title:Row(children:[Expanded(child:Text(reviewer,style:const TextStyle(fontWeight:FontWeight.w600))),Text(rating.toString()+'/5')]),subtitle:Padding(padding:const EdgeInsets.only(top:5),child:Text((r['text']??'').toString()))));})],
+                ])));
+              },
+            );
+          },
+        ),
+        const SizedBox(height:12),
+        const Card(child:Padding(padding:EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Community Activity',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),SizedBox(height:8),Text('This profile is participating in the Talib community.',style:TextStyle(color:Colors.grey))])))
       ]));
     }
     return Scaffold(
