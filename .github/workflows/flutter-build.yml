@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - 78c6-yaha-se-new-branch-banai-he-ab-firestore-py-kam-kren-gy
   workflow_dispatch:
 
 jobs:
@@ -89,7 +90,5 @@ jobs:
           retention-days: 14
 
 # Trigger verification build after Firebase isolation.
-
 # Build verification after restoring compile-time compatibility.
-
 # Trigger after fixing hostel Firestore imports.
