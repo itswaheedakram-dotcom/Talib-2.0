@@ -25,7 +25,8 @@ class DatabaseService {
     }
     await _db.collection('posts').doc(postId).update({
       'text':text.trim(),
-      if(category!=null)'category':category,\n      if(tags!=null)'tags':tags,
+      if(category!=null)'category':category,
+      if(tags!=null)'tags':tags,
       if(isQuestion!=null)'isQuestion':isQuestion,
       if(pollOptions!=null)'pollOptions':pollOptions,
       if(attachments!=null)'attachments':attachments,
