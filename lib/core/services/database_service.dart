@@ -114,6 +114,12 @@ class DatabaseService {
     await _db.collection('users').doc(uid).set({'timelineTopics':topics.toList()},SetOptions(merge:true));
   }
 
+  Stream<Set<String>> followingIdsStream(String uid){
+    uid=_uid(uid);
+    if(_demo(uid)) return _demoStream(DemoDataService.instance.followingIds(uid),()=>DemoDataService.instance.followingIds(uid));
+    return _db.collection('users').doc(uid).collection('following').snapshots().map((s)=>s.docs.map((d)=>d.id).toSet());
+  }
+
   Stream<bool> followingStream(String uid,String targetId){uid=_uid(uid);targetId=_uid(targetId);if(_demo(uid)||_demo(targetId))return _demoStream(DemoDataService.instance.isFollowing(uid,targetId),()=>DemoDataService.instance.isFollowing(uid,targetId));return _db.collection('users').doc(uid).collection('following').doc(targetId).snapshots().map((s)=>s.exists);}
   Stream<bool> mutualFollowStream(String uid,String targetId) {
     if (uid == targetId) return Stream<bool>.value(false);
