@@ -29,25 +29,68 @@ class _CommunityScreenState extends State<CommunityScreen>{
   void _showError(Object error){if(!mounted)return;ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_errorText(error)),duration:const Duration(seconds:5)));}
   void _login()=>_showError(StateError('Please sign in to create, like or save posts.'));
   
+  Widget _timelineButton({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }){
+    return Padding(
+      padding:const EdgeInsets.symmetric(horizontal:4,vertical:5),
+      child:Material(
+        color:selected?AppColors.primaryGreen:AppColors.white,
+        borderRadius:BorderRadius.circular(22),
+        child:InkWell(
+          onTap:onTap,
+          borderRadius:BorderRadius.circular(22),
+          child:Container(
+            height:38,
+            padding:const EdgeInsets.symmetric(horizontal:15),
+            alignment:Alignment.center,
+            decoration:BoxDecoration(
+              borderRadius:BorderRadius.circular(22),
+              border:Border.all(
+                color:selected?AppColors.primaryGreen:AppColors.guidanceBubble,
+              ),
+            ),
+            child:Text(
+              label,
+              maxLines:1,
+              overflow:TextOverflow.ellipsis,
+              style:TextStyle(
+                fontWeight:FontWeight.w700,
+                fontSize:13,
+                color:selected?AppColors.white:AppColors.homeMutedText,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _topicTab(String name){
     final selected=timelineTab>=2&&_selectedInstituteId==null&&category==name;
-    return InkWell(
-      onTap:()=>setState((){timelineTab=2;_selectedInstituteId=null;category=name;}),
-      child:Padding(
-        padding:const EdgeInsets.symmetric(horizontal:12,vertical:12),
-        child:Text(name,style:TextStyle(fontWeight:FontWeight.w800,color:selected?AppColors.primaryGreen:AppColors.homeMutedText)),
-      ),
+    return _timelineButton(
+      label:name,
+      selected:selected,
+      onTap:()=>setState((){
+        timelineTab=2;
+        _selectedInstituteId=null;
+        category=name;
+      }),
     );
   }
 
   Widget _instituteTab(Institute institute){
     final selected=_selectedInstituteId==institute.id;
-    return InkWell(
-      onTap:()=>setState((){timelineTab=3;_selectedInstituteId=institute.id;category='All';}),
-      child:Padding(
-        padding:const EdgeInsets.symmetric(horizontal:12,vertical:12),
-        child:Text(institute.name,overflow:TextOverflow.ellipsis,style:TextStyle(fontWeight:FontWeight.w800,color:selected?AppColors.primaryGreen:AppColors.homeMutedText)),
-      ),
+    return _timelineButton(
+      label:institute.name,
+      selected:selected,
+      onTap:()=>setState((){
+        timelineTab=3;
+        _selectedInstituteId=institute.id;
+        category='All';
+      }),
     );
   }
 
@@ -100,15 +143,19 @@ class _CommunityScreenState extends State<CommunityScreen>{
                         _timelineTab('Following',1),
                         ...topics.map(_topicTab),
                         ...selectedInstitutes.map(_instituteTab),
-                        InkWell(
-                          onTap:()=>context.push('/community/add-to-timeline').then((_)=>(mounted?setState((){}):null)),
-                          child:const Padding(
-                            padding:EdgeInsets.symmetric(horizontal:12,vertical:12),
-                            child:Text('+ Add',style:TextStyle(fontWeight:FontWeight.w800,color:AppColors.primaryGreen)),
+                        _timelineButton(
+                          label:'+ Add',
+                          selected:false,
+                          onTap:()=>context.push('/community/add-to-timeline').then(
+                            (_)=>(mounted?setState((){}):null),
                           ),
                         ),
                       ];
-                      return ListView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:4),children:tabs);
+                      return ListView(
+                        scrollDirection:Axis.horizontal,
+                        padding:const EdgeInsets.symmetric(horizontal:4),
+                        children:tabs,
+                      );
                     },
                   );
                 },
@@ -131,10 +178,14 @@ class _CommunityScreenState extends State<CommunityScreen>{
     );
   }
 
-  Widget _timelineTab(String label,int index)=>InkWell(
-    onTap:()=>setState((){timelineTab=index;category='All';}),
-    child:Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Center(
-      child:Text(label,style:TextStyle(fontWeight:FontWeight.w800,color:timelineTab==index?AppColors.primaryGreen:AppColors.homeMutedText)))),
+  Widget _timelineTab(String label,int index)=>_timelineButton(
+    label:label,
+    selected:timelineTab==index,
+    onTap:()=>setState((){
+      timelineTab=index;
+      _selectedInstituteId=null;
+      category='All';
+    }),
   );
 
   Widget _postFeed(User? user,bool demo,bool ready,Set<String> topics,Set<String>? following,String? instituteFilterId){
