@@ -51,4 +51,11 @@ class Post {
   }
 
   bool likedByUser(String? uid)=>uid!=null&&likedBy.contains(uid);
+
+  Map<String,dynamic> toMap() => {
+    'text':text,'authorId':authorId,'authorName':authorName,'category':category,
+    'createdAt':Timestamp.fromDate(createdAt),'likesCount':likesCount,'likedBy':likedBy,
+    'commentsCount':commentsCount,'isQuestion':isQuestion,'bestAnswerId':bestAnswerId,
+    if(instituteId!=null)'instituteId':instituteId,'pollOptions':pollOptions,'pollVotes':pollVotes,
+  };
 }
