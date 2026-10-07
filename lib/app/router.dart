@@ -18,6 +18,7 @@ import '../features/courses/presentation/screens/courses_screen.dart';
 import '../features/search/presentation/screens/search_screen.dart';
 import '../features/community/presentation/screens/community_screen.dart';
 import '../features/community/presentation/screens/create_post_screen.dart';
+import '../features/community/presentation/screens/add_to_timeline_screen.dart';
 import '../features/community/presentation/screens/post_comments_screen.dart';
 import '../features/models/post.dart';
 import '../features/models/hostel.dart';
@@ -58,6 +59,7 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/admin/institute-claims',builder:(_,__)=>const AdminInstituteClaimsScreen()),
   GoRoute(path:'/search',builder:(_,__)=>const SearchScreen()),
   GoRoute(path:'/community',builder:(_,s)=>CommunityScreen(instituteId:s.uri.queryParameters['instituteId'],instituteName:s.uri.queryParameters['instituteName'])),
+  GoRoute(path:'/community/add-to-timeline',builder:(_,__)=>const AddToTimelineScreen()),
   GoRoute(path:'/community/create',builder:(_,s)=>CreatePostScreen(post:s.extra is Post?s.extra as Post:null,instituteId:s.uri.queryParameters['instituteId'],instituteName:s.uri.queryParameters['instituteName'])),
   GoRoute(path:'/notifications',builder:(_,__)=>const NotificationsScreen()),
   GoRoute(path:'/community/post/:id',builder:(_,s)=>PostCommentsScreen(id:s.pathParameters['id']!)),
