@@ -13,19 +13,19 @@ class DatabaseService {
   Stream<T> _demoStream<T>(T initial,T Function() current) async* {yield initial;yield* DemoDataService.instance.changes.map((_)=>current());}
   CollectionReference<Map<String,dynamic>> collection(String name)=>_db.collection(name);
   Stream<List<Post>> postsStream({bool popular=false,String category='All',String query=''}){if(ActiveProfileController.instance.isDemo)return _demoStream(DemoDataService.instance.posts(category:category,query:query),()=>DemoDataService.instance.posts(category:category,query:query));return _db.collection('posts').orderBy(popular?'likesCount':'createdAt',descending:true).snapshots().map((s)=>s.docs.map(Post.fromDoc).where((p)=>(category=='All'||p.category==category)&&(query.isEmpty||p.text.toLowerCase().contains(query.toLowerCase())||p.authorName.toLowerCase().contains(query.toLowerCase()))).toList());}
-  Future<String> createPost({required String text,required String authorId,required String authorName,String category='General',bool isQuestion=false,List<String> pollOptions=const [],String? instituteId,List<Map<String,String>> attachments=const []})async{
-    if(ActiveProfileController.instance.isDemo)return DemoDataService.instance.createPost(text:text,authorId:_uid(authorId),authorName:ActiveProfileController.instance.resolveName(authorName),category:category,isQuestion:isQuestion,pollOptions:pollOptions,instituteId:instituteId,attachments:attachments);
-    final ref=await _db.collection('posts').add({'text':text.trim(),'authorId':authorId,'authorName':authorName,'category':category,'isQuestion':isQuestion,'createdAt':FieldValue.serverTimestamp(),'likesCount':0,'likedBy':<String>[],'commentsCount':0,'pollOptions':pollOptions,'pollVotes':<String,int>{},'attachments':attachments,if(instituteId!=null)'instituteId':instituteId});
+  Future<String> createPost({required String text,required String authorId,required String authorName,String category='General',bool isQuestion=false,List<String> pollOptions=const [],String? instituteId,List<Map<String,String>> attachments=const [],List<String> tags=const []})async{
+    if(ActiveProfileController.instance.isDemo)return DemoDataService.instance.createPost(text:text,authorId:_uid(authorId),authorName:ActiveProfileController.instance.resolveName(authorName),category:category,isQuestion:isQuestion,pollOptions:pollOptions,instituteId:instituteId,attachments:attachments,tags:tags);
+    final ref=await _db.collection('posts').add({'text':text.trim(),'authorId':authorId,'authorName':authorName,'category':category,'tags':tags,'isQuestion':isQuestion,'createdAt':FieldValue.serverTimestamp(),'likesCount':0,'likedBy':<String>[],'commentsCount':0,'pollOptions':pollOptions,'pollVotes':<String,int>{},'attachments':attachments,if(instituteId!=null)'instituteId':instituteId});
     return ref.id;
   }
-  Future<void> updatePost({required String postId,required String text,String? category,bool? isQuestion,List<String>? pollOptions,String? instituteId,List<Map<String,String>>? attachments}) async {
+  Future<void> updatePost({required String postId,required String text,String? category,bool? isQuestion,List<String>? pollOptions,String? instituteId,List<Map<String,String>>? attachments,List<String>? tags}) async {
     if(ActiveProfileController.instance.isDemo) {
-      DemoDataService.instance.updatePost(postId:postId,text:text,category:category,isQuestion:isQuestion,pollOptions:pollOptions,instituteId:instituteId,attachments:attachments);
+      DemoDataService.instance.updatePost(postId:postId,text:text,category:category,isQuestion:isQuestion,pollOptions:pollOptions,instituteId:instituteId,attachments:attachments,tags:tags);
       return;
     }
     await _db.collection('posts').doc(postId).update({
       'text':text.trim(),
-      if(category!=null)'category':category,
+      if(category!=null)'category':category,\n      if(tags!=null)'tags':tags,
       if(isQuestion!=null)'isQuestion':isQuestion,
       if(pollOptions!=null)'pollOptions':pollOptions,
       if(attachments!=null)'attachments':attachments,
