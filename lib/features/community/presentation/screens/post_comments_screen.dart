@@ -53,9 +53,10 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
   Widget _content(Post post, User? user) {
     final identity = ActiveProfileController.instance;
     final uid = identity.resolveUid(user?.uid ?? '');
-    final liked = post.likedByUser(uid) || _demoLiked;
-    final likes = post.likesCount + (_demoLiked ? 1 : 0);
-    final canInteract = user != null;
+    final currentPost = isDemo ? (DemoDataService.instance.post(widget.id) ?? post) : post;
+    final liked = currentPost.likedByUser(uid) || _demoLiked;
+    final likes = currentPost.likesCount;
+    final canInteract = user != null || isDemo;
 
     return Column(children: [
       Expanded(child: ListView(padding: const EdgeInsets.all(14), children: [
@@ -83,8 +84,10 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
         Wrap(spacing: 4, children: [
           IconButton(
             onPressed: canInteract ? () async {
-              if (isDemo) { setState(() => _demoLiked = !_demoLiked); }
-              else { await _db!.toggleLike(post, uid); }
+              if (isDemo) {
+                DemoDataService.instance.toggleLike(widget.id, uid);
+                setState(() => _demoLiked = false);
+              } else { await _db!.toggleLike(post, uid); }
             } : null,
             icon: Icon(liked ? Icons.favorite : Icons.favorite_border, color: Colors.red),
           ),
@@ -93,7 +96,11 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
             onPressed: canInteract ? () async {
               final next = !_saved;
               setState(() => _saved = next);
-              await _db!.toggleBookmark(post.id, uid, next);
+              if (isDemo) {
+                DemoDataService.instance.toggleBookmark(uid, post.id, next);
+              } else {
+                await _db!.toggleBookmark(post.id, uid, next);
+              }
             } : null,
             icon: Icon(_saved ? Icons.bookmark : Icons.bookmark_border, color: AppColors.primaryGreen),
           ),
@@ -134,7 +141,7 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
 
   Widget _demoComments() {
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: _db!.demoCommentsStream(widget.id),
+      stream: DemoDataService.instance.changes.map((_) => DemoDataService.instance.comments(widget.id).map((x) => {'id':x.id,'authorId':x.authorId,'authorName':x.authorName,'text':x.text,'createdAt':x.createdAt}).toList()),
       builder: (context, snapshot) {
         final docs = snapshot.data ?? const <Map<String, dynamic>>[];
         if (docs.isEmpty) return const Text('No comments yet.');
@@ -199,7 +206,17 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
 
   Future<void> _addComment(User? user) async {
     final text = _comment.text.trim();
-    if (user == null || text.isEmpty || _db == null) return;
+    final identity = ActiveProfileController.instance;
+    if (text.isEmpty) return;
+    if (isDemo) {
+      final uid = identity.effectiveUid;
+      if (uid == null) return;
+      final name = identity.effectiveName ?? 'Student';
+      DemoDataService.instance.addComment(postId: widget.id, text: text, uid: uid, name: name);
+      _comment.clear();
+      return;
+    }
+    if (user == null || _db == null) return;
     try {
       await _db!.addComment(
         postId: widget.id,
