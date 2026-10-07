@@ -26,6 +26,29 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     }
     if (identity.isDemo) {
       var rating = 5;
+      if (identity.effectiveUid == null) {
+        final reviewer = await showDialog<ActiveDemoProfile>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Choose reviewer'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: temporaryProfiles
+                  .where((p) => p.id != widget.id)
+                  .map((p) => ListTile(
+                        leading: CircleAvatar(child: Text(p.name[0])),
+                        title: Text(p.name),
+                        subtitle: Text(p.institute),
+                        onTap: () => Navigator.pop(dialogContext, p),
+                      ))
+                  .toList(),
+            ),
+          ),
+        );
+        if (reviewer == null) return;
+        identity.activate(reviewer);
+      }
+      if (identity.effectiveUid == widget.id) return;
       final controller = TextEditingController();
       final result = await showDialog<bool>(context: context,builder: (dialogContext) => StatefulBuilder(builder: (_, setDialogState) => AlertDialog(title: Text('Review ' + name),content: Column(mainAxisSize: MainAxisSize.min,children:[Row(mainAxisAlignment: MainAxisAlignment.center,children: List.generate(5,(i)=>IconButton(onPressed:()=>setDialogState(()=>rating=i+1),icon:Icon(i<rating?Icons.star:Icons.star_border)))),TextField(controller:controller,maxLines:4,maxLength:300,decoration:const InputDecoration(labelText:'Your review'))]),actions:[TextButton(onPressed:()=>Navigator.pop(dialogContext,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(dialogContext,true),child:const Text('Publish'))])));
       final text=controller.text.trim();
