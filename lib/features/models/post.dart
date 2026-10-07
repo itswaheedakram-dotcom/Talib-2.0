@@ -50,5 +50,21 @@ class Post {
     );
   }
 
-  Map<String,dynamic> toMap()=>{\n    'text':text,\n    'authorId':authorId,\n    'authorName':authorName,\n    'createdAt':Timestamp.fromDate(createdAt),\n    'category':category,\n    'likesCount':likesCount,\n    'likedBy':likedBy,\n    'commentsCount':commentsCount,\n    'isQuestion':isQuestion,\n    'bestAnswerId':bestAnswerId,\n    'instituteId':instituteId,\n    'pollOptions':pollOptions,\n    'pollVotes':pollVotes,\n  };\n\n  bool likedByUser(String? uid)=>uid!=null&&likedBy.contains(uid);
+  Map<String,dynamic> toMap()=>{
+    'text':text,
+    'authorId':authorId,
+    'authorName':authorName,
+    'createdAt':Timestamp.fromDate(createdAt),
+    'category':category,
+    'likesCount':likesCount,
+    'likedBy':likedBy,
+    'commentsCount':commentsCount,
+    'isQuestion':isQuestion,
+    'bestAnswerId':bestAnswerId,
+    'instituteId':instituteId,
+    'pollOptions':pollOptions,
+    'pollVotes':pollVotes,
+  };
+
+  bool likedByUser(String? uid)=>uid!=null&&likedBy.contains(uid);
 }
