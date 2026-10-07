@@ -133,9 +133,12 @@ class DemoDataService extends ChangeNotifier {
   void addComment({required String postId,required String uid,required String name,required String text}){final p=_posts[postId];if(p==null)return;(_comments[postId]??=[]).add(DemoComment(id:'demo-comment-${++_seq}',authorId:uid,authorName:name,text:text,createdAt:DateTime.now()));_posts[postId]=Post(id:p.id,text:p.text,authorId:p.authorId,authorName:p.authorName,createdAt:p.createdAt,category:p.category,likesCount:p.likesCount,likedBy:p.likedBy,commentsCount:(_comments[postId]??[]).length,isQuestion:p.isQuestion,bestAnswerId:p.bestAnswerId,instituteId:p.instituteId,pollOptions:p.pollOptions,pollVotes:p.pollVotes);if(p.authorId!=uid)_addNotification(p.authorId,{'type':'comment','text':'commented on your post','postId':postId,'fromId':uid,'createdAt':DateTime.now(),'read':false});_emit();}
 
   final Map<String,Set<String>> _timelineTopics={};
+  final Map<String,Set<String>> _timelineInstitutes={};
 
   Set<String> timelineTopics(String uid)=>Set.unmodifiable(_timelineTopics[uid]??TimelineTopics.defaults.toSet());
   void setTimelineTopics(String uid,Set<String> topics){_timelineTopics[uid]=topics.toSet();_emit();}
+  Set<String> timelineInstitutes(String uid)=>Set.unmodifiable(_timelineInstitutes[uid]??const <String>{});
+  void setTimelineInstitutes(String uid,Set<String> ids){_timelineInstitutes[uid]=ids.toSet();_emit();}
   Set<String> followingIds(String uid)=>Set.unmodifiable(_following[uid]??const <String>{});
 
   bool isFollowing(String uid,String target)=>_following[uid]?.contains(target)==true;
