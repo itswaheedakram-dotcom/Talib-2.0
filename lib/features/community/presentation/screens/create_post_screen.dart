@@ -253,7 +253,18 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
           ],
         ),
         if (_selectedTags.isNotEmpty)
-          Wrap(spacing: 6, runSpacing: 6, children: _selectedTags.map((tag) => InputChip(label: Text(tag), onDeleted: _saving ? null : () => setState(() => _selectedTags.remove(tag))).toList()),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: _selectedTags.map((tag) {
+              return InputChip(
+                label: Text(tag),
+                onDeleted: _saving ? null : () {
+                  setState(() => _selectedTags.remove(tag));
+                },
+              );
+            }).toList(),
+          ),
         if (instituteNames.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 6),
