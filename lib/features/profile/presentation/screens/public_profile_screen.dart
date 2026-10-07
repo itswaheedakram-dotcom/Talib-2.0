@@ -212,26 +212,32 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         ]))),
         const SizedBox(height:12),
         AnimatedBuilder(
-          animation: ActiveProfileController.instance,
+          animation: Listenable.merge([ActiveProfileController.instance, DemoDataService.instance]),
           builder: (context, _) {
-            final currentId=ActiveProfileController.instance.effectiveUid;
-            final canReview=currentId!=null&&currentId!=widget.id;
-            return StreamBuilder<List<Map<String,dynamic>>>(
-              stream:DatabaseService().demoReviewsStream(widget.id),
-              builder:(context,snap){
-                final reviews=snap.data??const <Map<String,dynamic>>[];
-                var total=0;var sum=0;
-                for(final r in reviews){final rating=(r['rating'] as num?)?.toInt()??0;if(rating>=1&&rating<=5){total++;sum+=rating;}}
-                final average=total==0?0.0:sum/total;
-                return Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                  Row(children:[const Expanded(child:Text('Ratings & Reviews',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700))),if(total>0)Text(average.toStringAsFixed(1)+'/5',style:const TextStyle(fontWeight:FontWeight.w700))]),
-                  const SizedBox(height:8),
-                  if(total>0)Row(children:[...List.generate(5,(i)=>Icon(i<average.round()?Icons.star:Icons.star_border,size:19,color:AppColors.primaryGreen)),const SizedBox(width:6),Text(total.toString()+' review'+(total==1?'':'s'))]) else const Text('No ratings yet.'),
-                  if(canReview) ...[const SizedBox(height:12),SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:()=>_review(name),icon:const Icon(Icons.star_outline),label:const Text('Rate & Comment')))],
-                  if(reviews.isNotEmpty) ...[const SizedBox(height:12),...reviews.map((r){final reviewer=(r['reviewerName']??'Student').toString();final rating=(r['rating'] as num?)?.toInt()??0;return Card(margin:const EdgeInsets.only(top:8),child:ListTile(leading:CircleAvatar(child:Text(reviewer.isEmpty?'?':reviewer[0].toUpperCase())),title:Row(children:[Expanded(child:Text(reviewer,style:const TextStyle(fontWeight:FontWeight.w600))),Text(rating.toString()+'/5')]),subtitle:Padding(padding:const EdgeInsets.only(top:5),child:Text((r['text']??'').toString()))));})],
-                ])));
-              },
-            );
+            final currentId = ActiveProfileController.instance.effectiveUid;
+            final canReview = currentId != null && currentId != widget.id;
+            final reviews = DemoDataService.instance.reviews(widget.id);
+            var total = 0; var sum = 0;
+            for (final review in reviews) {
+              final rating = (review['rating'] as num?)?.toInt() ?? 0;
+              if (rating >= 1 && rating <= 5) { total++; sum += rating; }
+            }
+            final average = total == 0 ? 0.0 : sum / total;
+            return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [const Expanded(child: Text('Ratings & Reviews', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700))), if (total > 0) Text(average.toStringAsFixed(1) + '/5', style: const TextStyle(fontWeight: FontWeight.w700))]),
+              const SizedBox(height: 8),
+              if (total > 0) Row(children: [...List.generate(5, (i) => Icon(i < average.round() ? Icons.star : Icons.star_border, size: 19, color: AppColors.primaryGreen)), const SizedBox(width: 6), Text(total.toString() + ' review' + (total == 1 ? '' : 's'))]) else const Text('No ratings yet.'),
+              if (canReview) ...[const SizedBox(height: 12), SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: () => _review(name), icon: const Icon(Icons.star_outline), label: const Text('Rate & Comment')))],
+              if (reviews.isNotEmpty) ...[const SizedBox(height: 12), ...reviews.map((review) {
+                final reviewer = (review['reviewerName'] ?? 'Student').toString();
+                final rating = (review['rating'] as num?)?.toInt() ?? 0;
+                return Card(margin: const EdgeInsets.only(top: 8), child: ListTile(
+                  leading: CircleAvatar(child: Text(reviewer.isEmpty ? '?' : reviewer[0].toUpperCase())),
+                  title: Row(children: [Expanded(child: Text(reviewer, style: const TextStyle(fontWeight: FontWeight.w600))), Text(rating.toString() + '/5')]),
+                  subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text((review['text'] ?? '').toString())),
+                ));
+              })],
+            ])));
           },
         ),
         const SizedBox(height:12),
