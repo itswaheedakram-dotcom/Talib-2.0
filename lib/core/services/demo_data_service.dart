@@ -41,6 +41,25 @@ class DemoDataService extends ChangeNotifier {
       _notifications[id]=[];
       _reviews[id]=[];
     }
+
+    // Seed visible demo ratings/reviews so the public profile has real
+    // review content before a test user submits their own review.
+    _reviews['demo-user-1']=[
+      {'id':'demo-user-2','reviewerId':'demo-user-2','reviewerName':'Ali Raza','rating':5,'text':'Helpful and supportive in the community.','createdAt':now.subtract(const Duration(days:2))},
+      {'id':'demo-user-3','reviewerId':'demo-user-3','reviewerName':'Hira Ahmed','rating':4,'text':'Good guidance and useful information.','createdAt':now.subtract(const Duration(days:1))},
+    ];
+    _reviews['demo-user-2']=[
+      {'id':'demo-user-1','reviewerId':'demo-user-1','reviewerName':'Ayesha Khan','rating':5,'text':'Very helpful for admission and study guidance.','createdAt':now.subtract(const Duration(days:3))},
+      {'id':'demo-user-4','reviewerId':'demo-user-4','reviewerName':'Usman Malik','rating':4,'text':'Good community member and responsive.','createdAt':now.subtract(const Duration(days:1))},
+    ];
+    _reviews['demo-user-3']=[
+      {'id':'demo-user-1','reviewerId':'demo-user-1','reviewerName':'Ayesha Khan','rating':5,'text':'Shares useful education guidance.','createdAt':now.subtract(const Duration(days:2))},
+      {'id':'demo-user-2','reviewerId':'demo-user-2','reviewerName':'Ali Raza','rating':5,'text':'Helpful and informative.','createdAt':now.subtract(const Duration(days:1))},
+    ];
+    _reviews['demo-user-4']=[
+      {'id':'demo-user-1','reviewerId':'demo-user-1','reviewerName':'Ayesha Khan','rating':4,'text':'Helpful in the community.','createdAt':now.subtract(const Duration(days:2))},
+      {'id':'demo-user-3','reviewerId':'demo-user-3','reviewerName':'Hira Ahmed','rating':5,'text':'Good guidance and discussion.','createdAt':now.subtract(const Duration(days:1))},
+    ];
     _posts['demo-post-1']=Post(id:'demo-post-1',text:'Welcome to Talib Community! Ask questions, share guidance and help other students.',authorId:'demo-user-1',authorName:'Ayesha Khan',createdAt:now.subtract(const Duration(minutes:15)),category:'General',likesCount:2,likedBy:['demo-user-2','demo-user-3'],commentsCount:1);
     _posts['demo-post-2']=Post(id:'demo-post-2',text:'Which institute is best for your next education program? Share your experience.',authorId:'demo-user-2',authorName:'Ali Raza',createdAt:now.subtract(const Duration(hours:2)),category:'Institute Reviews',likesCount:1,likedBy:['demo-user-1'],commentsCount:1);
     _comments['demo-post-1']=[DemoComment(id:'c1',authorId:'demo-user-2',authorName:'Ali Raza',text:'This is helpful. Thanks!',createdAt:now.subtract(const Duration(minutes:8)))];
