@@ -41,8 +41,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   GestureDetector(
                     onTap: () => setState(() => expanded = !expanded),
                     child: Container(
-                      width: 38,
-                      height: 22,
+                      width: 76,
+                      height: 26,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: AppColors.white,
@@ -64,9 +64,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemCount: items.length,
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 4,
-                          mainAxisExtent: 76,
+                          mainAxisExtent: 78,
                           crossAxisSpacing: 5,
-                          mainAxisSpacing: 1,
+                          mainAxisSpacing: 2,
                         ),
                         itemBuilder: (context, i) {
                           final item = items[i];
@@ -99,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 11,
                                     color: AppColors.homeMutedText,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -111,15 +111,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 4),
-                  Expanded(
-                    child: Center(
-                      child: FractionallySizedBox(
-                        widthFactor: 0.90,
-                        child: _compactBanners(context),
-                      ),
-                    ),
+                  const SizedBox(height: 12),
+                  FractionallySizedBox(
+                    widthFactor: 0.94,
+                    child: _compactBanners(context),
                   ),
+                  const Spacer(),
                 ],
               ),
             ),
@@ -131,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _hero(BuildContext context) {
     return Container(
-      height: 245,
+      height: 218,
       decoration: const BoxDecoration(
         color: AppColors.homeGreen,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
@@ -168,14 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Text('- Napoleon Hill', style: TextStyle(color: AppColors.authorAccent, fontSize: 14, fontWeight: FontWeight.w600)),
           ),
           const SizedBox(height: 5),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Icon(Icons.favorite_border_rounded, color: AppColors.white, size: 23),
-              SizedBox(width: 18),
-              Icon(Icons.share_rounded, color: AppColors.white, size: 23),
-            ],
-          ),
+          const SizedBox(height: 2),
         ],
       ),
     );
@@ -185,9 +175,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(height: 82, child: _findBanner(context)),
-        const SizedBox(height: 7),
-        SizedBox(height: 82, child: _guidanceBanner(context)),
+        SizedBox(height: 92, child: _findBanner(context)),
+        const SizedBox(height: 9),
+        SizedBox(height: 92, child: _guidanceBanner(context)),
       ],
     );
   }
@@ -211,18 +201,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text('Finding Institute?', style: TextStyle(color: AppColors.white, fontSize: 17, fontWeight: FontWeight.w500)),
                   SizedBox(height: 3),
-                  Text('Find an institute suitable to\nyour needs and eligibility', style: TextStyle(color: AppColors.white70, fontSize: 10, height: 1.15)),
+                  Text('Find an institute suitable to\nyour needs and eligibility', style: TextStyle(color: AppColors.white70, fontSize: 11, height: 1.2)),
                   SizedBox(height: 5),
                   DecoratedBox(
                     decoration: BoxDecoration(color: AppColors.actionAccent, borderRadius: BorderRadius.all(Radius.circular(18))),
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                      padding: EdgeInsets.symmetric(horizontal: 13, vertical: 6),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.search_rounded, color: AppColors.white, size: 14),
                           SizedBox(width: 4),
-                          Text('Find Now', style: TextStyle(color: AppColors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                          Text('Find Now', style: TextStyle(color: AppColors.white, fontSize: 12, fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
