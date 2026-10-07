@@ -8,6 +8,7 @@ class Post {
   final bool isQuestion;
   final String? bestAnswerId;
   final String? instituteId;
+  final List<String> instituteIds;
   final List<String> tags;
   final List<String> pollOptions;
   final Map<String,int> pollVotes;
@@ -26,6 +27,7 @@ class Post {
     this.isQuestion=false,
     this.bestAnswerId,
     this.instituteId,
+    this.instituteIds=const [],
     this.tags=const [],
     this.pollOptions=const [],
     this.pollVotes=const {},
@@ -49,6 +51,7 @@ class Post {
       isQuestion:d['isQuestion']==true,
       bestAnswerId:d['bestAnswerId']?.toString(),
       instituteId:d['instituteId']?.toString(),
+      instituteIds:(d['instituteIds'] is List) ? List<String>.from(d['instituteIds']) : ((d['instituteId']??'').toString().isEmpty ? const [] : [(d['instituteId']??'').toString()]),
       tags:(d['tags'] is List) ? List<String>.from(d['tags']) : [(d['category']??'General').toString()],
       pollOptions:List<String>.from(d['pollOptions']??const []),
       pollVotes:Map<String,int>.from((d['pollVotes']??const {}).map((k,v)=>MapEntry(k.toString(),asInt(v)))),
@@ -64,7 +67,7 @@ class Post {
     'text':text,'authorId':authorId,'authorName':authorName,'category':category,
     'createdAt':Timestamp.fromDate(createdAt),'likesCount':likesCount,'likedBy':likedBy,
     'commentsCount':commentsCount,'isQuestion':isQuestion,'bestAnswerId':bestAnswerId,
-    if(instituteId!=null)'instituteId':instituteId,'tags':tags,'pollOptions':pollOptions,'pollVotes':pollVotes,
+    if(instituteId!=null)'instituteId':instituteId,'instituteIds':instituteIds,'tags':tags,'pollOptions':pollOptions,'pollVotes':pollVotes,
     'attachments':attachments,
   };
 }
