@@ -10,16 +10,16 @@ class AddInstituteScreen extends StatefulWidget{
 }
 class _AddInstituteScreenState extends State<AddInstituteScreen>{
   final _formKey=GlobalKey<FormState>();
-  final _name=TextEditingController(),_campus=TextEditingController(),_province=TextEditingController(),_city=TextEditingController(),_description=TextEditingController(),_website=TextEditingController(),_eligibility=TextEditingController(),_minScore=TextEditingController(),_nextProgram=TextEditingController();
+  final _name=TextEditingController(),_campus=TextEditingController(),_province=TextEditingController(),_city=TextEditingController(),_town=TextEditingController(),_description=TextEditingController(),_website=TextEditingController(),_eligibility=TextEditingController(),_minScore=TextEditingController(),_nextProgram=TextEditingController();
   String _sector='Private',_submission='Online';bool _saving=false;
   String get title=>switch(widget.type){'schools'=>'Add School','colleges'=>'Add College','universities'=>'Add University',_=>'Add Institute'};
   String get typeLabel=>switch(widget.type){'schools'=>'School','colleges'=>'College','universities'=>'University',_=>'Institute'};
-  @override void dispose(){for(final c in[_name,_campus,_province,_city,_description,_website,_eligibility,_minScore,_nextProgram])c.dispose();super.dispose();}
+  @override void dispose(){for(final c in[_name,_campus,_province,_city,_town,_description,_website,_eligibility,_minScore,_nextProgram])c.dispose();super.dispose();}
 
   Future<void> _submit() async{
     if(!_formKey.currentState!.validate())return;
     setState(()=>_saving=true);
-    final institute=Institute(id:'',name:_name.text.trim(),type:widget.type,campus:_campus.text.trim(),province:_province.text.trim(),city:_city.text.trim(),sector:_sector,description:_description.text.trim(),website:_website.text.trim(),submissionMode:_submission,eligibility:_eligibility.text.trim(),minScore:double.tryParse(_minScore.text.trim())??0,nextProgram:_nextProgram.text.trim(),address:'${_city.text.trim()}, ${_province.text.trim()}',status:'pending');
+    final institute=Institute(id:'',name:_name.text.trim(),type:widget.type,campus:_campus.text.trim(),province:_province.text.trim(),city:_city.text.trim(),town:_town.text.trim(),sector:_sector,description:_description.text.trim(),website:_website.text.trim(),submissionMode:_submission,eligibility:_eligibility.text.trim(),minScore:double.tryParse(_minScore.text.trim())??0,nextProgram:_nextProgram.text.trim(),address:'${_city.text.trim()}, ${_province.text.trim()}',status:'pending');
     final saved=await InstituteRepository.instance.add(institute);
     if(!mounted)return;
     setState(()=>_saving=false);
@@ -57,6 +57,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen>{
               const SizedBox(width: 10),
               Expanded(child: _field(_city, 'City', Icons.location_on_outlined, required: true)),
             ]),
+            _field(_town, 'Town / Area', Icons.place_outlined),
             DropdownButtonFormField<String>(
               initialValue: _sector,
               decoration: const InputDecoration(labelText: 'Sector', prefixIcon: Icon(Icons.business_outlined)),
