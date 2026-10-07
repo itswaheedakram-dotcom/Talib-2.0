@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:typed_data';
 import '../../features/models/post.dart';
 import 'active_profile_controller.dart';
 import 'demo_data_service.dart';
@@ -11,14 +13,14 @@ class DatabaseService {
   Stream<T> _demoStream<T>(T initial,T Function() current) async* {yield initial;yield* DemoDataService.instance.changes.map((_)=>current());}
   CollectionReference<Map<String,dynamic>> collection(String name)=>_db.collection(name);
   Stream<List<Post>> postsStream({bool popular=false,String category='All',String query=''}){if(ActiveProfileController.instance.isDemo)return _demoStream(DemoDataService.instance.posts(category:category,query:query),()=>DemoDataService.instance.posts(category:category,query:query));return _db.collection('posts').orderBy(popular?'likesCount':'createdAt',descending:true).snapshots().map((s)=>s.docs.map(Post.fromDoc).where((p)=>(category=='All'||p.category==category)&&(query.isEmpty||p.text.toLowerCase().contains(query.toLowerCase())||p.authorName.toLowerCase().contains(query.toLowerCase()))).toList());}
-  Future<String> createPost({required String text,required String authorId,required String authorName,String category='General',bool isQuestion=false,List<String> pollOptions=const [],String? instituteId})async{
-    if(ActiveProfileController.instance.isDemo)return DemoDataService.instance.createPost(text:text,authorId:_uid(authorId),authorName:ActiveProfileController.instance.resolveName(authorName),category:category,isQuestion:isQuestion,pollOptions:pollOptions,instituteId:instituteId);
-    final ref=await _db.collection('posts').add({'text':text.trim(),'authorId':authorId,'authorName':authorName,'category':category,'isQuestion':isQuestion,'createdAt':FieldValue.serverTimestamp(),'likesCount':0,'likedBy':<String>[],'commentsCount':0,'pollOptions':pollOptions,'pollVotes':<String,int>{},if(instituteId!=null)'instituteId':instituteId});
+  Future<String> createPost({required String text,required String authorId,required String authorName,String category='General',bool isQuestion=false,List<String> pollOptions=const [],String? instituteId,List<Map<String,String>> attachments=const []})async{
+    if(ActiveProfileController.instance.isDemo)return DemoDataService.instance.createPost(text:text,authorId:_uid(authorId),authorName:ActiveProfileController.instance.resolveName(authorName),category:category,isQuestion:isQuestion,pollOptions:pollOptions,instituteId:instituteId,attachments:attachments);
+    final ref=await _db.collection('posts').add({'text':text.trim(),'authorId':authorId,'authorName':authorName,'category':category,'isQuestion':isQuestion,'createdAt':FieldValue.serverTimestamp(),'likesCount':0,'likedBy':<String>[],'commentsCount':0,'pollOptions':pollOptions,'pollVotes':<String,int>{},'attachments':attachments,if(instituteId!=null)'instituteId':instituteId});
     return ref.id;
   }
-  Future<void> updatePost({required String postId,required String text,String? category,bool? isQuestion,List<String>? pollOptions,String? instituteId}) async {
+  Future<void> updatePost({required String postId,required String text,String? category,bool? isQuestion,List<String>? pollOptions,String? instituteId,List<Map<String,String>>? attachments}) async {
     if(ActiveProfileController.instance.isDemo) {
-      DemoDataService.instance.updatePost(postId:postId,text:text,category:category,isQuestion:isQuestion,pollOptions:pollOptions,instituteId:instituteId);
+      DemoDataService.instance.updatePost(postId:postId,text:text,category:category,isQuestion:isQuestion,pollOptions:pollOptions,instituteId:instituteId,attachments:attachments);
       return;
     }
     await _db.collection('posts').doc(postId).update({
@@ -26,9 +28,24 @@ class DatabaseService {
       if(category!=null)'category':category,
       if(isQuestion!=null)'isQuestion':isQuestion,
       if(pollOptions!=null)'pollOptions':pollOptions,
+      if(attachments!=null)'attachments':attachments,
       if(instituteId!=null)'instituteId':instituteId,
     });
   }
+  Future<String> uploadCommunityAttachment({
+    required Uint8List bytes,
+    required String fileName,
+    required String type,
+  }) async {
+    final safeName=fileName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'),'_');
+    final ref=_db.app.options.projectId.isEmpty
+        ? FirebaseStorage.instance.ref('community/$safeName')
+        : FirebaseStorage.instance.ref('community/${DateTime.now().millisecondsSinceEpoch}_$safeName');
+    await ref.putData(bytes);
+    final url=await ref.getDownloadURL();
+    return url;
+  }
+
   Future<void> deletePost(String postId) async {
     if(ActiveProfileController.instance.isDemo) {
       DemoDataService.instance.deletePost(postId);
