@@ -25,6 +25,16 @@ class _CommunityScreenState extends State<CommunityScreen>{
   void _showError(Object error){if(!mounted)return;ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_errorText(error)),duration:const Duration(seconds:5)));}
   void _login()=>_showError(StateError('Please sign in to create, like or save posts.'));
   
+  Widget _topicTab(String name){
+    return InkWell(
+      onTap:()=>setState(()=>category=name),
+      child:Padding(
+        padding:const EdgeInsets.symmetric(horizontal:12,vertical:12),
+        child:Text(name,style:TextStyle(fontWeight:FontWeight.w800,color:category==name?AppColors.primaryGreen:AppColors.homeMutedText)),
+      ),
+    );
+  }
+
   @override Widget build(BuildContext context){
     final ready=FirebaseService.initialized;
     final user=ready?FirebaseAuth.instance.currentUser:null;
@@ -54,34 +64,46 @@ class _CommunityScreenState extends State<CommunityScreen>{
               Text('Ask students and professionals for guidance.',style:TextStyle(fontSize:12,color:AppColors.homeMutedText)),
             ])),
           ])),
-        Padding(padding:const EdgeInsets.fromLTRB(12,4,12,6),child:Row(children:[
-          Expanded(child:_timelineTab('For You',0)),
-          Expanded(child:_timelineTab('Following',1)),
-          Expanded(child:InkWell(onTap:()=>context.push('/community/add-to-timeline').then((_)=>setState((){})),
-            child:const Padding(padding:EdgeInsets.symmetric(vertical:12),child:Center(child:Text('+ Add',style:TextStyle(fontWeight:FontWeight.w800,color:AppColors.primaryGreen)))))),
-        ])),
+        SizedBox(
+          height:48,
+          child:StreamBuilder<Set<String>>(
+            stream:(uid.isEmpty&&!demo)?const Stream<Set<String>>.empty():_db.timelineTopicsStream(uid),
+            builder:(context,pref){
+              final topics=pref.data??_topics;
+              _topics=topics;
+              final tabs=<Widget>[
+                _timelineTab('For You',0),
+                _timelineTab('Following',1),
+                ...topics.map(_topicTab),
+                InkWell(
+                  onTap:()=>context.push('/community/add-to-timeline').then((_)=>(mounted?setState((){}):null)),
+                  child:const Padding(
+                    padding:EdgeInsets.symmetric(horizontal:12,vertical:12),
+                    child:Text('+ Add',style:TextStyle(fontWeight:FontWeight.w800,color:AppColors.primaryGreen)),
+                  ),
+                ),
+              ];
+              return ListView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:4),children:tabs);
+            },
+          ),
+        ),
         Padding(padding:const EdgeInsets.fromLTRB(12,0,12,6),child:TextField(
           controller:_search,onChanged:(v)=>setState(()=>query=v.trim()),
           decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:'Search posts and students',
             filled:true,fillColor:AppColors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(10),borderSide:BorderSide.none)),
         )),
         Expanded(child:timelineTab==0
-          ?StreamBuilder<Set<String>>(stream:(uid.isEmpty&&!demo)?const Stream<Set<String>>.empty():_db.timelineTopicsStream(uid),
-              builder:(context,pref){
-                final topics=pref.data??_topics;
-                _topics=topics;
-                return _postFeed(user,demo,ready,topics,null);
-              })
-          :StreamBuilder<Set<String>>(stream:(uid.isEmpty&&!demo)?const Stream<Set<String>>.empty():_db.followingIdsStream(uid),
-              builder:(context,follow){
-                return _postFeed(user,demo,ready,_topics,follow.data??const <String>{});
-              })),
+          ?_postFeed(user,demo,ready,_topics,null)
+          :timelineTab==1
+            ?StreamBuilder<Set<String>>(stream:(uid.isEmpty&&!demo)?const Stream<Set<String>>.empty():_db.followingIdsStream(uid),
+                builder:(context,follow)=>_postFeed(user,demo,ready,_topics,follow.data??const <String>{}))
+            :_postFeed(user,demo,ready,{category},null)),
       ]),
     );
   }
 
   Widget _timelineTab(String label,int index)=>InkWell(
-    onTap:()=>setState(()=>timelineTab=index),
+    onTap:()=>setState(()=>{timelineTab=index;category='All';}),
     child:Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Center(
       child:Text(label,style:TextStyle(fontWeight:FontWeight.w800,color:timelineTab==index?AppColors.primaryGreen:AppColors.homeMutedText)))),
   );
