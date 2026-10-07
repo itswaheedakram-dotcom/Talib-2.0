@@ -139,9 +139,27 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
     ]);
   }
 
+  Stream<List<Map<String, dynamic>>> _demoCommentsStream() async* {
+    List<Map<String, dynamic>> current() => DemoDataService.instance.comments(widget.id)
+        .map((x) => {
+              'id': x.id,
+              'authorId': x.authorId,
+              'authorName': x.authorName,
+              'text': x.text,
+              'createdAt': x.createdAt,
+            })
+        .toList();
+
+    // Emit the existing comments immediately when the screen opens.
+    yield current();
+
+    // Then keep the list live as demo data changes.
+    yield* DemoDataService.instance.changes.map((_) => current());
+  }
+
   Widget _demoComments() {
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: DemoDataService.instance.changes.map((_) => DemoDataService.instance.comments(widget.id).map((x) => {'id':x.id,'authorId':x.authorId,'authorName':x.authorName,'text':x.text,'createdAt':x.createdAt}).toList()),
+      stream: _demoCommentsStream(),
       builder: (context, snapshot) {
         final docs = snapshot.data ?? const <Map<String, dynamic>>[];
         if (docs.isEmpty) return const Text('No comments yet.');
