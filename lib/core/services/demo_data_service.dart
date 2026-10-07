@@ -81,10 +81,10 @@ class DemoDataService extends ChangeNotifier {
   bool isDemo(String uid)=>uid.startsWith('demo-user-');
 
   List<Post> posts({String category='All',String query=''}){final q=query.toLowerCase();return _posts.values.where((p)=>(category=='All'||p.category==category)&&(q.isEmpty||p.text.toLowerCase().contains(q)||p.authorName.toLowerCase().contains(q))).toList()..sort((a,b)=>b.createdAt.compareTo(a.createdAt));}
-  String createPost({required String text,required String authorId,required String authorName,String category='General',bool isQuestion=false,List<String> pollOptions=const [],String? instituteId,List<Map<String,String>> attachments=const []}){final id='demo-post-${++_seq}';_posts[id]=Post(id:id,text:text.trim(),authorId:authorId,authorName:authorName,createdAt:DateTime.now(),category:category,isQuestion:isQuestion,pollOptions:pollOptions,instituteId:instituteId,attachments:attachments);_comments[id]=[];_emit();return id;}
+  String createPost({required String text,required String authorId,required String authorName,String category='General',bool isQuestion=false,List<String> pollOptions=const [],String? instituteId,List<Map<String,String>> attachments=const [],List<String> tags=const []}){final id='demo-post-${++_seq}';_posts[id]=Post(id:id,text:text.trim(),authorId:authorId,authorName:authorName,createdAt:DateTime.now(),category:category,isQuestion:isQuestion,pollOptions:pollOptions,instituteId:instituteId,attachments:attachments,tags:tags);_comments[id]=[];_emit();return id;}
   Post? post(String id)=>_posts[id];
 
-  void updatePost({required String postId,required String text,String? category,bool? isQuestion,List<String>? pollOptions,String? instituteId,List<Map<String,String>>? attachments}) {
+  void updatePost({required String postId,required String text,String? category,bool? isQuestion,List<String>? pollOptions,String? instituteId,List<Map<String,String>>? attachments,List<String>? tags}) {
     final p=_posts[postId];
     if(p==null) throw StateError('Post not found: $postId');
     _posts[postId]=Post(
@@ -92,7 +92,7 @@ class DemoDataService extends ChangeNotifier {
       createdAt:p.createdAt,category:category??p.category,likesCount:p.likesCount,
       likedBy:p.likedBy,commentsCount:p.commentsCount,isQuestion:isQuestion??p.isQuestion,
       bestAnswerId:p.bestAnswerId,instituteId:instituteId??p.instituteId,
-      pollOptions:pollOptions??p.pollOptions,pollVotes:p.pollVotes,attachments:attachments??p.attachments,
+      pollOptions:pollOptions??p.pollOptions,pollVotes:p.pollVotes,attachments:attachments??p.attachments,tags:tags??p.tags,
     );
     _emit();
   }
@@ -137,7 +137,7 @@ class DemoDataService extends ChangeNotifier {
 
   void toggleLike(String postId,String uid){final p=_posts[postId];if(p==null)return;final liked=[...p.likedBy];if(liked.contains(uid)){liked.remove(uid);}else{liked.add(uid);if(p.authorId!=uid)_addNotification(p.authorId,{'type':'like','text':'liked your post','postId':postId,'fromId':uid,'createdAt':DateTime.now(),'read':false});}_posts[postId]=Post(id:p.id,text:p.text,authorId:p.authorId,authorName:p.authorName,createdAt:p.createdAt,category:p.category,likesCount:liked.length,likedBy:liked,commentsCount:p.commentsCount,isQuestion:p.isQuestion,bestAnswerId:p.bestAnswerId,instituteId:p.instituteId,pollOptions:p.pollOptions,pollVotes:p.pollVotes,attachments:p.attachments);_emit();}
   List<DemoComment> comments(String postId)=>List.unmodifiable(_comments[postId]??const []);
-  void addComment({required String postId,required String uid,required String name,required String text}){final p=_posts[postId];if(p==null)return;(_comments[postId]??=[]).add(DemoComment(id:'demo-comment-${++_seq}',authorId:uid,authorName:name,text:text,createdAt:DateTime.now()));_posts[postId]=Post(id:p.id,text:p.text,authorId:p.authorId,authorName:p.authorName,createdAt:p.createdAt,category:p.category,likesCount:p.likesCount,likedBy:p.likedBy,commentsCount:(_comments[postId]??[]).length,isQuestion:p.isQuestion,bestAnswerId:p.bestAnswerId,instituteId:p.instituteId,pollOptions:p.pollOptions,pollVotes:p.pollVotes);if(p.authorId!=uid)_addNotification(p.authorId,{'type':'comment','text':'commented on your post','postId':postId,'fromId':uid,'createdAt':DateTime.now(),'read':false});_emit();}
+  void addComment({required String postId,required String uid,required String name,required String text}){final p=_posts[postId];if(p==null)return;(_comments[postId]??=[]).add(DemoComment(id:'demo-comment-${++_seq}',authorId:uid,authorName:name,text:text,createdAt:DateTime.now()));_posts[postId]=Post(id:p.id,text:p.text,authorId:p.authorId,authorName:p.authorName,createdAt:p.createdAt,category:p.category,likesCount:p.likesCount,likedBy:p.likedBy,commentsCount:(_comments[postId]??[]).length,isQuestion:p.isQuestion,bestAnswerId:p.bestAnswerId,instituteId:p.instituteId,tags:p.tags,pollOptions:p.pollOptions,pollVotes:p.pollVotes,attachments:p.attachments);if(p.authorId!=uid)_addNotification(p.authorId,{'type':'comment','text':'commented on your post','postId':postId,'fromId':uid,'createdAt':DateTime.now(),'read':false});_emit();}
 
   final Map<String,Set<String>> _timelineTopics={};
   final Map<String,Set<String>> _timelineInstitutes={};
