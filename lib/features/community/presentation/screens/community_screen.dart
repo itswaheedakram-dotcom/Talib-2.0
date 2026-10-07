@@ -8,6 +8,7 @@ import '../../../../core/services/firebase_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/demo_data_service.dart';
 import '../../timeline_topics.dart';
+import '../../../institutes/data/institute_repository.dart';
 
 class CommunityScreen extends StatefulWidget{
   final String? instituteId;final String? instituteName;
@@ -18,19 +19,33 @@ class _CommunityScreenState extends State<CommunityScreen>{
   final _db=DatabaseService();final _search=TextEditingController();
   bool popular=false;String query='';String category='All';
   int timelineTab=0;
+  String? _selectedInstituteId;
   Set<String> _topics=TimelineTopics.defaults.toSet();
   final cats=const ['All','General','Admission Help','Career','Scholarships','Study Help','Institute Reviews','Jobs/Internships','Announcements'];
+  @override void initState(){super.initState();InstituteRepository.instance.load();}
   @override void dispose(){_search.dispose();super.dispose();}
   String _errorText(Object error){final raw=error.toString().trim();if(raw.isEmpty)return 'Unknown error.';return raw.replaceFirst(RegExp(r'^Exception:\s*'),'');}
   void _showError(Object error){if(!mounted)return;ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_errorText(error)),duration:const Duration(seconds:5)));}
   void _login()=>_showError(StateError('Please sign in to create, like or save posts.'));
   
   Widget _topicTab(String name){
+    final selected=timelineTab>=2&&_selectedInstituteId==null&&category==name;
     return InkWell(
-      onTap:()=>setState(()=>category=name),
+      onTap:()=>setState((){timelineTab=2;_selectedInstituteId=null;category=name;}),
       child:Padding(
         padding:const EdgeInsets.symmetric(horizontal:12,vertical:12),
-        child:Text(name,style:TextStyle(fontWeight:FontWeight.w800,color:category==name?AppColors.primaryGreen:AppColors.homeMutedText)),
+        child:Text(name,style:TextStyle(fontWeight:FontWeight.w800,color:selected?AppColors.primaryGreen:AppColors.homeMutedText)),
+      ),
+    );
+  }
+
+  Widget _instituteTab(Institute institute){
+    final selected=_selectedInstituteId==institute.id;
+    return InkWell(
+      onTap:()=>setState((){timelineTab=3;_selectedInstituteId=institute.id;category='All';}),
+      child:Padding(
+        padding:const EdgeInsets.symmetric(horizontal:12,vertical:12),
+        child:Text(institute.name,overflow:TextOverflow.ellipsis,style:TextStyle(fontWeight:FontWeight.w800,color:selected?AppColors.primaryGreen:AppColors.homeMutedText)),
       ),
     );
   }
@@ -75,6 +90,7 @@ class _CommunityScreenState extends State<CommunityScreen>{
                 _timelineTab('For You',0),
                 _timelineTab('Following',1),
                 ...topics.map(_topicTab),
+                ...InstituteRepository.instance.items.map(_instituteTab),
                 InkWell(
                   onTap:()=>context.push('/community/add-to-timeline').then((_)=>(mounted?setState((){}):null)),
                   child:const Padding(
@@ -93,11 +109,11 @@ class _CommunityScreenState extends State<CommunityScreen>{
             filled:true,fillColor:AppColors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(10),borderSide:BorderSide.none)),
         )),
         Expanded(child:timelineTab==0
-          ?_postFeed(user,demo,ready,_topics,null)
+          ?_postFeed(user,demo,ready,_topics,null,null)
           :timelineTab==1
             ?StreamBuilder<Set<String>>(stream:(uid.isEmpty&&!demo)?const Stream<Set<String>>.empty():_db.followingIdsStream(uid),
-                builder:(context,follow)=>_postFeed(user,demo,ready,_topics,follow.data??const <String>{}))
-            :_postFeed(user,demo,ready,{category},null)),
+                builder:(context,follow)=>_postFeed(user,demo,ready,_topics,follow.data??const <String>{},null))
+            :_postFeed(user,demo,ready,{category},null,_selectedInstituteId)),
       ]),
     );
   }
@@ -108,14 +124,16 @@ class _CommunityScreenState extends State<CommunityScreen>{
       child:Text(label,style:TextStyle(fontWeight:FontWeight.w800,color:timelineTab==index?AppColors.primaryGreen:AppColors.homeMutedText)))),
   );
 
-  Widget _postFeed(User? user,bool demo,bool ready,Set<String> topics,Set<String>? following){
-    final stream=demo?_demoPostsStream():ready?_db.postsStream(popular:popular,category:category,query:query):const Stream<List<Post>>.empty();
+  Widget _postFeed(User? user,bool demo,bool ready,Set<String> topics,Set<String>? following,String? instituteFilterId){
+    final stream=demo?_demoPostsStream():ready?_db.postsStream(popular:popular,category:instituteFilterId!=null?'All':category,query:query):const Stream<List<Post>>.empty();
     return StreamBuilder<List<Post>>(stream:stream,builder:(context,s){
       if(s.hasError)return _errorState(s.error!);
       if(!demo&&!ready)return _errorState(StateError(FirebaseService.initializationErrorMessage.isEmpty?'Firebase is not initialized.':FirebaseService.initializationErrorMessage));
       if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
       var posts=s.data??const <Post>[];
-      if(timelineTab==0){
+      if(instituteFilterId!=null){
+        posts=posts.where((p)=>p.instituteId==instituteFilterId).toList();
+      }else if(timelineTab==0){
         posts=posts.where((p)=>topics.contains(p.category)||p.category=='General').toList();
       }else{
         posts=posts.where((p)=>following?.contains(p.authorId)==true).toList();
