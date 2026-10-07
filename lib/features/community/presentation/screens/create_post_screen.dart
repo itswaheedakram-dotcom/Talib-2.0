@@ -9,6 +9,8 @@ import '../../../../core/services/database_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../../models/post.dart';
+import '../../../models/institute.dart';
+import '../../../institutes/data/institute_repository.dart';
 import '../../timeline_topics.dart';
 
 class CreatePostScreen extends StatefulWidget{
@@ -26,7 +28,8 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
   final _attachments=<Map<String,String>>[];
   bool _saving=false,_isQuestion=false,_isPoll=false;
   String category='General';
-  final Set<String> _selectedTags={'General'};
+  final Set<String> _selectedTags={};
+  final Set<String> _selectedInstituteIds={};
   static final categories=TimelineTopics.all;
 
   @override void initState(){
@@ -35,7 +38,8 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
     if(p!=null){
       _controller.text=p.text;
       category=TimelineTopics.byName(p.category)!=null?p.category:'General';
-      _selectedTags..clear()..addAll(p.tags.isEmpty?[p.category]:p.tags);
+      _selectedTags..clear()..addAll(p.tags);
+      _selectedInstituteIds..clear()..addAll(p.instituteIds.isNotEmpty?p.instituteIds:(p.instituteId==null?const []:[p.instituteId!]));
       _isQuestion=p.isQuestion;_isPoll=p.pollOptions.isNotEmpty;
       for(final option in p.pollOptions)_addPollOption(option);
       _attachments.addAll(p.attachments.map((x)=>Map<String,String>.from(x)));
@@ -118,7 +122,9 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
     try{user=FirebaseService.initialized?FirebaseAuth.instance.currentUser:null;}catch(error){_showError(error);return;}
     if(user==null&&!demoActive){_showError(StateError('Please sign in first. Firebase authentication has no active user.'));return;}
     final text=_controller.text.trim();if(text.isEmpty){_showError(ArgumentError('Write something before publishing.'));return;}
-    final postTags=_selectedTags.isEmpty?{category}:_selectedTags;
+    final postTags=_selectedTags.toSet();
+    final instituteIds=_selectedInstituteIds.toList();
+    final primaryInstituteId=instituteIds.isNotEmpty?instituteIds.first:widget.instituteId;
     final options=_isPoll?_pollOptions.map((c)=>c.text.trim()).where((x)=>x.isNotEmpty).take(5).toList():<String>[];
     if(_isPoll&&options.length<2){_showError(ArgumentError('Add at least 2 poll options.'));return;}
     setState(()=>_saving=true);
@@ -126,13 +132,51 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
       final authorId=identity.resolveUid(user?.uid??'');
       final name=identity.effectiveName ?? (user?.displayName?.trim().isNotEmpty==true?user!.displayName!.trim():(user?.email??'Student'));
       if(widget.post==null){
-        final postId=await _db.createPost(text:text,authorId:authorId,authorName:name,category:category,isQuestion:_isQuestion,pollOptions:options,instituteId:widget.instituteId,attachments:_attachments,tags:postTags.toList());
+        final postId=await _db.createPost(text:text,authorId:authorId,authorName:name,category:category,isQuestion:_isQuestion,pollOptions:options,instituteId:primaryInstituteId,attachments:_attachments,tags:postTags.toList(),instituteIds:instituteIds);
         if(!demoActive&&user!=null){try{await _db.notifyMentions(text:text,fromId:user.uid,postId:postId);}catch(error){debugPrint('Mention notification failed: $error');}}
       }else{
-        await _db.updatePost(postId:widget.post!.id,text:text,category:category,isQuestion:_isQuestion,pollOptions:options,instituteId:widget.post!.instituteId??widget.instituteId,attachments:_attachments,tags:postTags.toList());
+        await _db.updatePost(postId:widget.post!.id,text:text,category:category,isQuestion:_isQuestion,pollOptions:options,instituteId:widget.post!.instituteId??primaryInstituteId,attachments:_attachments,tags:postTags.toList(),instituteIds:instituteIds);
       }
       if(mounted)context.pop(true);
     }catch(error){_showError(error);}finally{if(mounted)setState(()=>_saving=false);}
+  }
+
+  Future<void> _pickTopics() async {
+    final temp=Set<String>.from(_selectedTags);
+    final result=await showModalBottomSheet<Set<String>>(context:context,isScrollControlled:true,builder:(sheet)=>StatefulBuilder(builder:(context,setSheet){
+      return SafeArea(child:SizedBox(height:MediaQuery.of(context).size.height*.78,child:Column(children:[
+        const Padding(padding:EdgeInsets.fromLTRB(16,14,16,8),child:Text('Tag Topics',style:TextStyle(fontSize:18,fontWeight:FontWeight.w800,color:AppColors.darkGreen))),
+        Expanded(child:ListView(children:TimelineTopics.all.map((topic)=>CheckboxListTile(value:temp.contains(topic.name),title:Text(topic.emoji+'  '+topic.name),activeColor:AppColors.primaryGreen,onChanged:(v)=>setSheet(()=>v==true?temp.add(topic.name):temp.remove(topic.name))).toList())),
+        Padding(padding:const EdgeInsets.all(12),child:FilledButton(onPressed:()=>Navigator.pop(sheet,temp),child:const Text('Done'))),
+      ]));
+    }));
+    if(result!=null)setState(()=>_selectedTags..clear()..addAll(result));
+  }
+
+  Future<void> _pickInstitutes() async {
+    await InstituteRepository.instance.load();
+    final temp=Set<String>.from(_selectedInstituteIds);
+    final result=await showModalBottomSheet<Set<String>>(context:context,isScrollControlled:true,builder:(sheet)=>StatefulBuilder(builder:(context,setSheet){
+      final list=InstituteRepository.instance.items;
+      return SafeArea(child:SizedBox(height:MediaQuery.of(context).size.height*.78,child:Column(children:[
+        const Padding(padding:EdgeInsets.fromLTRB(16,14,16,8),child:Text('Tag Institutes',style:TextStyle(fontSize:18,fontWeight:FontWeight.w800,color:AppColors.darkGreen))),
+        Expanded(child:ListView(children:list.map((i)=>CheckboxListTile(value:temp.contains(i.id),title:Text(i.name),subtitle:Text(i.type+' • '+i.city+', '+i.province),activeColor:AppColors.primaryGreen,onChanged:(v)=>setSheet(()=>v==true?temp.add(i.id):temp.remove(i.id))).toList())),
+        Padding(padding:const EdgeInsets.all(12),child:FilledButton(onPressed:()=>Navigator.pop(sheet,temp),child:const Text('Done'))),
+      ]));
+    }));
+    if(result!=null)setState(()=>_selectedInstituteIds..clear()..addAll(result));
+  }
+
+  Widget _tagSelector(){
+    final instituteNames=InstituteRepository.instance.items.where((i)=>_selectedInstituteIds.contains(i.id)).map((i)=>i.name).toList();
+    return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(children:[const Expanded(child:Text('Tags',style:TextStyle(fontSize:16,fontWeight:FontWeight.w800,color:AppColors.darkGreen))),
+        TextButton.icon(onPressed:_saving?null:_pickTopics,icon:const Icon(Icons.sell_outlined),label:const Text('Topics')),
+        TextButton.icon(onPressed:_saving?null:_pickInstitutes,icon:const Icon(Icons.school_outlined),label:const Text('Institutes'))]),
+      if(_selectedTags.isNotEmpty)Wrap(spacing:6,runSpacing:6,children:_selectedTags.map((x)=>InputChip(label:Text(x),onDeleted:_saving?null:()=>setState(()=>_selectedTags.remove(x))).toList()),
+      if(instituteNames.isNotEmpty)Padding(padding:const EdgeInsets.only(top:6),child:Wrap(spacing:6,runSpacing:6,children:instituteNames.map((x)=>InputChip(label:Text(x),onDeleted:_saving?null:(){final i=InstituteRepository.instance.items.firstWhere((e)=>e.name==x);setState(()=>_selectedInstituteIds.remove(i.id));}).toList())),
+      if(_selectedTags.isEmpty&&_selectedInstituteIds.isEmpty)const Padding(padding:EdgeInsets.only(top:4),child:Text('You can post without tags, or add one or more topics/institutes.',style:TextStyle(fontSize:12,color:AppColors.homeMutedText))),
+    ]);
   }
 
   Widget _attachmentPreview(){
@@ -166,7 +210,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
       Row(children:[const CircleAvatar(radius:21,backgroundColor:AppColors.softGreen,child:Icon(Icons.person,color:AppColors.primaryGreen)),const SizedBox(width:10),
         Expanded(child:Text(editing?'Update your post':(widget.instituteName==null?'Share with the community':'Share with this institute community'),style:const TextStyle(color:AppColors.darkGreen,fontWeight:FontWeight.w700)))]),
       const SizedBox(height:14),
-      DropdownButtonFormField<String>(value:TimelineTopics.byName(category)!=null?category:'General',decoration:const InputDecoration(labelText:'Tag'),items:categories.map((x)=>DropdownMenuItem(value:x.name,child:Text('${x.emoji}  ${x.name}'))).toList(),onChanged:_saving?null:(v)=>setState((){category=v??category;_selectedTags..clear()..add(category); })),
+      _tagSelector(),
       const SizedBox(height:10),
       TextField(controller:_controller,maxLines:8,maxLength:1000,decoration:const InputDecoration(hintText:'What do you want to share?')),
       _pollEditor(),_attachmentPreview(),
