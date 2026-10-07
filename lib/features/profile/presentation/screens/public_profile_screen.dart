@@ -104,12 +104,16 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         const SizedBox(height:10),Row(mainAxisAlignment:MainAxisAlignment.center,children:[Text(name,style:const TextStyle(fontSize:22,fontWeight:FontWeight.w600)),const SizedBox(width:6),const Icon(Icons.verified,size:20,color:AppColors.primaryGreen)]),Center(child:Text(demo['city']!,style:const TextStyle(color:Colors.grey))),
         const SizedBox(height:12),
         AnimatedBuilder(
-          animation: ActiveProfileController.instance,
+          animation: Listenable.merge([
+            ActiveProfileController.instance,
+            DemoDataService.instance,
+          ]),
           builder: (context, _) {
             final controller = ActiveProfileController.instance;
             final active = controller.active?.id == widget.id;
             final currentId = controller.effectiveUid;
             final following = currentId != null &&
+                currentId != widget.id &&
                 DemoDataService.instance.isFollowing(currentId, widget.id);
             return Column(
               children: [
@@ -148,12 +152,25 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     children: [
                       Expanded(
                         child: FilledButton.icon(
-                          onPressed: () =>
-                              DemoDataService.instance.toggleFollow(
-                            currentId,
-                            widget.id,
-                            !following,
-                          ),
+                          onPressed: () async {
+                            if (currentId == null || currentId == widget.id) return;
+                            DemoDataService.instance.toggleFollow(
+                              currentId,
+                              widget.id,
+                              !following,
+                            );
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    following
+                                        ? 'You unfollowed $name.'
+                                        : 'You are now following $name.',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
                           icon: Icon(
                             following
                                 ? Icons.person_remove_outlined
