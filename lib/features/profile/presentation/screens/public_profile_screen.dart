@@ -79,20 +79,30 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         AnimatedBuilder(
           animation: ActiveProfileController.instance,
           builder: (context, _) {
-            final active = ActiveProfileController.instance.active?.id == widget.id;
-            return SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: active ? null : () {
-                  final profile = temporaryProfiles.firstWhere((p) => p.id == widget.id);
-                  ActiveProfileController.instance.activate(profile);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(profile.name + ' is now the active test profile.')),
-                  );
-                },
-                icon: Icon(active ? Icons.check_circle : Icons.play_circle_outline),
-                label: Text(active ? 'Active Profile' : 'Activate This Profile'),
-              ),
+            final controller = ActiveProfileController.instance;
+            final active = controller.active?.id == widget.id;
+            final currentId = controller.effectiveUid;
+            final following = currentId != null && DemoDataService.instance.isFollowing(currentId, widget.id);
+            return Column(
+              children: [
+                SizedBox(width: double.infinity, child: FilledButton.icon(
+                  onPressed: active ? null : () {
+                    final profile = temporaryProfiles.firstWhere((p) => p.id == widget.id);
+                    controller.activate(profile);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(profile.name + ' is now the active test profile.')));
+                  },
+                  icon: Icon(active ? Icons.check_circle : Icons.play_circle_outline),
+                  label: Text(active ? 'Active Profile' : 'Activate This Profile'),
+                )),
+                if (currentId != null && currentId != widget.id) ...[
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(child: FilledButton.icon(onPressed: () => DemoDataService.instance.toggleFollow(currentId, widget.id, !following), icon: Icon(following ? Icons.person_remove_outlined : Icons.person_add_outlined), label: Text(following ? 'Following' : 'Follow'))),
+                    const SizedBox(width: 8),
+                    Expanded(child: OutlinedButton.icon(onPressed: () => context.push('/chat/' + DemoDataService.instance.conversationId(currentId, widget.id) + '?uid=' + widget.id + '&name=' + Uri.encodeComponent(name)), icon: const Icon(Icons.chat_bubble_outline), label: const Text('Message'))),
+                  ]),
+                ],
+              ],
             );
           },
         ),
