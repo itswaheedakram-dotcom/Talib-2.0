@@ -80,6 +80,17 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
         if (post.isQuestion) const Text('QUESTION', style: TextStyle(color: AppColors.primaryGreen, fontWeight: FontWeight.w800, fontSize: 11)),
         const SizedBox(height: 6),
         Text(post.text, style: const TextStyle(fontSize: 16, height: 1.45)),
+        if(post.attachments.isNotEmpty) ...[
+          const SizedBox(height:10),
+          ...post.attachments.map((a){
+            final type=a['type']??'file'; final url=a['url']??''; final name=a['name']??'Attachment';
+            if(type=='photo'&&url.isNotEmpty) return ClipRRect(
+              borderRadius:BorderRadius.circular(12),
+              child:Image.network(url,height:240,width:double.infinity,fit:BoxFit.cover,errorBuilder:(_,__,___)=>_attachmentTile(name,Icons.broken_image_outlined)),
+            );
+            return _attachmentTile(name,type=='link'?Icons.link:Icons.insert_drive_file_outlined);
+          }),
+        ],
         const SizedBox(height: 10),
         Wrap(spacing: 4, children: [
           IconButton(
@@ -166,8 +177,22 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
         return Column(children: docs.map((x) => ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const CircleAvatar(backgroundColor: AppColors.softGreen, child: Icon(Icons.person, color: AppColors.primaryGreen)),
-          title: Text((x['authorName'] ?? 'Student').toString(), style: const TextStyle(fontWeight: FontWeight.w600)),
+          title: Row(children:[
+            Expanded(child:Text((x['authorName'] ?? 'Student').toString(),style:const TextStyle(fontWeight:FontWeight.w600))),
+            if(widget.id.isNotEmpty && DemoDataService.instance.post(widget.id)?.bestAnswerId==x['id'])
+              const Text('BEST ANSWER',style:TextStyle(color:AppColors.primaryGreen,fontSize:10,fontWeight:FontWeight.bold)),
+          ]),
           subtitle: Text((x['text'] ?? '').toString()),
+          trailing: (DemoDataService.instance.post(widget.id)?.isQuestion==true && DemoDataService.instance.post(widget.id)?.authorId==ActiveProfileController.instance.effectiveUid)
+            ? IconButton(
+                tooltip:'Mark as best answer',
+                onPressed:()=>DemoDataService.instance.setBestAnswer(postId:widget.id,commentId:x['id'].toString(),uid:ActiveProfileController.instance.effectiveUid!),
+                icon:Icon(
+                  DemoDataService.instance.post(widget.id)?.bestAnswerId==x['id']?Icons.check_circle:Icons.check_circle_outline,
+                  color:AppColors.primaryGreen,
+                ),
+              )
+            : null,
         )).toList());
       },
     );
@@ -219,6 +244,20 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
           );
         }).toList());
       },
+    );
+  }
+
+  Widget _attachmentTile(String name,IconData icon){
+    return Padding(
+      padding:const EdgeInsets.only(bottom:8),
+      child:Container(
+        padding:const EdgeInsets.all(12),
+        decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(10)),
+        child:Row(children:[
+          Icon(icon,color:AppColors.primaryGreen),const SizedBox(width:10),
+          Expanded(child:Text(name,overflow:TextOverflow.ellipsis)),
+        ]),
+      ),
     );
   }
 
