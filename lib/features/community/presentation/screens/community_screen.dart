@@ -269,11 +269,16 @@ class _PostCard extends StatelessWidget{
         const SizedBox(width:10),Expanded(child:InkWell(onTap:onAuthor,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           Text(post.authorName,style:const TextStyle(fontWeight:FontWeight.w700,color:AppColors.darkGreen)),
           const SizedBox(height:3),
-          Align(alignment:Alignment.centerLeft,child:Container(
-            padding:const EdgeInsets.symmetric(horizontal:9,vertical:3),
-            decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(20)),
-            child:Text(post.category,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700,color:AppColors.primaryGreen),maxLines:1,overflow:TextOverflow.ellipsis),
-          )),
+          if(post.tags.isNotEmpty || post.instituteIds.isNotEmpty || post.instituteId!=null)
+            Wrap(spacing:5,runSpacing:4,children:[
+              ...post.tags.map((tag)=>_tagChip(tag)),
+              ...((post.instituteIds.isNotEmpty?post.instituteIds:(post.instituteId==null?const <String>[]:[post.instituteId!])).map((id){
+                final institute=InstituteRepository.instance.byId(id);
+                return _tagChip(institute?.name ?? id);
+              })),
+            ])
+          else
+            _tagChip(post.category),
         ]))),
         PopupMenuButton<String>(onSelected:(v){if(v=='edit'&&onEdit!=null)onEdit!();if(v=='delete'&&onDelete!=null)onDelete!();if(v=='report'&&onReport!=null)onReport!();if(v=='save'&&onBookmark!=null)onBookmark!();},
           itemBuilder:(_)=>[if(onEdit!=null)const PopupMenuItem(value:'edit',child:Text('Edit')),if(onDelete!=null)const PopupMenuItem(value:'delete',child:Text('Delete')),
@@ -312,6 +317,12 @@ class _PostCard extends StatelessWidget{
       ]),
     ])));
   }
+  Widget _tagChip(String label)=>Container(
+    padding:const EdgeInsets.symmetric(horizontal:9,vertical:3),
+    decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(20)),
+    child:Text(label,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700,color:AppColors.primaryGreen),maxLines:1,overflow:TextOverflow.ellipsis),
+  );
+
   Widget _attachmentTile(String name,IconData icon){
     return Container(
       margin:const EdgeInsets.only(bottom:7),
