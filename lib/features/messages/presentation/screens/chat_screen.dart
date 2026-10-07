@@ -58,10 +58,11 @@ Future<void> _send()async{
     context,
     Stream<List<Map<String,dynamic>>>.multi((controller){
       controller.add(DemoDataService.instance.messages(uid,otherUid));
-      final sub=DemoDataService.instance.changes.listen((_)=>controller.add(DemoDataService.instance.messages(uid,widget.otherUid)));
+      final sub=DemoDataService.instance.changes.listen((_)=>controller.add(DemoDataService.instance.messages(uid,otherUid)));
       controller.onCancel=sub.cancel;
     }),
     uid,
+    otherName,
   );
 }
  Widget _shell(BuildContext context,Stream stream,String uid,String otherName)=>Scaffold(appBar:AppBar(title:Text(otherName)),body:Column(children:[Expanded(child:StreamBuilder(stream:stream,builder:(context,s){if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());final raw=s.data;final docs=raw is List?raw:raw is QuerySnapshot?raw.docs.map((x)=>x.data()).toList():const [];if(docs.isEmpty)return const Center(child:Text('No messages yet. Say hello!'));return ListView.builder(padding:const EdgeInsets.all(12),itemCount:docs.length,itemBuilder:(context,i){final d=docs[i] as Map<String,dynamic>;final mine=d['senderId']==uid;return Align(alignment:mine?Alignment.centerRight:Alignment.centerLeft,child:Container(constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),decoration:BoxDecoration(color:mine?AppColors.primaryGreen:AppColors.softGreen,borderRadius:BorderRadius.circular(16)),child:Column(crossAxisAlignment:mine?CrossAxisAlignment.end:CrossAxisAlignment.start,children:[Text((d['text']??'').toString(),style:TextStyle(color:mine?AppColors.white:AppColors.darkGreen)),Text(_time(d['createdAt']),style:TextStyle(fontSize:10,color:mine?AppColors.white.withOpacity(.75):AppColors.mutedText))])));});})),SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(10,6,10,10),child:Row(children:[Expanded(child:TextField(controller:controller,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:const InputDecoration(hintText:'Write a message...',border:OutlineInputBorder()))),const SizedBox(width:8),IconButton(onPressed:sending?null:_send,icon:const Icon(Icons.send))])))]));
