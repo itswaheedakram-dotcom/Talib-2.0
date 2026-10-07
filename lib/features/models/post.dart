@@ -10,6 +10,7 @@ class Post {
   final String? instituteId;
   final List<String> pollOptions;
   final Map<String,int> pollVotes;
+  final List<Map<String,String>> attachments;
 
   const Post({
     required this.id,
@@ -25,7 +26,8 @@ class Post {
     this.bestAnswerId,
     this.instituteId,
     this.pollOptions=const [],
-    this.pollVotes=const {}
+    this.pollVotes=const {},
+    this.attachments=const []
   });
 
   factory Post.fromDoc(DocumentSnapshot<Map<String,dynamic>> doc){
@@ -46,7 +48,10 @@ class Post {
       bestAnswerId:d['bestAnswerId']?.toString(),
       instituteId:d['instituteId']?.toString(),
       pollOptions:List<String>.from(d['pollOptions']??const []),
-      pollVotes:Map<String,int>.from((d['pollVotes']??const {}).map((k,v)=>MapEntry(k.toString(),asInt(v))))
+      pollVotes:Map<String,int>.from((d['pollVotes']??const {}).map((k,v)=>MapEntry(k.toString(),asInt(v)))),
+      attachments:(d['attachments'] is List)
+          ? (d['attachments'] as List).map((x)=>Map<String,String>.from((x as Map).map((k,v)=>MapEntry(k.toString(),v.toString())))).toList()
+          : const [],
     );
   }
 
@@ -57,5 +62,6 @@ class Post {
     'createdAt':Timestamp.fromDate(createdAt),'likesCount':likesCount,'likedBy':likedBy,
     'commentsCount':commentsCount,'isQuestion':isQuestion,'bestAnswerId':bestAnswerId,
     if(instituteId!=null)'instituteId':instituteId,'pollOptions':pollOptions,'pollVotes':pollVotes,
+    'attachments':attachments,
   };
 }
