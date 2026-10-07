@@ -189,7 +189,9 @@ class _CommunityScreenState extends State<CommunityScreen>{
   );
 
   Widget _postFeed(User? user,bool demo,bool ready,Set<String> topics,Set<String>? following,String? instituteFilterId){
-    final stream=demo?_demoPostsStream():ready?_db.postsStream(popular:popular,category:instituteFilterId!=null?'All':category,query:query):const Stream<List<Post>>.empty();
+    // Always load the complete post stream here. Timeline buttons are a view
+    // over the same centralized tag data, so aliases/legacy posts continue to work.
+    final stream=demo?_demoPostsStream():ready?_db.postsStream(popular:popular,category:'All',query:query):const Stream<List<Post>>.empty();
     return StreamBuilder<List<Post>>(stream:stream,builder:(context,s){
       if(s.hasError)return _errorState(s.error!);
       if(!demo&&!ready)return _errorState(StateError(FirebaseService.initializationErrorMessage.isEmpty?'Firebase is not initialized.':FirebaseService.initializationErrorMessage));
@@ -198,7 +200,13 @@ class _CommunityScreenState extends State<CommunityScreen>{
       if(instituteFilterId!=null){
         posts=posts.where((p)=>p.instituteId==instituteFilterId).toList();
       }else if(timelineTab==0){
-        posts=posts.where((p)=>topics.contains(p.category)||p.category=='General').toList();
+        // No user-selected tags is valid: For You becomes the fallback feed.
+        if(topics.isNotEmpty){
+          posts=posts.where((p){
+            final values=p.tags.isEmpty?[p.category]:p.tags;
+            return values.any((tag)=>topics.any((selected)=>TimelineTopics.matches(selected,tag)));
+          }).toList();
+        }
       }else{
         posts=posts.where((p)=>following?.contains(p.authorId)==true).toList();
       }
@@ -213,7 +221,7 @@ class _CommunityScreenState extends State<CommunityScreen>{
   ])));
   
   Stream<List<Post>> _demoPostsStream()async*{
-    List<Post> current()=>DemoDataService.instance.posts(category:category,query:query)
+    List<Post> current()=>DemoDataService.instance.posts(category:'All',query:query)
       .where((p)=>widget.instituteId==null||p.instituteId==widget.instituteId).toList();
     yield current();yield*DemoDataService.instance.changes.map((_)=>current());
   }
