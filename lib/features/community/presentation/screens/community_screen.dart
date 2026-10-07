@@ -9,6 +9,7 @@ import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/demo_data_service.dart';
 import '../../timeline_topics.dart';
 import '../../../institutes/data/institute_repository.dart';
+import '../../../models/institute.dart';
 
 class CommunityScreen extends StatefulWidget{
   final String? instituteId;final String? instituteName;
