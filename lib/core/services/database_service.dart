@@ -15,8 +15,26 @@ class DatabaseService {
     final ref=await _db.collection('posts').add({'text':text.trim(),'authorId':authorId,'authorName':authorName,'category':category,'isQuestion':isQuestion,'createdAt':FieldValue.serverTimestamp(),'likesCount':0,'likedBy':<String>[],'commentsCount':0,'pollOptions':pollOptions,'pollVotes':<String,int>{},if(instituteId!=null)'instituteId':instituteId});
     return ref.id;
   }
-  Future<void> updatePost({required String postId,required String text,String? category,bool? isQuestion})=>_db.collection('posts').doc(postId).update({'text':text.trim(),if(category!=null)'category':category,if(isQuestion!=null)'isQuestion':isQuestion});
-  Future<void> deletePost(String postId)=>_db.collection('posts').doc(postId).delete();
+  Future<void> updatePost({required String postId,required String text,String? category,bool? isQuestion,List<String>? pollOptions,String? instituteId}) async {
+    if(ActiveProfileController.instance.isDemo) {
+      DemoDataService.instance.updatePost(postId:postId,text:text,category:category,isQuestion:isQuestion,pollOptions:pollOptions,instituteId:instituteId);
+      return;
+    }
+    await _db.collection('posts').doc(postId).update({
+      'text':text.trim(),
+      if(category!=null)'category':category,
+      if(isQuestion!=null)'isQuestion':isQuestion,
+      if(pollOptions!=null)'pollOptions':pollOptions,
+      if(instituteId!=null)'instituteId':instituteId,
+    });
+  }
+  Future<void> deletePost(String postId) async {
+    if(ActiveProfileController.instance.isDemo) {
+      DemoDataService.instance.deletePost(postId);
+      return;
+    }
+    await _db.collection('posts').doc(postId).delete();
+  }
   Future<void> toggleLike(Post post,String uid)async{uid=_uid(uid);if(_demo(uid)){DemoDataService.instance.toggleLike(post.id,uid);return;}
     final ref=_db.collection('posts').doc(post.id);
     await _db.runTransaction((tx)async{final snap=await tx.get(ref);if(!snap.exists)return;final d=snap.data()??{};final ids=List<String>.from(d['likedBy']??const[]);final add=!ids.contains(uid);if(add)ids.add(uid);else ids.remove(uid);tx.update(ref,{'likedBy':ids,'likesCount':ids.length});if(add&&post.authorId!=uid){final n=_db.collection('users').doc(post.authorId).collection('notifications').doc();tx.set(n,{'type':'like','text':'liked your post','postId':post.id,'fromId':uid,'createdAt':FieldValue.serverTimestamp(),'read':false});}});
@@ -89,7 +107,7 @@ class DatabaseService {
   }
   Stream<int> followerCountStream(String uid){uid=_uid(uid);if(_demo(uid))return _demoStream(DemoDataService.instance.followerCount(uid),()=>DemoDataService.instance.followerCount(uid));return _db.collection('users').doc(uid).collection('followers').snapshots().map((s)=>s.size);}
   Future<void> notifyMention({required String targetId,required String fromId,required String postId})=>_db.collection('users').doc(targetId).collection('notifications').add({'type':'mention','text':'mentioned you in a community post','postId':postId,'fromId':fromId,'createdAt':FieldValue.serverTimestamp(),'read':false});
-  Future<void> votePoll({required String postId,required String uid,required int option})async{final ref=_db.collection('posts').doc(postId);await _db.runTransaction((tx)async{final s=await tx.get(ref);if(!s.exists)return;final d=s.data()??{};final voters=Map<String,dynamic>.from(d['pollVoters']??{});final old=voters[uid];final votes=Map<String,dynamic>.from(d['pollVotes']??{});if(old!=null){final k=old.toString();votes[k]=((votes[k]??0) as num).toInt()-1;}voters[uid]=option;final k=option.toString();votes[k]=((votes[k]??0) as num).toInt()+1;tx.update(ref,{'pollVoters':voters,'pollVotes':votes});});}
+  Future<void> votePoll({required String postId,required String uid,required int option})async{uid=_uid(uid);if(ActiveProfileController.instance.isDemo){DemoDataService.instance.votePoll(postId:postId,uid:uid,option:option);return;}final ref=_db.collection('posts').doc(postId);await _db.runTransaction((tx)async{final s=await tx.get(ref);if(!s.exists)return;final d=s.data()??{};final voters=Map<String,dynamic>.from(d['pollVoters']??{});final old=voters[uid];final votes=Map<String,dynamic>.from(d['pollVotes']??{});if(old!=null){final k=old.toString();votes[k]=((votes[k]??0) as num).toInt()-1;}voters[uid]=option;final k=option.toString();votes[k]=((votes[k]??0) as num).toInt()+1;tx.update(ref,{'pollVoters':voters,'pollVotes':votes});});}
   Future<void> notifyMentions({required String text,required String fromId,required String postId})async{
     final matches=RegExp(r'@([A-Za-z0-9_.-]+)').allMatches(text);
     if(matches.isEmpty)return;
