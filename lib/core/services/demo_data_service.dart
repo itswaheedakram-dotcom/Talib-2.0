@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../features/models/post.dart';
+import '../../features/community/timeline_topics.dart';
 
 class DemoComment {
   final String id, authorId, authorName, text;
@@ -131,6 +132,10 @@ class DemoDataService extends ChangeNotifier {
   List<DemoComment> comments(String postId)=>List.unmodifiable(_comments[postId]??const []);
   void addComment({required String postId,required String uid,required String name,required String text}){final p=_posts[postId];if(p==null)return;(_comments[postId]??=[]).add(DemoComment(id:'demo-comment-${++_seq}',authorId:uid,authorName:name,text:text,createdAt:DateTime.now()));_posts[postId]=Post(id:p.id,text:p.text,authorId:p.authorId,authorName:p.authorName,createdAt:p.createdAt,category:p.category,likesCount:p.likesCount,likedBy:p.likedBy,commentsCount:(_comments[postId]??[]).length,isQuestion:p.isQuestion,bestAnswerId:p.bestAnswerId,instituteId:p.instituteId,pollOptions:p.pollOptions,pollVotes:p.pollVotes);if(p.authorId!=uid)_addNotification(p.authorId,{'type':'comment','text':'commented on your post','postId':postId,'fromId':uid,'createdAt':DateTime.now(),'read':false});_emit();}
 
+  final Map<String,Set<String>> _timelineTopics={};
+
+  Set<String> timelineTopics(String uid)=>Set.unmodifiable(_timelineTopics[uid]??TimelineTopics.defaults.toSet());
+  void setTimelineTopics(String uid,Set<String> topics){_timelineTopics[uid]=topics.toSet();_emit();}
   bool isFollowing(String uid,String target)=>_following[uid]?.contains(target)==true;
   bool isMutual(String a,String b)=>a!=b&&isFollowing(a,b)&&isFollowing(b,a);
   void toggleFollow(String uid,String target,bool follow){(_following[uid]??={});if(follow){_following[uid]!.add(target);_addNotification(target,{'type':'follow','text':'started following you','fromId':uid,'createdAt':DateTime.now(),'read':false});}else{_following[uid]!.remove(target);}_emit();}
