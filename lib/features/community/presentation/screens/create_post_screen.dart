@@ -142,43 +142,140 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
   }
 
   Future<void> _pickTopics() async {
-    final temp=Set<String>.from(_selectedTags);
-    final result=await showModalBottomSheet<Set<String>>(context:context,isScrollControlled:true,builder:(sheet)=>StatefulBuilder(builder:(context,setSheet){
-      return SafeArea(child:SizedBox(height:MediaQuery.of(context).size.height*.78,child:Column(children:[
-        const Padding(padding:EdgeInsets.fromLTRB(16,14,16,8),child:Text('Tag Topics',style:TextStyle(fontSize:18,fontWeight:FontWeight.w800,color:AppColors.darkGreen))),
-        Expanded(child:ListView(children:TimelineTopics.all.map((topic)=>CheckboxListTile(value:temp.contains(topic.name),title:Text(topic.emoji+'  '+topic.name),activeColor:AppColors.primaryGreen,onChanged:(v)=>setSheet(()=>v==true?temp.add(topic.name):temp.remove(topic.name))).toList())),
-        Padding(padding:const EdgeInsets.all(12),child:FilledButton(onPressed:()=>Navigator.pop(sheet,temp),child:const Text('Done'))),
-      ]));
-    }));
-    if(result!=null)setState(()=>_selectedTags..clear()..addAll(result));
+    final temp = Set<String>.from(_selectedTags);
+    final result = await showModalBottomSheet<Set<String>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheet) => StatefulBuilder(
+        builder: (context, setSheet) {
+          return SafeArea(
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * .78,
+              child: Column(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
+                    child: Text('Tag Topics', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.darkGreen)),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      children: TimelineTopics.all.map((topic) {
+                        return CheckboxListTile(
+                          value: temp.contains(topic.name),
+                          title: Text(topic.emoji + '  ' + topic.name),
+                          activeColor: AppColors.primaryGreen,
+                          onChanged: (value) {
+                            setSheet(() {
+                              if (value == true) { temp.add(topic.name); } else { temp.remove(topic.name); }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: FilledButton(onPressed: () => Navigator.pop(sheet, temp), child: const Text('Done')),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    if (result != null) {
+      setState(() { _selectedTags..clear()..addAll(result); });
+    }
   }
 
   Future<void> _pickInstitutes() async {
     await InstituteRepository.instance.load();
-    final temp=Set<String>.from(_selectedInstituteIds);
-    final result=await showModalBottomSheet<Set<String>>(context:context,isScrollControlled:true,builder:(sheet)=>StatefulBuilder(builder:(context,setSheet){
-      final list=InstituteRepository.instance.items;
-      return SafeArea(child:SizedBox(height:MediaQuery.of(context).size.height*.78,child:Column(children:[
-        const Padding(padding:EdgeInsets.fromLTRB(16,14,16,8),child:Text('Tag Institutes',style:TextStyle(fontSize:18,fontWeight:FontWeight.w800,color:AppColors.darkGreen))),
-        Expanded(child:ListView(children:list.map((i)=>CheckboxListTile(value:temp.contains(i.id),title:Text(i.name),subtitle:Text(i.type+' • '+i.city+', '+i.province),activeColor:AppColors.primaryGreen,onChanged:(v)=>setSheet(()=>v==true?temp.add(i.id):temp.remove(i.id))).toList())),
-        Padding(padding:const EdgeInsets.all(12),child:FilledButton(onPressed:()=>Navigator.pop(sheet,temp),child:const Text('Done'))),
-      ]));
-    }));
-    if(result!=null)setState(()=>_selectedInstituteIds..clear()..addAll(result));
+    final temp = Set<String>.from(_selectedInstituteIds);
+    final result = await showModalBottomSheet<Set<String>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheet) => StatefulBuilder(
+        builder: (context, setSheet) {
+          final list = InstituteRepository.instance.items;
+          return SafeArea(
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * .78,
+              child: Column(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
+                    child: Text('Tag Institutes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.darkGreen)),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      children: list.map((institute) {
+                        return CheckboxListTile(
+                          value: temp.contains(institute.id),
+                          title: Text(institute.name),
+                          subtitle: Text(institute.type + ' • ' + institute.city + ', ' + institute.province),
+                          activeColor: AppColors.primaryGreen,
+                          onChanged: (value) {
+                            setSheet(() {
+                              if (value == true) { temp.add(institute.id); } else { temp.remove(institute.id); }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: FilledButton(onPressed: () => Navigator.pop(sheet, temp), child: const Text('Done')),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    if (result != null) {
+      setState(() { _selectedInstituteIds..clear()..addAll(result); });
+    }
   }
 
-  Widget _tagSelector(){
-    final instituteNames=InstituteRepository.instance.items.where((i)=>_selectedInstituteIds.contains(i.id)).map((i)=>i.name).toList();
-    return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Row(children:[const Expanded(child:Text('Tags',style:TextStyle(fontSize:16,fontWeight:FontWeight.w800,color:AppColors.darkGreen))),
-        TextButton.icon(onPressed:_saving?null:_pickTopics,icon:const Icon(Icons.sell_outlined),label:const Text('Topics')),
-        TextButton.icon(onPressed:_saving?null:_pickInstitutes,icon:const Icon(Icons.school_outlined),label:const Text('Institutes'))]),
-      if(_selectedTags.isNotEmpty)Wrap(spacing:6,runSpacing:6,children:_selectedTags.map((x)=>InputChip(label:Text(x),onDeleted:_saving?null:()=>setState(()=>_selectedTags.remove(x))).toList()),
-      if(instituteNames.isNotEmpty)Padding(padding:const EdgeInsets.only(top:6),child:Wrap(spacing:6,runSpacing:6,children:instituteNames.map((x)=>InputChip(label:Text(x),onDeleted:_saving?null:(){final i=InstituteRepository.instance.items.firstWhere((e)=>e.name==x);setState(()=>_selectedInstituteIds.remove(i.id));}).toList())),
-      if(_selectedTags.isEmpty&&_selectedInstituteIds.isEmpty)const Padding(padding:EdgeInsets.only(top:4),child:Text('You can post without tags, or add one or more topics/institutes.',style:TextStyle(fontSize:12,color:AppColors.homeMutedText))),
-    ]);
+  Widget _tagSelector() {
+    final instituteNames = InstituteRepository.instance.items.where((institute) => _selectedInstituteIds.contains(institute.id)).map((institute) => institute.name).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(child: Text('Tags', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.darkGreen))),
+            TextButton.icon(onPressed: _saving ? null : _pickTopics, icon: const Icon(Icons.sell_outlined), label: const Text('Topics')),
+            TextButton.icon(onPressed: _saving ? null : _pickInstitutes, icon: const Icon(Icons.school_outlined), label: const Text('Institutes')),
+          ],
+        ),
+        if (_selectedTags.isNotEmpty)
+          Wrap(spacing: 6, runSpacing: 6, children: _selectedTags.map((tag) => InputChip(label: Text(tag), onDeleted: _saving ? null : () => setState(() => _selectedTags.remove(tag))).toList()),
+        if (instituteNames.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Wrap(
+              spacing: 6, runSpacing: 6,
+              children: instituteNames.map((name) => InputChip(
+                label: Text(name),
+                onDeleted: _saving ? null : () {
+                  final institute = InstituteRepository.instance.items.firstWhere((item) => item.name == name);
+                  setState(() => _selectedInstituteIds.remove(institute.id));
+                },
+              )).toList(),
+            ),
+          ),
+        if (_selectedTags.isEmpty && _selectedInstituteIds.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Text('You can post without tags, or add one or more topics/institutes.', style: TextStyle(fontSize: 12, color: AppColors.homeMutedText)),
+          ),
+      ],
+    );
   }
-
   Widget _attachmentPreview(){
     if(_attachments.isEmpty)return const SizedBox.shrink();
     return Padding(padding:const EdgeInsets.only(bottom:10),child:Wrap(spacing:8,runSpacing:8,children:List.generate(_attachments.length,(i){
