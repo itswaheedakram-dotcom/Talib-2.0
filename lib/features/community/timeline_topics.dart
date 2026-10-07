@@ -51,21 +51,6 @@ abstract final class TimelineTopics {
     return null;
   }
 
-  static const defaults = <String>[
-    'Admissions',
-    'Career',
-    'Scholarships',
-    'Study Help',
-    'Institute Reviews',
-    'Announcements',
-    'Entry Tests',
-    'Exam Preparation',
-    'Internships',
-    'Jobs',
-    'Study Resources',
-    'Study Abroad',
-    'Hostels',
-    'Events & Seminars',
-    'Student Life',
-  ];
+  // Topics are opt-in. New users start with only For You + Following + Add.
+  static const defaults = <String>[];
 }
