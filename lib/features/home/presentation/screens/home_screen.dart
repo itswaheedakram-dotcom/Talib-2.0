@@ -58,15 +58,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (expanded) ...[
                     const SizedBox(height: 3),
                     SizedBox(
-                      height: 124,
+                      height: 158,
                       child: GridView.builder(
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: items.length,
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 4,
-                          mainAxisExtent: 60,
+                          mainAxisExtent: 76,
                           crossAxisSpacing: 5,
-                          mainAxisSpacing: 2,
+                          mainAxisSpacing: 1,
                         ),
                         itemBuilder: (context, i) {
                           final item = items[i];
@@ -77,11 +77,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Container(
-                                  width: 44,
-                                  height: 44,
+                                  width: 50,
+                                  height: 50,
                                   decoration: BoxDecoration(
                                     color: AppColors.white,
-                                    borderRadius: BorderRadius.circular(13),
+                                    borderRadius: BorderRadius.circular(14),
                                     boxShadow: const [
                                       BoxShadow(
                                         color: AppColors.cardShadow,
@@ -90,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ],
                                   ),
-                                  child: Icon(item.icon, color: AppColors.homeGreen, size: 23),
+                                  child: Icon(item.icon, color: AppColors.homeGreen, size: 27),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
