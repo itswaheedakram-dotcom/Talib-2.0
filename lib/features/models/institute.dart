@@ -5,6 +5,7 @@ class Institute {
   final String campus;
   final String province;
   final String city;
+  final String town;
   final String sector;
   final String address;
   final String description;
@@ -30,6 +31,7 @@ class Institute {
     this.campus = '',
     this.province = '',
     required this.city,
+    this.town = '',
     this.sector = 'Private',
     this.address = '',
     this.description = '',
@@ -51,7 +53,7 @@ class Institute {
 
   Map<String, dynamic> toMap() => {
     'name': name, 'type': type, 'campus': campus, 'province': province,
-    'city': city, 'sector': sector, 'address': address, 'description': description,
+    'city': city, 'town': town, 'sector': sector, 'address': address, 'description': description,
     'website': website, 'submissionMode': submissionMode, 'eligibility': eligibility,
     'programs': programs, 'contact': contact, 'status': status, 'minScore': minScore, 'nextProgram': nextProgram,
     'admissionStatus': admissionStatus, 'admissionDeadline': admissionDeadline, 'feeRange': feeRange, 'entryTestRequired': entryTestRequired,
@@ -65,6 +67,7 @@ class Institute {
     campus: (map['campus'] ?? '').toString(),
     province: (map['province'] ?? '').toString(),
     city: (map['city'] ?? '').toString(),
+    town: (map['town'] ?? '').toString(),
     sector: (map['sector'] ?? 'Private').toString(),
     address: (map['address'] ?? '').toString(),
     description: (map['description'] ?? '').toString(),
