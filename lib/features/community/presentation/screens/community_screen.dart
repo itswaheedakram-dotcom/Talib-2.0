@@ -303,6 +303,7 @@ class _PostCard extends StatelessWidget{
         const Spacer(),TextButton(onPressed:onOpen,child:const Text('View')),
       ]),
     ])));
+  }
   Widget _attachmentTile(String name,IconData icon){
     return Container(
       margin:const EdgeInsets.only(bottom:7),
