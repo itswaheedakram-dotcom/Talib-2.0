@@ -8,6 +8,7 @@ class Post {
   final bool isQuestion;
   final String? bestAnswerId;
   final String? instituteId;
+  final List<String> tags;
   final List<String> pollOptions;
   final Map<String,int> pollVotes;
   final List<Map<String,String>> attachments;
@@ -25,6 +26,7 @@ class Post {
     this.isQuestion=false,
     this.bestAnswerId,
     this.instituteId,
+    this.tags=const [],
     this.pollOptions=const [],
     this.pollVotes=const {},
     this.attachments=const []
@@ -47,6 +49,7 @@ class Post {
       isQuestion:d['isQuestion']==true,
       bestAnswerId:d['bestAnswerId']?.toString(),
       instituteId:d['instituteId']?.toString(),
+      tags:(d['tags'] is List) ? List<String>.from(d['tags']) : [(d['category']??'General').toString()],
       pollOptions:List<String>.from(d['pollOptions']??const []),
       pollVotes:Map<String,int>.from((d['pollVotes']??const {}).map((k,v)=>MapEntry(k.toString(),asInt(v)))),
       attachments:(d['attachments'] is List)
