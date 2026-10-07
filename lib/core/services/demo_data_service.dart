@@ -81,6 +81,7 @@ class DemoDataService extends ChangeNotifier {
   void toggleBookmark(String uid,String postId,bool save){(_bookmarks[uid]??={});if(save){_bookmarks[uid]!.add(postId);}else{_bookmarks[uid]!.remove(postId);}_emit();}
 
   String _conversation(String a,String b){final x=[a,b]..sort();return '${x[0]}|${x[1]}';}
+  String conversationId(String a,String b)=>_conversation(a,b);
   String _name(String id)=>{'demo-user-1':'Ayesha Khan','demo-user-2':'Ali Raza','demo-user-3':'Hira Ahmed','demo-user-4':'Usman Malik'}[id]??'Student';
   List<Map<String,dynamic>> conversations(String uid){final result=<Map<String,dynamic>>[];for(final e in _messages.entries){final parts=e.key.split('|');if(parts.contains(uid)){final other=parts.firstWhere((x)=>x!=uid,orElse:()=>uid);final list=e.value;final last=list.isEmpty?null:list.last;result.add({'id':e.key,'otherUid':other,'otherName':_name(other),'lastMessage':last?['text']??'','updatedAt':last?['createdAt']??DateTime.now()});}}return result..sort((a,b)=>(b['updatedAt'] as DateTime).compareTo(a['updatedAt'] as DateTime));}
   List<Map<String,dynamic>> messages(String a,String b)=>List.unmodifiable(_messages[_conversation(a,b)]??const []);
