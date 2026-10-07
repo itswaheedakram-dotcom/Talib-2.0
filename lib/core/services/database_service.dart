@@ -4,7 +4,7 @@ import 'active_profile_controller.dart';
 import 'demo_data_service.dart';
 
 class DatabaseService {
-  final FirebaseFirestore _db=FirebaseFirestore.instance;
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
   String _uid(String uid)=>ActiveProfileController.instance.resolveUid(uid);
   bool _demo(String uid)=>DemoDataService.instance.isDemo(_uid(uid));
   Stream<T> _demoStream<T>(T initial,T Function() current) async* {yield initial;yield* DemoDataService.instance.changes.map((_)=>current());}
