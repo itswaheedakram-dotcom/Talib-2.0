@@ -188,7 +188,6 @@ class DatabaseService {
   Future<void> toggleDemoInstituteBookmark(String uid,String instituteId,bool save){DemoDataService.instance.toggleInstituteBookmark(_uid(uid),instituteId,save);return Future.value();}
   Future<void> claimDemoInstitute(String uid,String instituteId){DemoDataService.instance.claimInstitute(_uid(uid),instituteId);return Future.value();}
 
-}
   Stream<Set<String>> timelineInstitutesStream(String uid){
     uid=_uid(uid);
     if(_demo(uid)) return _demoStream(DemoDataService.instance.timelineInstitutes(uid),()=>DemoDataService.instance.timelineInstitutes(uid));
@@ -204,3 +203,4 @@ class DatabaseService {
     if(_demo(uid)){DemoDataService.instance.setTimelineInstitutes(uid,ids);return;}
     await _db.collection('users').doc(uid).set({'timelineInstitutes':ids.toList()},SetOptions(merge:true));
   }
+}
