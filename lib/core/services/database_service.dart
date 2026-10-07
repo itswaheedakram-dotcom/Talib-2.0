@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/models/post.dart';
 import 'active_profile_controller.dart';
 import 'demo_data_service.dart';
+import '../../features/community/timeline_topics.dart';
 
 class DatabaseService {
   FirebaseFirestore get _db => FirebaseFirestore.instance;
@@ -96,6 +97,23 @@ class DatabaseService {
     },SetOptions(merge:true));
     return id;
   }
+  Stream<Set<String>> timelineTopicsStream(String uid){
+    uid=_uid(uid);
+    if(_demo(uid)) return _demoStream(DemoDataService.instance.timelineTopics(uid),()=>DemoDataService.instance.timelineTopics(uid));
+    return _db.collection('users').doc(uid).snapshots().map((s){
+      final data=s.data()??{};
+      final raw=data['timelineTopics'];
+      if(raw is List && raw.isNotEmpty) return raw.map((x)=>x.toString()).toSet();
+      return TimelineTopics.defaults.toSet();
+    });
+  }
+
+  Future<void> setTimelineTopics(String uid,Set<String> topics) async {
+    uid=_uid(uid);
+    if(_demo(uid)){DemoDataService.instance.setTimelineTopics(uid,topics);return;}
+    await _db.collection('users').doc(uid).set({'timelineTopics':topics.toList()},SetOptions(merge:true));
+  }
+
   Stream<bool> followingStream(String uid,String targetId){uid=_uid(uid);targetId=_uid(targetId);if(_demo(uid)||_demo(targetId))return _demoStream(DemoDataService.instance.isFollowing(uid,targetId),()=>DemoDataService.instance.isFollowing(uid,targetId));return _db.collection('users').doc(uid).collection('following').doc(targetId).snapshots().map((s)=>s.exists);}
   Stream<bool> mutualFollowStream(String uid,String targetId) {
     if (uid == targetId) return Stream<bool>.value(false);
