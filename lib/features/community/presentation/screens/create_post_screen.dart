@@ -38,18 +38,19 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
   Future<void> _publish()async{
     final realUser=FirebaseAuth.instance.currentUser;
     final identity=ActiveProfileController.instance;
-    final user=realUser;
+    final user=realUser;final demoActive=identity.isDemoActive;
     final text=_controller.text.trim();
-    if(user==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Please sign in first.')));return;}
+    if(user==null&&!demoActive){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Please sign in first.')));return;}
     if(text.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Write something before publishing.')));return;}
     final options=isPoll?_pollController.text.split('\n').map((x)=>x.trim()).where((x)=>x.isNotEmpty).take(5).toList():<String>[];
     if(isPoll&&options.length<2){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Add at least 2 poll options.')));return;}
     setState(()=>_saving=true);
     try{
-      final name=identity.effectiveName ?? (user.displayName?.trim().isNotEmpty==true?user.displayName!.trim():(user.email??'Student'));
+      final authorId=identity.resolveUid(user?.uid??'');
+      final name=identity.effectiveName ?? (user?.displayName?.trim().isNotEmpty==true?user!.displayName!.trim():(user?.email??'Student'));
       if(widget.post==null){
-        final postId=await _db.createPost(text:text,authorId:user.uid,authorName:name,category:category,isQuestion:isQuestion,pollOptions:options,instituteId:widget.instituteId);
-        await _db.notifyMentions(text:text,fromId:user.uid,postId:postId);
+        final postId=await _db.createPost(text:text,authorId:authorId,authorName:name,category:category,isQuestion:isQuestion,pollOptions:options,instituteId:widget.instituteId);
+        if(!demoActive&&user!=null)await _db.notifyMentions(text:text,fromId:user.uid,postId:postId);
       }else{
         await _db.updatePost(postId:widget.post!.id,text:text,category:category,isQuestion:isQuestion);
       }
