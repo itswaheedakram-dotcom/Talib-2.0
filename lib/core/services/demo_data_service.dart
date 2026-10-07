@@ -113,7 +113,7 @@ class DemoDataService extends ChangeNotifier {
     final previous=_pollVoters[voterKey];
     if(previous!=null) {
       final oldKey=previous.toString();
-      votes[oldKey]=((votes[oldKey]??0)-1).clamp(0,1<<30);
+      final oldCount=(votes[oldKey]??0)-1; votes[oldKey]=oldCount<0?0:oldCount;
     }
     _pollVoters[voterKey]=option;
     final key=option.toString();
