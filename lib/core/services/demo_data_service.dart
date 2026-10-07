@@ -130,7 +130,7 @@ class DemoDataService extends ChangeNotifier {
       id:p.id,text:p.text,authorId:p.authorId,authorName:p.authorName,createdAt:p.createdAt,
       category:p.category,likesCount:p.likesCount,likedBy:p.likedBy,commentsCount:p.commentsCount,
       isQuestion:p.isQuestion,bestAnswerId:p.bestAnswerId,instituteId:p.instituteId,
-      pollOptions:p.pollOptions,pollVotes:votes,
+      pollOptions:p.pollOptions,pollVotes:votes,attachments:p.attachments,
     );
     _emit();
   }
