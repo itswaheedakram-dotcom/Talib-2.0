@@ -18,7 +18,7 @@ class DatabaseService {
 
   Stream<List<Post>> postsStream({bool popular=false,String category='All',String query=''}) {
     if (_real) {
-      Query<Map<String,dynamic>> q=_postsRef.orderBy('createdAt',descending:true);
+      Query<Map<String,dynamic>> q=_postsRef;
       if(category!='All') q=q.where('category',isEqualTo:category);
       return q.snapshots().map((s){ final list=s.docs.map(Post.fromDoc).toList(); if(popular) list.sort((a,b)=>b.likesCount.compareTo(a.likesCount)); return _filter(list,query); });
     }
@@ -170,8 +170,6 @@ class DatabaseService {
   Future<DocumentSnapshot<Map<String,dynamic>>> newsItem(String id) {
     return FirebaseFirestore.instance.collection('news').doc(id).get();
   }
-}
-
 }
 
 extension _NullableStreamStart<T> on Stream<T> { Stream<T> startWith(T value) async* { yield value; yield* this; } }
