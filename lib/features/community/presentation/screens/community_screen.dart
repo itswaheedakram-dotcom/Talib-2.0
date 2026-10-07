@@ -90,20 +90,27 @@ class _CommunityScreenState extends State<CommunityScreen>{
                 builder:(context,pref){
                   final topics=pref.data??_topics;
                   _topics=topics;
-                  final tabs=<Widget>[
-                    _timelineTab('For You',0),
-                    _timelineTab('Following',1),
-                    ...topics.map(_topicTab),
-                    ...InstituteRepository.instance.items.map(_instituteTab),
-                    InkWell(
-                      onTap:()=>context.push('/community/add-to-timeline').then((_)=>(mounted?setState((){}):null)),
-                      child:const Padding(
-                        padding:EdgeInsets.symmetric(horizontal:12,vertical:12),
-                        child:Text('+ Add',style:TextStyle(fontWeight:FontWeight.w800,color:AppColors.primaryGreen)),
-                      ),
-                    ),
-                  ];
-                  return ListView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:4),children:tabs);
+                  return StreamBuilder<Set<String>>(
+                    stream:(uid.isEmpty&&!demo)?const Stream<Set<String>>.empty():_db.timelineInstitutesStream(uid),
+                    builder:(context,instPref){
+                      final selectedInstituteIds=instPref.data??const <String>{};
+                      final selectedInstitutes=InstituteRepository.instance.items.where((i)=>selectedInstituteIds.contains(i.id));
+                      final tabs=<Widget>[
+                        _timelineTab('For You',0),
+                        _timelineTab('Following',1),
+                        ...topics.map(_topicTab),
+                        ...selectedInstitutes.map(_instituteTab),
+                        InkWell(
+                          onTap:()=>context.push('/community/add-to-timeline').then((_)=>(mounted?setState((){}):null)),
+                          child:const Padding(
+                            padding:EdgeInsets.symmetric(horizontal:12,vertical:12),
+                            child:Text('+ Add',style:TextStyle(fontWeight:FontWeight.w800,color:AppColors.primaryGreen)),
+                          ),
+                        ),
+                      ];
+                      return ListView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:4),children:tabs);
+                    },
+                  );
                 },
               ),
             );
