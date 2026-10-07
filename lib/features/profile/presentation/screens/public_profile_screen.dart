@@ -83,7 +83,23 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
             final active = controller.active?.id == widget.id;
             final currentId = controller.effectiveUid;
             final following = currentId != null && DemoDataService.instance.isFollowing(currentId, widget.id);
-            if (currentId == null || currentId == widget.id) return const SizedBox.shrink();
+            return Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: active ? null : () {
+                      final profile = temporaryProfiles.firstWhere((p) => p.id == widget.id);
+                      controller.activate(profile);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(profile.name + ' is now the active test profile.')),
+                      );
+                    },
+                    icon: Icon(active ? Icons.check_circle : Icons.play_circle_outline),
+                    label: Text(active ? 'Active Profile' : 'Activate This Profile'),
+                  ),
+                ),
+                if (currentId != null && currentId != widget.id) ...[
             return Row(children: [
               Expanded(child: FilledButton.icon(
                 onPressed: () => DemoDataService.instance.toggleFollow(currentId, widget.id, !following),
@@ -95,8 +111,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 onPressed: () => context.push('/chat/' + DemoDataService.instance.conversationId(currentId, widget.id) + '?uid=' + widget.id + '&name=' + Uri.encodeComponent(name)),
                 icon: const Icon(Icons.chat_bubble_outline),
                 label: const Text('Message'),
-              )),
-            ]);
+              )),                  ]),
+                ],
+              ],
+            );            ]);
           },
         ),
         const SizedBox(height:18),Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
