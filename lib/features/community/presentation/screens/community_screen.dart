@@ -7,6 +7,7 @@ import '../../../../core/services/database_service.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/demo_data_service.dart';
+import '../../timeline_topics.dart';
 
 class CommunityScreen extends StatefulWidget{
   final String? instituteId;final String? instituteName;
@@ -16,6 +17,8 @@ class CommunityScreen extends StatefulWidget{
 class _CommunityScreenState extends State<CommunityScreen>{
   final _db=DatabaseService();final _search=TextEditingController();
   bool popular=false;String query='';String category='All';
+  int timelineTab=0;
+  Set<String> _topics=TimelineTopics.defaults.toSet();
   final cats=const ['All','General','Admission Help','Career','Scholarships','Study Help','Institute Reviews','Jobs/Internships','Announcements'];
   @override void dispose(){_search.dispose();super.dispose();}
   String _errorText(Object error){final raw=error.toString().trim();if(raw.isEmpty)return 'Unknown error.';return raw.replaceFirst(RegExp(r'^Exception:\s*'),'');}
@@ -26,7 +29,10 @@ class _CommunityScreenState extends State<CommunityScreen>{
     final ready=FirebaseService.initialized;
     final user=ready?FirebaseAuth.instance.currentUser:null;
     final identity=ActiveProfileController.instance;
-    final demo=identity.isDemoActive;final canInteract=user!=null||demo;
+    final demo=identity.isDemoActive;
+    final canInteract=user!=null||demo;
+    final uid=identity.resolveUid(user?.uid??'');
+
     return Scaffold(
       appBar:AppBar(title:Text(widget.instituteName==null?'Community':'${widget.instituteName} Community'),actions:[
         IconButton(tooltip:'Notifications',icon:const Icon(Icons.notifications_none),onPressed:()=>context.push('/notifications')),
@@ -48,38 +54,55 @@ class _CommunityScreenState extends State<CommunityScreen>{
               Text('Ask students and professionals for guidance.',style:TextStyle(fontSize:12,color:AppColors.homeMutedText)),
             ])),
           ])),
-        Padding(padding:const EdgeInsets.fromLTRB(12,4,12,6),child:TextField(
+        Padding(padding:const EdgeInsets.fromLTRB(12,4,12,6),child:Row(children:[
+          Expanded(child:_timelineTab('For You',0)),
+          Expanded(child:_timelineTab('Following',1)),
+          Expanded(child:InkWell(onTap:()=>context.push('/community/add-to-timeline').then((_)=>setState((){})),
+            child:const Padding(padding:EdgeInsets.symmetric(vertical:12),child:Center(child:Text('+ Add',style:TextStyle(fontWeight:FontWeight.w800,color:AppColors.primaryGreen)))))),
+        ])),
+        Padding(padding:const EdgeInsets.fromLTRB(12,0,12,6),child:TextField(
           controller:_search,onChanged:(v)=>setState(()=>query=v.trim()),
           decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:'Search posts and students',
             filled:true,fillColor:AppColors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(10),borderSide:BorderSide.none)),
         )),
-        SizedBox(height:42,child:ListView.separated(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:12),
-          itemCount:cats.length,itemBuilder:(_,i)=>ChoiceChip(label:Text(cats[i]),selected:category==cats[i],
-            selectedColor:AppColors.primaryGreen,backgroundColor:AppColors.softGreen,
-            labelStyle:TextStyle(color:category==cats[i]?AppColors.white:AppColors.darkGreen),
-            onSelected:(_)=>setState(()=>category=cats[i])),
-          separatorBuilder:(_,__)=>const SizedBox(width:6))),
-        Expanded(child:demo
-          ?StreamBuilder<List<Post>>(stream:_demoPostsStream(),builder:(context,s)=>_postList(s.data??const <Post>[],user))
-          :ready
-            ?StreamBuilder<Set<String>>(
-                stream:user==null?const Stream<Set<String>>.empty():_db.blockedUserIdsStream(user.uid),
-                builder:(context,b){
-                  final blocked=b.data??const <String>{};
-                  return StreamBuilder<List<Post>>(stream:_db.postsStream(popular:popular,category:category,query:query),
-                    builder:(context,s){
-                      if(s.hasError)return _errorState(s.error!);
-                      if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
-                      final posts=(s.data??[]).where((p)=>!blocked.contains(p.authorId))
-                        .where((p)=>widget.instituteId==null||p.instituteId==widget.instituteId).toList();
-                      return _postList(posts,user);
-                    });
-                })
-            :_errorState(StateError(FirebaseService.initializationErrorMessage.isEmpty?'Firebase is not initialized.':FirebaseService.initializationErrorMessage))),
+        Expanded(child:timelineTab==0
+          ?StreamBuilder<Set<String>>(stream:(uid.isEmpty&&!demo)?const Stream<Set<String>>.empty():_db.timelineTopicsStream(uid),
+              builder:(context,pref){
+                final topics=pref.data??_topics;
+                _topics=topics;
+                return _postFeed(user,demo,ready,topics,null);
+              })
+          :StreamBuilder<Set<String>>(stream:(uid.isEmpty&&!demo)?const Stream<Set<String>>.empty():_db.followingIdsStream(uid),
+              builder:(context,follow){
+                return _postFeed(user,demo,ready,_topics,follow.data??const <String>{});
+              })),
       ]),
     );
   }
-  
+
+  Widget _timelineTab(String label,int index)=>InkWell(
+    onTap:()=>setState(()=>timelineTab=index),
+    child:Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Center(
+      child:Text(label,style:TextStyle(fontWeight:FontWeight.w800,color:timelineTab==index?AppColors.primaryGreen:AppColors.homeMutedText)))),
+  );
+
+  Widget _postFeed(User? user,bool demo,bool ready,Set<String> topics,Set<String>? following){
+    final stream=demo?_demoPostsStream():ready?_db.postsStream(popular:popular,category:category,query:query):const Stream<List<Post>>.empty();
+    return StreamBuilder<List<Post>>(stream:stream,builder:(context,s){
+      if(s.hasError)return _errorState(s.error!);
+      if(!demo&&!ready)return _errorState(StateError(FirebaseService.initializationErrorMessage.isEmpty?'Firebase is not initialized.':FirebaseService.initializationErrorMessage));
+      if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
+      var posts=s.data??const <Post>[];
+      if(timelineTab==0){
+        posts=posts.where((p)=>topics.contains(p.category)||p.category=='General').toList();
+      }else{
+        posts=posts.where((p)=>following?.contains(p.authorId)==true).toList();
+      }
+      if(widget.instituteId!=null)posts=posts.where((p)=>p.instituteId==widget.instituteId).toList();
+      return _postList(posts,user);
+    });
+  }
+
   Widget _errorState(Object error)=>Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
     Text(_errorText(error),textAlign:TextAlign.center),const SizedBox(height:12),
     OutlinedButton(onPressed:()=>setState((){}),child:const Text('Retry')),
