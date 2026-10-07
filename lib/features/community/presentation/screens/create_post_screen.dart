@@ -8,7 +8,8 @@ import '../../../../app/theme.dart';
 import '../../../../core/services/database_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/firebase_service.dart';
-import '../../../models/post.dart';\nimport '../../timeline_topics.dart';
+import '../../../models/post.dart';
+import '../../timeline_topics.dart';
 
 class CreatePostScreen extends StatefulWidget{
   final Post? post;
@@ -25,14 +26,16 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
   final _attachments=<Map<String,String>>[];
   bool _saving=false,_isQuestion=false,_isPoll=false;
   String category='General';
-  static const categories=['General','Admission Help','Career','Scholarships','Study Help','Institute Reviews','Jobs/Internships','Announcements'];
+  final Set<String> _selectedTags={'General'};
+  static final categories=TimelineTopics.all;
 
   @override void initState(){
     super.initState();
     final p=widget.post;
     if(p!=null){
       _controller.text=p.text;
-      category=TimelineTopics.byName(p.category)!=null?p.category:'General';\n      _selectedTags..clear()..addAll(p.tags.isEmpty?[p.category]:p.tags);
+      category=TimelineTopics.byName(p.category)!=null?p.category:'General';
+      _selectedTags..clear()..addAll(p.tags.isEmpty?[p.category]:p.tags);
       _isQuestion=p.isQuestion;_isPoll=p.pollOptions.isNotEmpty;
       for(final option in p.pollOptions)_addPollOption(option);
       _attachments.addAll(p.attachments.map((x)=>Map<String,String>.from(x)));
@@ -115,7 +118,8 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
     try{user=FirebaseService.initialized?FirebaseAuth.instance.currentUser:null;}catch(error){_showError(error);return;}
     if(user==null&&!demoActive){_showError(StateError('Please sign in first. Firebase authentication has no active user.'));return;}
     final text=_controller.text.trim();if(text.isEmpty){_showError(ArgumentError('Write something before publishing.'));return;}
-    final postTags=_selectedTags.isEmpty?{category}:_selectedTags;\n    final options=_isPoll?_pollOptions.map((c)=>c.text.trim()).where((x)=>x.isNotEmpty).take(5).toList():<String>[];
+    final postTags=_selectedTags.isEmpty?{category}:_selectedTags;
+    final options=_isPoll?_pollOptions.map((c)=>c.text.trim()).where((x)=>x.isNotEmpty).take(5).toList():<String>[];
     if(_isPoll&&options.length<2){_showError(ArgumentError('Add at least 2 poll options.'));return;}
     setState(()=>_saving=true);
     try{
@@ -125,7 +129,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
         final postId=await _db.createPost(text:text,authorId:authorId,authorName:name,category:category,isQuestion:_isQuestion,pollOptions:options,instituteId:widget.instituteId,attachments:_attachments,tags:postTags.toList());
         if(!demoActive&&user!=null){try{await _db.notifyMentions(text:text,fromId:user.uid,postId:postId);}catch(error){debugPrint('Mention notification failed: $error');}}
       }else{
-        await _db.updatePost(postId:widget.post!.id,text:text,category:category,isQuestion:_isQuestion,pollOptions:options,instituteId:widget.post!.instituteId??widget.instituteId,attachments:_attachments);
+        await _db.updatePost(postId:widget.post!.id,text:text,category:category,isQuestion:_isQuestion,pollOptions:options,instituteId:widget.post!.instituteId??widget.instituteId,attachments:_attachments,tags:postTags.toList());
       }
       if(mounted)context.pop(true);
     }catch(error){_showError(error);}finally{if(mounted)setState(()=>_saving=false);}
