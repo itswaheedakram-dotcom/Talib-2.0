@@ -83,31 +83,22 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
             final active = controller.active?.id == widget.id;
             final currentId = controller.effectiveUid;
             final following = currentId != null && DemoDataService.instance.isFollowing(currentId, widget.id);
-            return Column(
-              children: [
-                SizedBox(width: double.infinity, child: FilledButton.icon(
-                  onPressed: active ? null : () {
-                    final profile = temporaryProfiles.firstWhere((p) => p.id == widget.id);
-                    controller.activate(profile);
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(profile.name + ' is now the active test profile.')));
-                  },
-                  icon: Icon(active ? Icons.check_circle : Icons.play_circle_outline),
-                  label: Text(active ? 'Active Profile' : 'Activate This Profile'),
-                )),
-                if (currentId != null && currentId != widget.id) ...[
-                  const SizedBox(height: 8),
-                  Row(children: [
-                    Expanded(child: FilledButton.icon(onPressed: () => DemoDataService.instance.toggleFollow(currentId, widget.id, !following), icon: Icon(following ? Icons.person_remove_outlined : Icons.person_add_outlined), label: Text(following ? 'Following' : 'Follow'))),
-                    const SizedBox(width: 8),
-                    Expanded(child: OutlinedButton.icon(onPressed: () => context.push('/chat/' + DemoDataService.instance.conversationId(currentId, widget.id) + '?uid=' + widget.id + '&name=' + Uri.encodeComponent(name)), icon: const Icon(Icons.chat_bubble_outline), label: const Text('Message'))),
-                  ]),
-                ],
-              ],
-            );
+            if (currentId == null || currentId == widget.id) return const SizedBox.shrink();
+            return Row(children: [
+              Expanded(child: FilledButton.icon(
+                onPressed: () => DemoDataService.instance.toggleFollow(currentId, widget.id, !following),
+                icon: Icon(following ? Icons.person_remove_outlined : Icons.person_add_outlined),
+                label: Text(following ? 'Following' : 'Follow'),
+              )),
+              const SizedBox(width: 8),
+              Expanded(child: OutlinedButton.icon(
+                onPressed: () => context.push('/chat/' + DemoDataService.instance.conversationId(currentId, widget.id) + '?uid=' + widget.id + '&name=' + Uri.encodeComponent(name)),
+                icon: const Icon(Icons.chat_bubble_outline),
+                label: const Text('Message'),
+              )),
+            ]);
           },
         ),
-        const SizedBox(height:12),
-        AnimatedBuilder(animation: ActiveProfileController.instance,builder:(context,_) { final active=ActiveProfileController.instance.active; if(active==null||active.id==widget.id)return const SizedBox.shrink(); return StreamBuilder<bool>(stream:DatabaseService().followingStream(active.id,widget.id),builder:(context,s){final following=s.data==true;return Row(children:[Expanded(child:FilledButton.icon(onPressed:()=>DatabaseService().toggleFollow(active.id,widget.id,!following),icon:Icon(following?Icons.person_remove_outlined:Icons.person_add_outlined),label:Text(following?'Following':'Follow'))),const SizedBox(width:8),Expanded(child:OutlinedButton.icon(onPressed:()=>context.push('/chat/${DatabaseService().conversationId(active.id,widget.id)}?uid=${widget.id}&name=${Uri.encodeComponent(name)}'),icon:const Icon(Icons.chat_bubble_outline),label:const Text('Message')))]);});}),
         const SizedBox(height:18),Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           const Text('Profile Information',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),const SizedBox(height:10),_InfoTile(Icons.school_outlined,'Education level',demo['level']!),if(demo['institute']!.isNotEmpty)_InfoTile(Icons.account_balance_outlined,'Institute',demo['institute']!),if(demo['program']!.isNotEmpty)_InfoTile(Icons.menu_book_outlined,'Program / Degree',demo['program']!)
         ]))),const SizedBox(height:12),const Card(child:Padding(padding:EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Community Activity',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),SizedBox(height:8),Text('This profile is participating in the Talib community.',style:TextStyle(color:Colors.grey))])))
