@@ -8,7 +8,7 @@ import '../../../../app/theme.dart';
 import '../../../../core/services/database_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/firebase_service.dart';
-import '../../../models/post.dart';
+import '../../../models/post.dart';\nimport '../../timeline_topics.dart';
 
 class CreatePostScreen extends StatefulWidget{
   final Post? post;
@@ -32,7 +32,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
     final p=widget.post;
     if(p!=null){
       _controller.text=p.text;
-      category=categories.contains(p.category)?p.category:'General';
+      category=TimelineTopics.byName(p.category)!=null?p.category:'General';\n      _selectedTags..clear()..addAll(p.tags.isEmpty?[p.category]:p.tags);
       _isQuestion=p.isQuestion;_isPoll=p.pollOptions.isNotEmpty;
       for(final option in p.pollOptions)_addPollOption(option);
       _attachments.addAll(p.attachments.map((x)=>Map<String,String>.from(x)));
@@ -115,14 +115,14 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
     try{user=FirebaseService.initialized?FirebaseAuth.instance.currentUser:null;}catch(error){_showError(error);return;}
     if(user==null&&!demoActive){_showError(StateError('Please sign in first. Firebase authentication has no active user.'));return;}
     final text=_controller.text.trim();if(text.isEmpty){_showError(ArgumentError('Write something before publishing.'));return;}
-    final options=_isPoll?_pollOptions.map((c)=>c.text.trim()).where((x)=>x.isNotEmpty).take(5).toList():<String>[];
+    final postTags=_selectedTags.isEmpty?{category}:_selectedTags;\n    final options=_isPoll?_pollOptions.map((c)=>c.text.trim()).where((x)=>x.isNotEmpty).take(5).toList():<String>[];
     if(_isPoll&&options.length<2){_showError(ArgumentError('Add at least 2 poll options.'));return;}
     setState(()=>_saving=true);
     try{
       final authorId=identity.resolveUid(user?.uid??'');
       final name=identity.effectiveName ?? (user?.displayName?.trim().isNotEmpty==true?user!.displayName!.trim():(user?.email??'Student'));
       if(widget.post==null){
-        final postId=await _db.createPost(text:text,authorId:authorId,authorName:name,category:category,isQuestion:_isQuestion,pollOptions:options,instituteId:widget.instituteId,attachments:_attachments);
+        final postId=await _db.createPost(text:text,authorId:authorId,authorName:name,category:category,isQuestion:_isQuestion,pollOptions:options,instituteId:widget.instituteId,attachments:_attachments,tags:postTags.toList());
         if(!demoActive&&user!=null){try{await _db.notifyMentions(text:text,fromId:user.uid,postId:postId);}catch(error){debugPrint('Mention notification failed: $error');}}
       }else{
         await _db.updatePost(postId:widget.post!.id,text:text,category:category,isQuestion:_isQuestion,pollOptions:options,instituteId:widget.post!.instituteId??widget.instituteId,attachments:_attachments);
@@ -162,7 +162,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
       Row(children:[const CircleAvatar(radius:21,backgroundColor:AppColors.softGreen,child:Icon(Icons.person,color:AppColors.primaryGreen)),const SizedBox(width:10),
         Expanded(child:Text(editing?'Update your post':(widget.instituteName==null?'Share with the community':'Share with this institute community'),style:const TextStyle(color:AppColors.darkGreen,fontWeight:FontWeight.w700)))]),
       const SizedBox(height:14),
-      DropdownButtonFormField<String>(value:category,decoration:const InputDecoration(labelText:'Tag'),items:categories.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:_saving?null:(v)=>setState(()=>category=v??category)),
+      DropdownButtonFormField<String>(value:TimelineTopics.byName(category)!=null?category:'General',decoration:const InputDecoration(labelText:'Tag'),items:categories.map((x)=>DropdownMenuItem(value:x.name,child:Text('${x.emoji}  ${x.name}'))).toList(),onChanged:_saving?null:(v)=>setState((){category=v??category;_selectedTags..clear()..add(category); })),
       const SizedBox(height:10),
       TextField(controller:_controller,maxLines:8,maxLength:1000,decoration:const InputDecoration(hintText:'What do you want to share?')),
       _pollEditor(),_attachmentPreview(),
