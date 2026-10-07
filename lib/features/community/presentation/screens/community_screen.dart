@@ -260,14 +260,34 @@ class _PostCard extends StatelessWidget{
           style:const TextStyle(color:AppColors.primaryGreen,fontWeight:FontWeight.bold)))),
         const SizedBox(width:10),Expanded(child:InkWell(onTap:onAuthor,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           Text(post.authorName,style:const TextStyle(fontWeight:FontWeight.w700,color:AppColors.darkGreen)),
-          Text(post.category,style:const TextStyle(fontSize:11,color:AppColors.homeMutedText)),
+          const SizedBox(height:3),
+          Align(alignment:Alignment.centerLeft,child:Container(
+            padding:const EdgeInsets.symmetric(horizontal:9,vertical:3),
+            decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(20)),
+            child:Text(post.category,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700,color:AppColors.primaryGreen),maxLines:1,overflow:TextOverflow.ellipsis),
+          )),
         ]))),
         PopupMenuButton<String>(onSelected:(v){if(v=='edit'&&onEdit!=null)onEdit!();if(v=='delete'&&onDelete!=null)onDelete!();if(v=='report'&&onReport!=null)onReport!();if(v=='save'&&onBookmark!=null)onBookmark!();},
           itemBuilder:(_)=>[if(onEdit!=null)const PopupMenuItem(value:'edit',child:Text('Edit')),if(onDelete!=null)const PopupMenuItem(value:'delete',child:Text('Delete')),
             if(onBookmark!=null)const PopupMenuItem(value:'save',child:Text('Save')),if(onReport!=null)const PopupMenuItem(value:'report',child:Text('Report'))]),
       ]),
       if(post.isQuestion)const Padding(padding:EdgeInsets.only(top:5),child:Text('QUESTION',style:TextStyle(fontSize:10,color:AppColors.primaryGreen,fontWeight:FontWeight.w800))),
-      const SizedBox(height:8),InkWell(onTap:onOpen,child:Text(post.text,style:const TextStyle(fontSize:14,height:1.4))),const SizedBox(height:7),
+      const SizedBox(height:8),InkWell(onTap:onOpen,child:Text(post.text,style:const TextStyle(fontSize:14,height:1.4))),
+      if(post.attachments.isNotEmpty) ...[
+        const SizedBox(height:8),
+        ...post.attachments.map((a){
+          final type=a['type']??'file'; final url=a['url']??''; final name=a['name']??'Attachment';
+          if(type=='photo'&&url.isNotEmpty) return Padding(
+            padding:const EdgeInsets.only(bottom:7),
+            child:ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.network(
+              url,height:190,width:double.infinity,fit:BoxFit.cover,
+              errorBuilder:(_,__,___)=>_attachmentTile(name,Icons.broken_image_outlined),
+            )),
+          );
+          return _attachmentTile(name,type=='link'?Icons.link:Icons.insert_drive_file_outlined);
+        }),
+      ],
+      const SizedBox(height:7),
       if(post.pollOptions.isNotEmpty)...[
         const Text('Poll',style:TextStyle(fontWeight:FontWeight.w700,color:AppColors.darkGreen)),const SizedBox(height:6),
         ...List.generate(post.pollOptions.length,(i){
@@ -283,5 +303,16 @@ class _PostCard extends StatelessWidget{
         const Spacer(),TextButton(onPressed:onOpen,child:const Text('View')),
       ]),
     ])));
+  Widget _attachmentTile(String name,IconData icon){
+    return Container(
+      margin:const EdgeInsets.only(bottom:7),
+      padding:const EdgeInsets.symmetric(horizontal:10,vertical:9),
+      decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(9)),
+      child:Row(children:[
+        Icon(icon,size:19,color:AppColors.primaryGreen),
+        const SizedBox(width:8),
+        Expanded(child:Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:12))),
+      ]),
+    );
   }
 }
