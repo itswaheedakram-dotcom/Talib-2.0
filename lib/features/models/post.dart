@@ -50,5 +50,5 @@ class Post {
     );
   }
 
-  bool likedByUser(String? uid)=>uid!=null&&likedBy.contains(uid);
+  Map<String,dynamic> toMap()=>{\n    'text':text,\n    'authorId':authorId,\n    'authorName':authorName,\n    'createdAt':Timestamp.fromDate(createdAt),\n    'category':category,\n    'likesCount':likesCount,\n    'likedBy':likedBy,\n    'commentsCount':commentsCount,\n    'isQuestion':isQuestion,\n    'bestAnswerId':bestAnswerId,\n    'instituteId':instituteId,\n    'pollOptions':pollOptions,\n    'pollVotes':pollVotes,\n  };\n\n  bool likedByUser(String? uid)=>uid!=null&&likedBy.contains(uid);
 }
