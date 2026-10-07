@@ -58,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (expanded) ...[
                     const SizedBox(height: 3),
                     SizedBox(
-                      height: 158,
+                      height: 190,
                       child: GridView.builder(
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: items.length,
@@ -111,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 24),
                   FractionallySizedBox(
                     widthFactor: 0.94,
                     child: _compactBanners(context),
@@ -150,6 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: const Icon(Icons.notifications_rounded, color: AppColors.white, size: 27),
               ),
             ],
+            ),
           ),
           const Spacer(),
           const Icon(Icons.format_quote_rounded, color: AppColors.homeAccent, size: 34),
