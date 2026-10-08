@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/services/firebase_service.dart';
 import '../../data/hostel_repository.dart';
 import '../../data/hostel_registry.dart';
 import '../../data/hostel_seed_data.dart';
@@ -18,7 +19,7 @@ class HostelsScreen extends StatefulWidget {
 
 class _HostelsScreenState extends State<HostelsScreen> {
   final TextEditingController _searchController = TextEditingController();
-  final HostelRepository _repository = HostelRepository();
+  HostelRepository? _repository;
   StreamSubscription<List<Hostel>>? _hostelSubscription;
 
   List<Hostel> _hostels = List<Hostel>.from(exampleHostels);
@@ -38,8 +39,11 @@ class _HostelsScreenState extends State<HostelsScreen> {
 
   Future<void> _connectToFirestore() async {
     try {
-      await _repository.seedDemoDataIfEmpty();
-      _hostelSubscription = _repository.watchHostels().listen(
+      if (!FirebaseService.initialized) return;
+      final repository = HostelRepository();
+      _repository = repository;
+      await repository.seedDemoDataIfEmpty();
+      _hostelSubscription = repository.watchHostels().listen(
         (hostels) {
           if (!mounted) return;
           setState(() {
@@ -63,7 +67,9 @@ class _HostelsScreenState extends State<HostelsScreen> {
   }
 
   List<Hostel> _filteredHostels() {
-    return _repository.discover(
+    final repository = _repository;
+    if (repository == null) return _localDiscover(_hostels);
+    return repository.discover(
       _hostels,
       query: _searchController.text.trim(),
       city: _city,
@@ -73,6 +79,32 @@ class _HostelsScreenState extends State<HostelsScreen> {
       acOnly: _acOnly,
       sort: _sort,
     );
+  }
+
+  List<Hostel> _localDiscover(List<Hostel> source) {
+    final normalizedQuery = _searchController.text.trim().toLowerCase();
+    final result = source.where((hostel) {
+      if (hostel.status.toLowerCase() != 'approved') return false;
+      if (_city != 'All' && hostel.city != _city) return false;
+      if (_gender != 'All' && hostel.gender != _gender) return false;
+      if (_type != 'All' && hostel.type != _type) return false;
+      if (_roomType != 'All' && hostel.roomType != _roomType && !hostel.rooms.any((room) => room.type == _roomType)) return false;
+      if (_acOnly && !hostel.ac && !hostel.rooms.any((room) => room.ac)) return false;
+      if (normalizedQuery.isEmpty) return true;
+      final haystack = <String>[hostel.name, hostel.city, hostel.area, hostel.type, hostel.gender, hostel.price, hostel.roomType, hostel.availability, hostel.meals, hostel.description, hostel.address, hostel.website, ...hostel.facilities, ...hostel.rules, ...hostel.rooms.map((room) => room.type)].join(' ').toLowerCase();
+      return haystack.contains(normalizedQuery);
+    }).toList();
+    if (_sort == 'Top Rated') result.sort((a, b) => b.rating.compareTo(a.rating));
+    else if (_sort == 'Price Low') result.sort((a, b) => _numberValue(a.price).compareTo(_numberValue(b.price)));
+    else if (_sort == 'Price High') result.sort((a, b) => _numberValue(b.price).compareTo(_numberValue(a.price)));
+    else if (_sort == 'Nearest') result.sort((a, b) => _numberValue(a.distance).compareTo(_numberValue(b.distance)));
+    else result.sort((a, b) => a.name.compareTo(b.name));
+    return result;
+  }
+
+  double _numberValue(String value) {
+    final match = RegExp(r'[-+]?\\d+(?:\\.\\d+)?').firstMatch(value.replaceAll(',', ''));
+    return match == null ? double.infinity : double.tryParse(match.group(0)!) ?? double.infinity;
   }
 
   List<String> _values(
