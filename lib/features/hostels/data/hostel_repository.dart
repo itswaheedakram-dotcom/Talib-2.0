@@ -126,8 +126,25 @@ class HostelRepository {
     ],
   };
 
+  static final Map<String, StreamController<List<HostelReview>>> _demoReviewControllers = {};
+
   static Stream<List<HostelReview>> demoReviewStream(String hostelId) {
-    return Stream.value(List<HostelReview>.from(_demoReviews[hostelId] ?? const []));
+    final controller = _demoReviewControllers.putIfAbsent(
+      hostelId,
+      () => StreamController<List<HostelReview>>.broadcast(),
+    );
+    return Stream.multi((multi) {
+      multi.add(List<HostelReview>.from(_demoReviews[hostelId] ?? const []));
+      final subscription = controller.stream.listen(multi.add);
+      multi.onCancel = subscription.cancel;
+    });
+  }
+
+  static void _emitDemoReviews(String hostelId) {
+    final controller = _demoReviewControllers[hostelId];
+    if (controller != null && !controller.isClosed) {
+      controller.add(List<HostelReview>.from(_demoReviews[hostelId] ?? const []));
+    }
   }
 
   static Future<HostelReview?> demoMyReview(String hostelId, String userId) async {
@@ -175,6 +192,7 @@ class HostelRepository {
         rating: reviews.isEmpty ? 0 : total / reviews.length,
         reviewCount: reviews.length, ratingTotal: total, rooms: current.rooms, rules: current.rules,
       );
+      _emitDemoReviews(hostelId);
     }
   }
 
