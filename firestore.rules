@@ -1,75 +1,54 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
-      return request.auth != null;
-    }
-
-    function admin() {
-      return signedIn() && request.auth.token.admin == true;
-    }
-
-    function hostelOwner(String hostelId) {
-      return signedIn() && resource.data.ownerId == request.auth.uid;
-    }
-
-    function mutualFollow(String uid, String otherUid) {
+    function signedIn() { return request.auth != null; }
+    function admin() { return signedIn() && request.auth.token.admin == true; }
+    function hostelOwner() { return signedIn() && resource.data.ownerId == request.auth.uid; }
+    function mutualFollow(uid, otherUid) {
       return uid != otherUid
         && exists(/databases/$(database)/documents/users/$(uid)/following/$(otherUid))
         && exists(/databases/$(database)/documents/users/$(otherUid)/following/$(uid));
     }
-
-    function isBlocked(String uid, String otherUid) {
+    function isBlocked(uid, otherUid) {
       return exists(/databases/$(database)/documents/users/$(uid)/blockedUsers/$(otherUid));
     }
-
-    function notBlocked(String uid, String otherUid) {
+    function notBlocked(uid, otherUid) {
       return !isBlocked(uid, otherUid) && !isBlocked(otherUid, uid);
     }
-
-    function isParticipant(List participants) {
-      return signedIn()
-        && participants.size() == 2
-        && participants.hasAny([request.auth.uid]);
+    function isParticipant(participants) {
+      return signedIn() && participants.size() == 2 && participants.hasAny([request.auth.uid]);
     }
 
-    // Existing app data paths. Messaging is intentionally NOT covered
-    // by a broad authenticated catch-all.
     match /users/{userId} {
       allow read, write: if signedIn();
-      match /{subcollection}/{documentId} {
-        allow read, write: if signedIn();
-      }
+      match /{subcollection}/{documentId} { allow read, write: if signedIn(); }
     }
-
     match /posts/{postId} {
       allow read, write: if signedIn();
-      match /comments/{commentId} {
-        allow read, write: if signedIn();
-      }
+      match /comments/{commentId} { allow read, write: if signedIn(); }
     }
-
-    match /institutes/{instituteId} {
-      allow read, write: if signedIn();
-    }
+    match /institutes/{instituteId} { allow read, write: if signedIn(); }
 
     match /hostels/{hostelId} {
-      // Students can discover only approved listings. Owners/admins can read
-      // their own pending/rejected records.
-      allow read: if resource.data.status == 'approved'
-        || hostelOwner(hostelId)
-        || admin();
-
+      allow read: if resource.data.status == 'approved' || hostelOwner() || admin();
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.status == 'pending';
-
       allow update: if admin()
-        || (hostelOwner(hostelId)
+        || (hostelOwner()
           && request.resource.data.ownerId == resource.data.ownerId
-          && request.resource.data.status == resource.data.status);
-
-      allow delete: if admin() || hostelOwner(hostelId);
+          && request.resource.data.status == resource.data.status)
+        || (signedIn()
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['reviewCount', 'ratingTotal', 'rating', 'updatedAt'])
+          && request.resource.data.reviewCount is number
+          && request.resource.data.ratingTotal is number
+          && request.resource.data.rating is number
+          && request.resource.data.reviewCount >= 0
+          && request.resource.data.ratingTotal >= 0
+          && request.resource.data.rating >= 0
+          && request.resource.data.rating <= 5);
+      allow delete: if admin() || hostelOwner();
 
       match /reviews/{reviewId} {
         allow read: if true;
@@ -81,7 +60,6 @@ service cloud.firestore {
           && request.resource.data.rating <= 5
           && request.resource.data.comment is string
           && request.resource.data.comment.size() <= 2000;
-
         allow update, delete: if signedIn()
           && reviewId == request.auth.uid
           && resource.data.userId == request.auth.uid;
@@ -92,78 +70,44 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.status == 'pending';
-
-      allow read: if admin()
-        || (signedIn() && resource.data.userId == request.auth.uid);
-
+      allow read: if admin() || (signedIn() && resource.data.userId == request.auth.uid);
       allow update: if admin();
       allow delete: if admin();
     }
 
-    match /resources/{resourceId} {
-      allow read, write: if signedIn();
-    }
-
-    match /reports/{reportId} {
-      allow read, write: if signedIn();
-    }
+    match /resources/{resourceId} { allow read, write: if signedIn(); }
+    match /reports/{reportId} { allow read, write: if signedIn(); }
 
     match /conversations/{conversationId} {
       allow read: if signedIn() && resource.data.participants.hasAny([request.auth.uid]);
-
       allow create: if signedIn()
         && request.resource.data.participants is list
         && request.resource.data.participants.size() == 2
         && request.resource.data.participants.hasAny([request.auth.uid])
         && request.resource.data.participants[0] != request.resource.data.participants[1]
-        && mutualFollow(
-          request.resource.data.participants[0],
-          request.resource.data.participants[1]
-        )
-        && notBlocked(
-          request.resource.data.participants[0],
-          request.resource.data.participants[1]
-        );
-
+        && mutualFollow(request.resource.data.participants[0], request.resource.data.participants[1])
+        && notBlocked(request.resource.data.participants[0], request.resource.data.participants[1]);
       allow update: if signedIn()
         && isParticipant(resource.data.participants)
         && request.resource.data.participants == resource.data.participants
-        && mutualFollow(
-          resource.data.participants[0],
-          resource.data.participants[1]
-        );
-
+        && mutualFollow(resource.data.participants[0], resource.data.participants[1]);
       allow delete: if false;
 
       match /messages/{messageId} {
-        allow read: if isParticipant(
-          get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants
-        )
-        && notBlocked(
-          get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants[0],
-          get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants[1]
-        );
-
+        allow read: if isParticipant(get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants)
+          && notBlocked(
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants[0],
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants[1]);
         allow create: if signedIn()
-          && isParticipant(
-            get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants
-          )
+          && isParticipant(get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants)
           && request.resource.data.senderId == request.auth.uid
           && request.resource.data.receiverId != request.auth.uid
-          && request.resource.data.receiverId in
-             get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants
-          && mutualFollow(
-            request.resource.data.senderId,
-            request.resource.data.receiverId
-          )
-          && notBlocked(
-            request.resource.data.senderId,
-            request.resource.data.receiverId
-          )
+          && request.resource.data.receiverId in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants
+          && mutualFollow(request.resource.data.senderId, request.resource.data.receiverId)
+          && notBlocked(request.resource.data.senderId, request.resource.data.receiverId)
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 5000;
-
         allow update: if signedIn()
           && resource.data.receiverId == request.auth.uid
           && request.resource.data.senderId == resource.data.senderId
@@ -171,7 +115,6 @@ service cloud.firestore {
           && request.resource.data.text == resource.data.text
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
           && request.resource.data.read == true;
-
         allow delete: if false;
       }
     }
