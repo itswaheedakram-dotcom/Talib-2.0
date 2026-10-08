@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
@@ -60,6 +61,11 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
   Future<void> _save() async {
     final hostel = _hostel;
     if (hostel == null) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (!hostel.isDemo && (user == null || user.uid != hostel.ownerId)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only the hostel owner can manage this listing.')));
+      return;
+    }
     setState(() => _saving = true);
     try {
       final updated = Hostel(
