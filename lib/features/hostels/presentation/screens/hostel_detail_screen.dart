@@ -8,6 +8,7 @@ import '../../data/hostel_repository.dart';
 import '../../data/hostel_review.dart';
 import '../../data/hostel_seed_data.dart';
 import '../../../../core/services/firebase_service.dart';
+import '../../../../core/services/active_profile_controller.dart';
 import 'package:go_router/go_router.dart';
 import '../../../models/hostel.dart';
 
@@ -44,11 +45,32 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
     return values;
   }
 
-  bool get signedIn {
+  ActiveProfileController get _identity => ActiveProfileController.instance;
+  bool get _demoIdentity => _identity.isDemoActive;
+  String? get _effectiveUid {
+    if (_demoIdentity) return _identity.effectiveUid;
     try {
-      return FirebaseAuth.instance.currentUser != null || hostel.isDemo;
+      return FirebaseAuth.instance.currentUser?.uid;
     } catch (_) {
-      return hostel.isDemo;
+      return null;
+    }
+  }
+  String get _effectiveName {
+    if (_demoIdentity) return _identity.effectiveName ?? 'Demo Member';
+    try {
+      final name = FirebaseAuth.instance.currentUser?.displayName?.trim();
+      return name == null || name.isEmpty ? 'Member' : name;
+    } catch (_) {
+      return 'Member';
+    }
+  }
+
+  bool get signedIn {
+    if (_demoIdentity || hostel.isDemo) return _effectiveUid != null;
+    try {
+      return FirebaseAuth.instance.currentUser != null;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -69,9 +91,9 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
     setState(() => _loadingReview = true);
     try {
       final user = FirebaseAuth.instance.currentUser;
-      final userId = user?.uid ?? (hostel.isDemo ? 'demo-user' : '');
+      final userId = _effectiveUid ?? '';
       if (userId.isEmpty) return;
-      final review = hostel.isDemo
+      final review = (_demoIdentity || hostel.isDemo || !FirebaseService.initialized)
           ? await HostelRepository.demoMyReview(hostel.id, userId)
           : await HostelRepository().getMyReview(hostel.id, userId);
       if (!mounted) return;
@@ -100,7 +122,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
 
   Future<void> _saveReview() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null && !hostel.isDemo) {
+    if (_effectiveUid == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please sign in to review this hostel.')),
       );
@@ -115,22 +137,20 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
 
     setState(() => _savingReview = true);
     try {
-      if (hostel.isDemo || !FirebaseService.initialized) {
+      if (_demoIdentity || hostel.isDemo || !FirebaseService.initialized) {
         await HostelRepository.submitDemoReview(
           hostelId: hostel.id,
-          userId: user?.uid ?? 'demo-user',
-          userName: user?.displayName?.trim().isNotEmpty == true ? user!.displayName!.trim() : 'Demo Member',
+          userId: _effectiveUid!,
+          userName: _effectiveName,
           rating: _myRating,
           comment: _commentController.text.trim(),
         );
       } else {
         await HostelRepository().submitReview(
           hostelId: hostel.id,
-        userId: user!.uid,
-        userName: user.displayName?.trim().isNotEmpty == true
-            ? user.displayName!.trim()
-            : 'Member',
-        rating: _myRating,
+          userId: user!.uid,
+          userName: _effectiveName,
+          rating: _myRating,
           comment: _commentController.text.trim(),
         );
       }
@@ -534,7 +554,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
             )
           else if (reviews.isEmpty)
             const Text(
-              'No reviews yet. Be the first registered member to review this hostel.',
+              'No reviews yet. Be the first member to review this hostel.',
               style: TextStyle(
                 color: AppColors.mutedText,
                 height: 1.4,
