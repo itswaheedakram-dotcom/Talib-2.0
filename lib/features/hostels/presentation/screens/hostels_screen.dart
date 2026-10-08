@@ -685,3 +685,4 @@ class _HostelsScreenState extends State<HostelsScreen> {
       ],
     );
   }
+}
