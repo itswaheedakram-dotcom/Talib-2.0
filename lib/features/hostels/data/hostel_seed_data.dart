@@ -18,6 +18,7 @@ final List<Hostel> exampleHostels = [
     facilities: ['Wi-Fi', 'Mess', 'Laundry', 'Security', 'CCTV', 'Study room'],
     description: 'Comfortable student accommodation with essential facilities and a secure environment.',
     phone: '+92 300 1111111',
+    rating: 5.0, reviewCount: 1, ratingTotal: 5.0,
     address: 'Johar Town, Lahore',
   ),
   Hostel(
@@ -33,6 +34,7 @@ final List<Hostel> exampleHostels = [
     facilities: ['Wi-Fi', 'Mess', 'CCTV', 'Study room', 'Laundry', 'Security'],
     description: 'Female student hostel near the city campus with study space and security facilities.',
     phone: '+92 300 2222222',
+    rating: 4.0, reviewCount: 1, ratingTotal: 4.0,
     address: 'Gulberg, Lahore',
   ),
   Hostel(
