@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme.dart';
 import '../../data/hostel_repository.dart';
 import '../../data/hostel_review.dart';
+import '../../data/hostel_manager.dart';
 import '../../data/hostel_seed_data.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
@@ -27,6 +28,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
   HostelReview? _myReview;
   bool _loadingReview = false;
   bool _savingReview = false;
+  HostelManager? _managerAccess;
   final TextEditingController _commentController = TextEditingController();
 
   Hostel get hostel => widget.hostel;
@@ -65,11 +67,13 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
     }
   }
 
-  bool get _canManage {
+  bool get _isOwner {
     if (hostel.ownerId.isEmpty) return false;
     final uid = _effectiveUid;
     return uid != null && uid == hostel.ownerId;
   }
+
+  bool get _canManage => _isOwner || _managerAccess != null;
 
 
   bool get signedIn {
@@ -85,12 +89,25 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
   void initState() {
     super.initState();
     _loadMyReview();
+    _loadManagementAccess();
   }
 
   @override
   void dispose() {
     _commentController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadManagementAccess() async {
+    final uid = _effectiveUid;
+    if (uid == null || hostel.id.isEmpty || uid == hostel.ownerId) return;
+    try {
+      final manager = await HostelRepository().managerAccess(hostel.id, uid);
+      if (!mounted) return;
+      setState(() => _managerAccess = manager);
+    } catch (_) {
+      // Management access is optional; keep the public hostel view available.
+    }
   }
 
   Future<void> _loadMyReview() async {
