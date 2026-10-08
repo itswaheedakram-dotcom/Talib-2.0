@@ -65,6 +65,13 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
     }
   }
 
+  bool get _canManage {
+    if (hostel.ownerId.isEmpty) return false;
+    final uid = _effectiveUid;
+    return uid != null && uid == hostel.ownerId;
+  }
+
+
   bool get signedIn {
     if (_demoIdentity || hostel.isDemo) return _effectiveUid != null;
     try {
@@ -247,7 +254,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                     label: const Text('Claim Hostel'),
                   ),
                 ),
-              if (hostel.isDemo || hostel.ownerId.isNotEmpty) ...[
+              if (_canManage) ...[
                 if (hostel.isDemo || hostel.ownerId.isEmpty) const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton.icon(
