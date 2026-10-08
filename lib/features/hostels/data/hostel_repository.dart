@@ -308,6 +308,7 @@ class HostelRepository {
       await submitDemoReview(hostelId: hostelId, userId: userId, userName: userName, rating: rating, comment: comment);
       return;
     }
+    if (rating < 1 || rating > 5) throw ArgumentError('Rating must be between 1 and 5');
     final ref = _collection.doc(hostelId).collection('reviews').doc(userId);
     await _db.runTransaction((tx) async {
       final old = await tx.get(ref);
