@@ -1,0 +1,56 @@
+name: Deploy Firebase Firestore Rules
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - firestore-from-78c6-stable
+    paths:
+      - firestore.rules
+      - firebase.json
+      - .github/workflows/firebase-deploy.yml
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-firestore-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Write Firebase service account
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "FIREBASE_SERVICE_ACCOUNT secret is missing."
+            exit 1
+          fi
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
+
+      - name: Validate Firebase project secret
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -z "$FIREBASE_PROJECT_ID" ]; then
+            echo "FIREBASE_PROJECT_ID secret is missing."
+            exit 1
+          fi
+
+      - name: Deploy Firestore rules
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          npx --yes firebase-tools@latest deploy --only firestore:rules --project "$FIREBASE_PROJECT_ID"
+
+      - name: Remove service account file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-service-account.json"
