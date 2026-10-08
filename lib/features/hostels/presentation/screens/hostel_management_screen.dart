@@ -29,7 +29,7 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
   HostelManager? _manager;
   bool _loading = true;
   bool _saving = false;
-  final _repo = HostelRepository();
+  HostelRepository? _repo;
   final Map<String, TextEditingController> _c = {};
   final List<_RoomDraft> _rooms = [];
 
@@ -80,7 +80,8 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
     // Only query Firestore for a hostel that is not a local demo record.
     if (hostel == null && FirebaseService.initialized) {
       try {
-        hostel = await _repo.getHostel(widget.hostelId);
+        _repo ??= HostelRepository();
+        hostel = await _repo!.getHostel(widget.hostelId);
       } catch (_) {
         // Keep the screen alive and show the explicit not-found state below.
       }
@@ -88,9 +89,10 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
 
     HostelManager? manager;
     final uid = _uid;
-    if (hostel != null && uid != null && uid != hostel.ownerId) {
+    if (hostel != null && uid != null && uid != hostel.ownerId && FirebaseService.initialized) {
       try {
-        manager = await _repo.getManager(hostel.id, uid);
+        _repo ??= HostelRepository();
+        manager = await _repo!.getManager(hostel.id, uid);
       } catch (_) {
         // Manager access is optional; never let it blank/crash this screen.
       }
@@ -141,7 +143,8 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
     if (h == null || uid == null || changes.isEmpty) return;
     setState(() => _saving = true);
     try {
-      await _repo.updateHostelSectionSafe(
+      _repo ??= HostelRepository();
+      await _repo!.updateHostelSectionSafe(
         hostel: h,
         userId: uid,
         permission: permission,
