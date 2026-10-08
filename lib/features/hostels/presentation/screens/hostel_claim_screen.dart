@@ -30,6 +30,8 @@ class _HostelClaimScreenState extends State<HostelClaimScreen> {
   final _note = TextEditingController();
   bool _saving = false;
 
+  bool get _isDemoHostel => widget.isDemo || HostelRepository.demoHostels.any((h) => h.id == widget.hostelId);
+
   @override
   void initState() {
     super.initState();
@@ -69,7 +71,7 @@ class _HostelClaimScreenState extends State<HostelClaimScreen> {
         userName: _name.text.trim(),
         contact: _contact.text.trim(),
         note: _note.text.trim(),
-        demo: demoIdentity || widget.isDemo || !FirebaseService.initialized,
+        demo: demoIdentity || _isDemoHostel || !FirebaseService.initialized,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
