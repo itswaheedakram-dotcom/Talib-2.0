@@ -46,9 +46,9 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
 
   bool get signedIn {
     try {
-      return FirebaseAuth.instance.currentUser != null;
+      return FirebaseAuth.instance.currentUser != null || hostel.isDemo;
     } catch (_) {
-      return false;
+      return hostel.isDemo;
     }
   }
 
@@ -65,14 +65,15 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
   }
 
   Future<void> _loadMyReview() async {
-    if (!signedIn || hostel.id.isEmpty) return;
+    if ((!signedIn && !hostel.isDemo) || hostel.id.isEmpty) return;
     setState(() => _loadingReview = true);
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      final userId = user?.uid ?? (hostel.isDemo ? 'demo-user' : '');
+      if (userId.isEmpty) return;
       final review = hostel.isDemo
-          ? await HostelRepository.demoMyReview(hostel.id, user.uid)
-          : await HostelRepository().getMyReview(hostel.id, user.uid);
+          ? await HostelRepository.demoMyReview(hostel.id, userId)
+          : await HostelRepository().getMyReview(hostel.id, userId);
       if (!mounted) return;
       setState(() {
         _myReview = review;
@@ -99,7 +100,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
 
   Future<void> _saveReview() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    if (user == null && !hostel.isDemo) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please sign in to review this hostel.')),
       );
@@ -117,15 +118,15 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
       if (hostel.isDemo || !FirebaseService.initialized) {
         await HostelRepository.submitDemoReview(
           hostelId: hostel.id,
-          userId: user.uid,
-          userName: user.displayName?.trim().isNotEmpty == true ? user.displayName!.trim() : 'Demo Member',
+          userId: user?.uid ?? 'demo-user',
+          userName: user?.displayName?.trim().isNotEmpty == true ? user!.displayName!.trim() : 'Demo Member',
           rating: _myRating,
           comment: _commentController.text.trim(),
         );
       } else {
         await HostelRepository().submitReview(
         hostelId: hostel.id,
-        userId: user.uid,
+        userId: user!.uid,
         userName: user.displayName?.trim().isNotEmpty == true
             ? user.displayName!.trim()
             : 'Member',
