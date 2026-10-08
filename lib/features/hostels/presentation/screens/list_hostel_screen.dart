@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/services/firebase_service.dart';
 import '../../data/hostel_registry.dart';
 import '../../data/hostel_repository.dart';
 import '../../data/hostel_room.dart';
@@ -31,7 +32,8 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
 
   Future<void> _submit() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) { if (mounted) context.push('/signin'); return; }
+    final demoMode = !FirebaseService.initialized;
+    if (user == null && !demoMode) { if (mounted) context.push('/signin'); return; }
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
@@ -47,9 +49,9 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
         description:_description.text.trim(), ownerId:user.uid,
         ownerName:user.displayName?.trim().isNotEmpty==true ? user.displayName!.trim() : 'Hostel Owner', status:'pending',
       );
-      await HostelRepository().submitHostel(hostel);
+      await HostelRepository.submitHostelSafe(hostel, demo: demoMode);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hostel submitted for admin approval.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(demoMode ? 'Demo hostel added successfully.' : 'Hostel submitted for admin approval.')));
       context.pop();
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hostel could not be submitted. Please try again.')));
