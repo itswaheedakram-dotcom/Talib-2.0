@@ -62,17 +62,39 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
 
   Future<void> _load() async {
     Hostel? hostel;
-    try {
-      hostel = await _repo.getHostel(widget.hostelId);
-    } catch (_) {}
-    hostel ??= HostelRepository.demoHostels.where((h) => h.id == widget.hostelId).firstOrNull;
+
+    // Demo hostels must be resolved locally first. This keeps the management
+    // screen usable before Firebase is connected/deployed.
+    for (final item in HostelRepository.demoHostels) {
+      if (item.id == widget.hostelId) {
+        hostel = item;
+        break;
+      }
+    }
+
+    // Only query Firestore for a hostel that is not a local demo record.
+    if (hostel == null && FirebaseService.initialized) {
+      try {
+        hostel = await _repo.getHostel(widget.hostelId);
+      } catch (_) {
+        // Keep the screen alive and show the explicit not-found state below.
+      }
+    }
 
     HostelManager? manager;
     final uid = _uid;
     if (hostel != null && uid != null && uid != hostel.ownerId) {
       try {
         manager = await _repo.getManager(hostel.id, uid);
-      } catch (_) {}
+      } catch (_) {
+        // Manager access is optional; never let it blank/crash this screen.
+      }
+    }
+
+    if (hostel != null) {
+      // Seed controllers before the first non-loading build so TextFields
+      // never receive null controllers.
+      _seedFields(hostel);
     }
 
     if (!mounted) return;
@@ -81,9 +103,6 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
       _manager = manager;
       _loading = false;
     });
-    if (hostel != null) {
-      _seedFields(hostel);
-    }
   }
 
   void _seedFields(Hostel h) {
