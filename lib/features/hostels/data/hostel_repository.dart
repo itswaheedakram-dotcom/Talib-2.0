@@ -482,6 +482,49 @@ class HostelRepository {
     });
   }
 
+  static Hostel _applyDemoChanges(Hostel hostel, Map<String, dynamic> changes) {
+    return Hostel(
+      id: hostel.id,
+      name: (changes['name'] ?? hostel.name).toString(),
+      city: (changes['city'] ?? hostel.city).toString(),
+      area: (changes['area'] ?? hostel.area).toString(),
+      type: (changes['type'] ?? hostel.type).toString(),
+      gender: (changes['gender'] ?? hostel.gender).toString(),
+      distance: (changes['distance'] ?? hostel.distance).toString(),
+      price: (changes['price'] ?? hostel.price).toString(),
+      securityFee: (changes['securityFee'] ?? hostel.securityFee).toString(),
+      roomType: (changes['roomType'] ?? hostel.roomType).toString(),
+      availability: (changes['availability'] ?? hostel.availability).toString(),
+      meals: (changes['meals'] ?? hostel.meals).toString(),
+      ac: changes['ac'] is bool ? changes['ac'] as bool : hostel.ac,
+      facilities: changes['facilities'] is List
+          ? List<String>.from((changes['facilities'] as List).map((e) => e.toString()))
+          : hostel.facilities,
+      imageUrls: changes['imageUrls'] is List
+          ? List<String>.from((changes['imageUrls'] as List).map((e) => e.toString()))
+          : hostel.imageUrls,
+      description: (changes['description'] ?? hostel.description).toString(),
+      phone: (changes['phone'] ?? hostel.phone).toString(),
+      website: (changes['website'] ?? hostel.website).toString(),
+      imageUrl: (changes['imageUrl'] ?? hostel.imageUrl).toString(),
+      address: (changes['address'] ?? hostel.address).toString(),
+      ownerId: hostel.ownerId,
+      ownerName: hostel.ownerName,
+      status: hostel.status,
+      isVerified: hostel.isVerified,
+      isDemo: hostel.isDemo,
+      rating: hostel.rating,
+      reviewCount: hostel.reviewCount,
+      ratingTotal: hostel.ratingTotal,
+      rooms: changes['rooms'] is List
+          ? List<HostelRoom>.from(changes['rooms'] as List)
+          : hostel.rooms,
+      rules: changes['rules'] is List
+          ? List<String>.from((changes['rules'] as List).map((e) => e.toString()))
+          : hostel.rules,
+    );
+  }
+
   Stream<List<HostelClaim>> watchAllClaims() {
     return _db.collection('hostelClaims').orderBy('createdAt', descending: true).snapshots().map(
       (s) => s.docs.map(HostelClaim.fromDoc).toList(),
