@@ -208,6 +208,10 @@ class HostelRepository {
   }) async {
     if (demo || !FirebaseService.initialized) {
       final id = 'demo-claim-$hostelId-$userId';
+      final existing = _demoClaims[id];
+      if (existing != null && (existing.status == 'pending' || existing.status == 'approved')) {
+        return id;
+      }
       _demoClaims[id] = HostelClaim(
         id: id,
         hostelId: hostelId,
@@ -226,7 +230,7 @@ class HostelRepository {
     final existing = await ref.get();
     if (existing.exists) {
       final existingStatus = (existing.data()?['status'] ?? 'pending').toString();
-      if (existingStatus == 'approved') return ref.id;
+      if (existingStatus == 'pending' || existingStatus == 'approved') return ref.id;
     }
     await ref.set({
       'hostelId': hostelId,
@@ -304,9 +308,23 @@ class HostelRepository {
   }
 
   Stream<List<HostelClaim>> watchOwnerClaims(String userId) {
+    if (!FirebaseService.initialized) {
+      return Stream.value(
+        _demoClaims.values.where((claim) => claim.userId == userId).toList(),
+      );
+    }
     return _db.collection('hostelClaims').where('userId', isEqualTo: userId).snapshots().map(
       (s) => s.docs.map(HostelClaim.fromDoc).toList(),
     );
+  }
+
+  Future<HostelClaim?> getMyClaim(String hostelId, String userId) async {
+    final claimId = '${hostelId}_${userId}';
+    if (!FirebaseService.initialized) {
+      return _demoClaims['demo-claim-$hostelId-$userId'];
+    }
+    final doc = await _db.collection('hostelClaims').doc(claimId).get();
+    return doc.exists ? HostelClaim.fromDoc(doc) : null;
   }
 
   Stream<List<HostelClaim>> watchAllClaims() {
