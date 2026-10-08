@@ -321,16 +321,20 @@ class HostelRepository {
   static final Map<String, List<HostelManager>> _demoManagers = {};
 
   Stream<List<HostelManager>> watchManagers(String hostelId) {
-    if (!FirebaseService.initialized) {
-      return Stream.value(List<HostelManager>.from(_demoManagers[hostelId] ?? const []));
+    final demoHostel = _demoHostels.any((item) => item.id == hostelId);
+    if (demoHostel || !FirebaseService.initialized) {
+      return Stream.value(
+        List<HostelManager>.from(_demoManagers[hostelId] ?? const <HostelManager>[]),
+      );
     }
     return _db.collection('hostels').doc(hostelId).collection('managers').snapshots().map(
-      (s) => s.docs.map(HostelManager.fromDoc).toList(),
+      (s) => s.docs.map(HostelManager.fromDoc).where((m) => m.status == 'active').toList(),
     );
   }
 
   Future<HostelManager?> getManager(String hostelId, String userId) async {
-    if (!FirebaseService.initialized) {
+    final demoHostel = _demoHostels.any((item) => item.id == hostelId);
+    if (demoHostel || !FirebaseService.initialized) {
       for (final manager in _demoManagers[hostelId] ?? const <HostelManager>[]) {
         if (manager.userId == userId && manager.status == 'active') return manager;
       }
@@ -434,47 +438,50 @@ class HostelRepository {
   /// Manager updates are section-based so owner-only fields stay protected.
   Future<void> updateHostelSectionSafe({
     required Hostel hostel,
+    required String userId,
     required String permission,
     required Map<String, dynamic> changes,
   }) async {
     if (changes.isEmpty) return;
-    if (hostel.isDemo || !FirebaseService.initialized) {
+    if (userId.trim().isEmpty) throw StateError('User identity is required.');
+
+    final allowedByPermission = <String, Set<String>>{
+      HostelManagerPermissions.basicInfo: {'name', 'type', 'gender', 'description'},
+      HostelManagerPermissions.location: {'city', 'area', 'distance', 'address'},
+      HostelManagerPermissions.pricing: {'price', 'securityFee', 'roomType'},
+      HostelManagerPermissions.rooms: {'rooms'},
+      HostelManagerPermissions.photos: {'imageUrl', 'imageUrls'},
+      HostelManagerPermissions.facilities: {'facilities', 'meals', 'ac'},
+      HostelManagerPermissions.rules: {'rules'},
+      HostelManagerPermissions.availability: {'availability'},
+      HostelManagerPermissions.contact: {'phone', 'website'},
+    };
+    final allowedKeys = allowedByPermission[permission] ?? <String>{};
+    if (allowedKeys.isEmpty || changes.keys.any((key) => !allowedKeys.contains(key))) {
+      throw StateError('This section contains fields outside its permission.');
+    }
+
+    final isOwner = hostel.ownerId == userId;
+    final isDemoHostel = _demoHostels.any((item) => item.id == hostel.id);
+    if (!isOwner) {
+      final manager = await getManager(hostel.id, userId);
+      if (manager == null || !manager.can(permission)) {
+        throw StateError('You do not have permission to edit this section.');
+      }
+    }
+
+    if (isDemoHostel || !FirebaseService.initialized) {
       final index = _demoHostels.indexWhere((item) => item.id == hostel.id);
-      if (index < 0) return;
+      if (index < 0) throw StateError('Hostel not found.');
       _demoHostels[index] = _applyDemoChanges(_demoHostels[index], changes);
       return;
     }
-    await _collection.doc(hostel.id).update({...changes, 'updatedAt': FieldValue.serverTimestamp()});
+    await _collection.doc(hostel.id).update({
+      ...changes,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
-  static Hostel _applyDemoChanges(Hostel hostel, Map<String, dynamic> changes) {
-    return Hostel(
-      id: hostel.id,
-      name: (changes['name'] ?? hostel.name).toString(),
-      city: (changes['city'] ?? hostel.city).toString(),
-      area: (changes['area'] ?? hostel.area).toString(),
-      type: (changes['type'] ?? hostel.type).toString(),
-      gender: (changes['gender'] ?? hostel.gender).toString(),
-      distance: (changes['distance'] ?? hostel.distance).toString(),
-      price: (changes['price'] ?? hostel.price).toString(),
-      securityFee: (changes['securityFee'] ?? hostel.securityFee).toString(),
-      roomType: (changes['roomType'] ?? hostel.roomType).toString(),
-      availability: (changes['availability'] ?? hostel.availability).toString(),
-      meals: (changes['meals'] ?? hostel.meals).toString(),
-      ac: changes['ac'] is bool ? changes['ac'] as bool : hostel.ac,
-      facilities: changes['facilities'] is List ? List<String>.from((changes['facilities'] as List).map((e) => e.toString())) : hostel.facilities,
-      imageUrls: changes['imageUrls'] is List ? List<String>.from((changes['imageUrls'] as List).map((e) => e.toString())) : hostel.imageUrls,
-      description: (changes['description'] ?? hostel.description).toString(),
-      phone: (changes['phone'] ?? hostel.phone).toString(),
-      website: (changes['website'] ?? hostel.website).toString(),
-      imageUrl: (changes['imageUrl'] ?? hostel.imageUrl).toString(),
-      address: (changes['address'] ?? hostel.address).toString(),
-      ownerId: hostel.ownerId, ownerName: hostel.ownerName, status: hostel.status,
-      isVerified: hostel.isVerified, isDemo: hostel.isDemo, rating: hostel.rating,
-      reviewCount: hostel.reviewCount, ratingTotal: hostel.ratingTotal, rooms: hostel.rooms,
-      rules: changes['rules'] is List ? List<String>.from((changes['rules'] as List).map((e) => e.toString())) : hostel.rules,
-    );
-  }
   Stream<List<HostelClaim>> watchAllClaims() {
     return _db.collection('hostelClaims').orderBy('createdAt', descending: true).snapshots().map(
       (s) => s.docs.map(HostelClaim.fromDoc).toList(),
