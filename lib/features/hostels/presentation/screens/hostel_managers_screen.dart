@@ -43,7 +43,7 @@ class _HostelManagersScreenState extends State<HostelManagersScreen> {
         h=await _repository!.getHostel(widget.hostelId);
       }
     } catch (_) {}
-    if(mounted)setState(()=>{_hostel=h,_loading=false});
+    if(mounted)setState(() { _hostel=h; _loading=false; });
   }
 
   void _pick(ActiveDemoProfile p){_uid.text=p.id;_name.text=p.name;}
