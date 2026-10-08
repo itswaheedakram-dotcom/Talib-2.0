@@ -28,12 +28,13 @@ jobs:
         shell: bash
         run: |
           if [ -f android/app/build.gradle.kts ]; then
-            sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' android/app/build.gradle.kts
+            sed -i -E '/^[[:space:]]*jvmTarget[[:space:]]*=.*toString\(\)/d' android/app/build.gradle.kts
+            sed -i -E '/^[[:space:]]*kotlinOptions[[:space:]]*\{/d' android/app/build.gradle.kts
+            printf '\nkotlin {\n    compilerOptions {\n        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17\n    }\n}\n' >> android/app/build.gradle.kts
           elif [ -f android/app/build.gradle ]; then
-            sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/' android/app/build.gradle
-          else
-            echo "Android app Gradle file not found"
-            exit 1
+            sed -i -E '/^[[:space:]]*jvmTarget[[:space:]]*=.*toString\(\)/d' android/app/build.gradle
+            sed -i -E '/^[[:space:]]*kotlinOptions[[:space:]]*\{/d' android/app/build.gradle
+            printf '\nkotlin {\n    compilerOptions {\n        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17\n    }\n}\n' >> android/app/build.gradle
           fi
 
       - name: Configure Kotlin and Java compatibility
@@ -46,15 +47,26 @@ jobs:
           fi
 
           if [ -f android/app/build.gradle.kts ]; then
-            sed -i 's/JavaVersion\.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle.kts
-            perl -0pi -e 's/kotlinOptions\\s*\\{.*?\\}//s' android/app/build.gradle.kts
+            sed -i -E '/^[[:space:]]*jvmTarget[[:space:]]*=.*toString\(\)/d' android/app/build.gradle.kts
+            sed -i -E '/^[[:space:]]*kotlinOptions[[:space:]]*\{/d' android/app/build.gradle.kts
             printf '\nkotlin {\n    compilerOptions {\n        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17\n    }\n}\n' >> android/app/build.gradle.kts
           elif [ -f android/app/build.gradle ]; then
-            sed -i 's/JavaVersion\.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle
-            perl -0pi -e 's/kotlinOptions\\s*\\{.*?\\}//s' android/app/build.gradle
+            sed -i -E '/^[[:space:]]*jvmTarget[[:space:]]*=.*toString\(\)/d' android/app/build.gradle
+            sed -i -E '/^[[:space:]]*kotlinOptions[[:space:]]*\{/d' android/app/build.gradle
             printf '\nkotlin {\n    compilerOptions {\n        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17\n    }\n}\n' >> android/app/build.gradle
           fi
 
+      - name: Verify Kotlin compiler configuration
+        shell: bash
+        run: |
+          file="android/app/build.gradle.kts"
+          [ -f "$file" ] || file="android/app/build.gradle"
+          echo "===== FINAL $file ====="
+          cat "$file"
+          if grep -Eq 'jvmTarget[[:space:]]*=.*(VERSION_|toString\(\))|kotlinOptions' "$file"; then
+            echo "ERROR: Legacy Kotlin JVM target configuration remains."
+            exit 1
+          fi
       - name: Verify Android Gradle configuration
         shell: bash
         run: |
