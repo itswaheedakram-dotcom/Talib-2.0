@@ -8,7 +8,6 @@ import '../../../../core/services/active_profile_controller.dart';
 import '../../../models/hostel.dart';
 import '../../data/hostel_repository.dart';
 import '../../data/hostel_manager.dart';
-import '../../data/hostel_manager.dart';
 import '../../data/hostel_seed_data.dart';
 
 class HostelManagementScreen extends StatefulWidget {
@@ -63,12 +62,6 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
       try {
         manager = await HostelRepository().getManager(hostel.id, uid);
       } catch (_) {}
-    }
-    final active = ActiveProfileController.instance.active;
-    final user = FirebaseService.initialized ? FirebaseAuth.instance.currentUser : null;
-    final uid = active?.id ?? user?.uid;
-    if (hostel != null && uid != null && uid != hostel.ownerId) {
-      try { _managerAccess = await HostelRepository().managerAccess(hostel.id, uid); } catch (_) {}
     }
     if (!mounted) return;
     setState(() {
@@ -162,7 +155,7 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
         children: [
           Text(hostel.name, style: const TextStyle(color: AppColors.darkGreen, fontSize: 22, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          Text(isOwnerLabel(hostel) ? 'Owner management' : 'Manager access'), style: const TextStyle(color: AppColors.mutedText)),
+          Text(isOwnerLabel(hostel) ? 'Owner management' : 'Manager access', style: const TextStyle(color: AppColors.mutedText)),
           const SizedBox(height: 18),
           TextField(
             controller: _availability,
