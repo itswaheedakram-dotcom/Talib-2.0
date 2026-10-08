@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/services/firebase_service.dart';
+import '../../../../core/services/active_profile_controller.dart';
 import '../../data/hostel_repository.dart';
 
 class HostelClaimScreen extends StatefulWidget {
@@ -32,8 +33,13 @@ class _HostelClaimScreenState extends State<HostelClaimScreen> {
   @override
   void initState() {
     super.initState();
-    final user = FirebaseAuth.instance.currentUser;
-    _name.text = user?.displayName?.trim() ?? '';
+    final active = ActiveProfileController.instance.active;
+    if (active != null) {
+      _name.text = active.name;
+    } else {
+      final user = FirebaseService.initialized ? FirebaseAuth.instance.currentUser : null;
+      _name.text = user?.displayName?.trim() ?? '';
+    }
   }
 
   @override
@@ -48,8 +54,14 @@ class _HostelClaimScreenState extends State<HostelClaimScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      final userId = user?.uid ?? 'demo-user';
+      final active = ActiveProfileController.instance.active;
+      final user = FirebaseService.initialized ? FirebaseAuth.instance.currentUser : null;
+      final demoIdentity = active != null;
+      final userId = active?.id ?? user?.uid;
+      if (userId == null || userId.isEmpty) {
+        if (mounted) context.push('/signin');
+        return;
+      }
       await HostelRepository.submitClaim(
         hostelId: widget.hostelId,
         hostelName: widget.hostelName,
@@ -57,7 +69,7 @@ class _HostelClaimScreenState extends State<HostelClaimScreen> {
         userName: _name.text.trim(),
         contact: _contact.text.trim(),
         note: _note.text.trim(),
-        demo: widget.isDemo || !FirebaseService.initialized,
+        demo: demoIdentity || widget.isDemo || !FirebaseService.initialized,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
