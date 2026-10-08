@@ -71,6 +71,43 @@ service cloud.firestore {
           && request.resource.data.rating <= 5);
       allow delete: if admin() || hostelOwner();
 
+      function hostelManager(permission) {
+        return signedIn()
+          && exists(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid))
+          && get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.status == 'active'
+          && get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.permissions[permission] == true;
+      }
+
+      allow read: if resource.data.status == 'approved'
+        || hostelOwner()
+        || admin()
+        || (signedIn()
+          && exists(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid))
+          && get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.status == 'active');
+
+      allow update: if hostelManager('basicInfo')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'type', 'gender', 'description', 'updatedAt'])
+        || hostelManager('location')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['city', 'area', 'distance', 'address', 'updatedAt'])
+        || hostelManager('pricing')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['price', 'securityFee', 'roomType', 'updatedAt'])
+        || hostelManager('rooms')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rooms', 'updatedAt'])
+        || hostelManager('availability')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['availability', 'updatedAt'])
+        || hostelManager('photos')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['imageUrl', 'imageUrls', 'updatedAt'])
+        || hostelManager('facilities')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['facilities', 'meals', 'ac', 'updatedAt'])
+        || hostelManager('rules')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rules', 'updatedAt']);
+
+      match /managers/{managerId} {
+        allow read: if admin() || hostelOwner() || (signedIn() && managerId == request.auth.uid);
+        allow create, update: if admin() || hostelOwner();
+        allow delete: if admin() || hostelOwner();
+      }
+
       match /reviews/{reviewId} {
         allow read: if true;
         allow create: if signedIn()
