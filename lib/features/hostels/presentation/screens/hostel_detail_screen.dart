@@ -275,7 +275,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                 if (hostel.isDemo || hostel.ownerId.isEmpty) const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => context.push('/hostel/' + Uri.encodeComponent(hostel.id) + '/manage'),
+                    onPressed: () => context.push('/hostel/' + Uri.encodeComponent(hostel.id) + '/manage', extra: hostel),
                     icon: const Icon(Icons.settings_outlined),
                     label: const Text('Manage'),
                   ),
