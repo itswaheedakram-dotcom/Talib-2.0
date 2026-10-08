@@ -5,6 +5,7 @@ import '../../../../app/theme.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../data/hostel_manager.dart';
+import '../../../models/hostel.dart';
 import '../../data/hostel_repository.dart';
 
 class HostelManagersScreen extends StatefulWidget {
@@ -20,25 +21,15 @@ class _HostelManagersScreenState extends State<HostelManagersScreen> {
   final _nameController = TextEditingController();
   final _repository = HostelRepository();
   final Map<String, bool> _permissions = {
-    'basicInfo': true,
-    'photos': false,
-    'roomsPricing': true,
-    'facilitiesMeals': false,
-    'rules': false,
-    'availability': true,
-    'contact': false,
+    HostelManagerPermissions.basicInfo: true,
+    HostelManagerPermissions.photos: false,
+    HostelManagerPermissions.roomsPricing: true,
+    HostelManagerPermissions.facilitiesMeals: false,
+    HostelManagerPermissions.rules: false,
+    HostelManagerPermissions.availability: true,
+    HostelManagerPermissions.contact: false,
   };
   bool _saving = false;
-
-  static const _labels = <String, String>{
-    'basicInfo': 'Basic information',
-    'photos': 'Photos',
-    'roomsPricing': 'Rooms & pricing',
-    'facilitiesMeals': 'Facilities & meals',
-    'rules': 'Rules',
-    'availability': 'Availability',
-    'contact': 'Contact information',
-  };
 
   @override
   void dispose() {
@@ -101,7 +92,7 @@ class _HostelManagersScreenState extends State<HostelManagersScreen> {
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: _labels.entries.map((entry) => SwitchListTile(
+              children: HostelManagerPermissions.labels.entries.map((entry) => SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(entry.value),
                 value: values[entry.key] == true,
@@ -137,10 +128,21 @@ class _HostelManagersScreenState extends State<HostelManagersScreen> {
     final authUid = FirebaseService.initialized ? FirebaseAuth.instance.currentUser?.uid : null;
     final currentUid = active?.id ?? authUid;
 
-    return Scaffold(
-      backgroundColor: AppColors.cream,
-      appBar: AppBar(title: const Text('Hostel Managers')),
-      body: StreamBuilder<List<HostelManager>>(
+    return FutureBuilder<Hostel?>(
+      future: _repository.getHostel(widget.hostelId),
+      builder: (context, hostelSnapshot) {
+        final hostel = hostelSnapshot.data;
+        final isOwner = hostel != null && currentUid != null && hostel.ownerId == currentUid;
+        if (hostelSnapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(backgroundColor: AppColors.cream, body: Center(child: CircularProgressIndicator(color: AppColors.primaryGreen)));
+        }
+        if (!isOwner) {
+          return const Scaffold(backgroundColor: AppColors.cream, body: Center(child: Padding(padding: EdgeInsets.all(24), child: Text('Only the hostel owner can manage manager access.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.mutedText)))));
+        }
+        return Scaffold(
+          backgroundColor: AppColors.cream,
+          appBar: AppBar(title: const Text('Hostel Managers')),
+          body: StreamBuilder<List<HostelManager>>(
         stream: _repository.watchManagers(widget.hostelId),
         builder: (context, snapshot) {
           final managers = snapshot.data ?? const <HostelManager>[];
@@ -200,8 +202,9 @@ class _HostelManagersScreenState extends State<HostelManagersScreen> {
                 ),
             ],
           );
-        },
-      ),
+          },
+        );
+      },
     );
   }
 }
