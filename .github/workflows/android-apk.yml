@@ -28,12 +28,10 @@ jobs:
         shell: bash
         run: |
           if [ -f android/app/build.gradle.kts ]; then
-            sed -i -E '/^[[:space:]]*jvmTarget[[:space:]]*=.*toString\(\)/d' android/app/build.gradle.kts
-            sed -i -E '/^[[:space:]]*kotlinOptions[[:space:]]*\{/d' android/app/build.gradle.kts
+            perl -0pi -e 's/^[ \t]*kotlinOptions[ \t]*\{.*?^[ \t]*\}//ms' android/app/build.gradle.kts
             printf '\nkotlin {\n    compilerOptions {\n        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17\n    }\n}\n' >> android/app/build.gradle.kts
           elif [ -f android/app/build.gradle ]; then
-            sed -i -E '/^[[:space:]]*jvmTarget[[:space:]]*=.*toString\(\)/d' android/app/build.gradle
-            sed -i -E '/^[[:space:]]*kotlinOptions[[:space:]]*\{/d' android/app/build.gradle
+            perl -0pi -e 's/^[ \t]*kotlinOptions[ \t]*\{.*?^[ \t]*\}//ms' android/app/build.gradle
             printf '\nkotlin {\n    compilerOptions {\n        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17\n    }\n}\n' >> android/app/build.gradle
           fi
 
