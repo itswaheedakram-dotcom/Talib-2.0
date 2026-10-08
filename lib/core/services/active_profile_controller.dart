@@ -34,4 +34,5 @@ const temporaryProfiles=<ActiveDemoProfile>[
   ActiveDemoProfile(id:'demo-user-2',name:'Ali Raza',city:'Multan, Punjab',level:'BS Software Engineering',institute:'BZU Multan',program:'Software Engineering'),
   ActiveDemoProfile(id:'demo-user-3',name:'Hira Ahmed',city:'Islamabad',level:'MS Education',institute:'NUST Islamabad',program:'Education'),
   ActiveDemoProfile(id:'demo-user-4',name:'Usman Malik',city:'Faisalabad, Punjab',level:'BS Business Administration',institute:'University of Agriculture Faisalabad',program:'Business Administration'),
+  ActiveDemoProfile(id:'demo-user-5',name:'Ahtasham Malik',city:'Lahore, Punjab',level:'BS Business Administration',institute:'University of the Punjab',program:'Business Administration'),
 ];
