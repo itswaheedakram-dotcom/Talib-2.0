@@ -159,6 +159,23 @@ class HostelRepository {
     } else {
       reviews.insert(0, review);
     }
+    final hostelIndex = _demoHostels.indexWhere((h) => h.id == hostelId);
+    if (hostelIndex >= 0) {
+      final total = reviews.fold<double>(0, (sum, item) => sum + item.rating);
+      final current = _demoHostels[hostelIndex];
+      _demoHostels[hostelIndex] = Hostel(
+        id: current.id, name: current.name, city: current.city, area: current.area,
+        type: current.type, gender: current.gender, distance: current.distance,
+        price: current.price, securityFee: current.securityFee, roomType: current.roomType,
+        availability: current.availability, meals: current.meals, ac: current.ac,
+        facilities: current.facilities, imageUrls: current.imageUrls, description: current.description,
+        phone: current.phone, website: current.website, imageUrl: current.imageUrl, address: current.address,
+        ownerId: current.ownerId, ownerName: current.ownerName, status: current.status,
+        isVerified: current.isVerified, isDemo: current.isDemo,
+        rating: reviews.isEmpty ? 0 : total / reviews.length,
+        reviewCount: reviews.length, ratingTotal: total, rooms: current.rooms, rules: current.rules,
+      );
+    }
   }
 
   static Future<String> submitClaim({
@@ -186,7 +203,12 @@ class HostelRepository {
       return id;
     }
     final db = FirebaseFirestore.instance;
-    final ref = db.collection('hostelClaims').doc();
+    final ref = db.collection('hostelClaims').doc('${hostelId}_${userId}');
+    final existing = await ref.get();
+    if (existing.exists) {
+      final existingStatus = (existing.data()?['status'] ?? 'pending').toString();
+      if (existingStatus == 'approved') return ref.id;
+    }
     await ref.set({
       'hostelId': hostelId,
       'hostelName': hostelName,
