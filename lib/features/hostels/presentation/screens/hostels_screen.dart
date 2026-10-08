@@ -685,7 +685,8 @@ class _HostelsScreenState extends State<HostelsScreen> {
       ],
     );
   }
-}  List<String> _values(
+
+  List<String> _values(
     List<Hostel> hostels,
     String Function(Hostel) getter,
   ) {
