@@ -42,7 +42,6 @@ class _HostelsScreenState extends State<HostelsScreen> {
       if (!FirebaseService.initialized) return;
       final repository = HostelRepository();
       _repository = repository;
-      await repository.seedDemoDataIfEmpty();
       _hostelSubscription = repository.watchHostels().listen(
         (hostels) {
           if (!mounted) return;
