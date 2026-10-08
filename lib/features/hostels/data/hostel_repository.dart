@@ -5,7 +5,6 @@ import 'hostel_seed_data.dart';
 import 'hostel_review.dart';
 import 'hostel_claim.dart';
 import 'hostel_manager.dart';
-import 'hostel_manager.dart';
 import '../../../core/services/firebase_service.dart';
 
 class HostelRepository {
