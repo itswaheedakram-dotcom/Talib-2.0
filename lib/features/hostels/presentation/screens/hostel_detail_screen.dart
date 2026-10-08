@@ -200,6 +200,8 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
             _ratingSummary(hostel.rating, hostel.reviewCount),
           ],
           const SizedBox(height: 14),
+          _quickHighlights(),
+          const SizedBox(height: 14),
           _gallery(gallery),
           const SizedBox(height: 4),
           _sectionTitle('Location'),
@@ -260,6 +262,10 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
             if (hostel.meals.isNotEmpty)
               _infoRow(Icons.restaurant_outlined, 'Meals / Mess', hostel.meals),
           ]),
+          if (hostel.rooms.isNotEmpty) ...[
+            _sectionTitle('Rooms & Pricing'),
+            _roomsCard(),
+          ],
           if (hostel.facilities.isNotEmpty) ...[
             _sectionTitle('Facilities'),
             _infoCard([
@@ -290,6 +296,10 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                     .toList(),
               ),
             ]),
+          ],
+          if (hostel.rules.isNotEmpty) ...[
+            _sectionTitle('Hostel Rules'),
+            _rulesCard(),
           ],
           if (hostel.description.isNotEmpty) ...[
             _sectionTitle('About Hostel'),
@@ -400,6 +410,62 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
             ),
     );
   }
+  Widget _quickHighlights() {
+    final highlights = <Widget>[
+      if (hostel.price.isNotEmpty) _highlight(Icons.payments_outlined, hostel.price, 'Monthly'),
+      if (hostel.roomType.isNotEmpty) _highlight(Icons.bed_outlined, hostel.roomType, 'Room'),
+      if (hostel.gender.isNotEmpty) _highlight(Icons.people_outline, hostel.gender, 'For'),
+      if (hostel.availability.isNotEmpty) _highlight(Icons.event_available_outlined, hostel.availability, 'Available'),
+      if (hostel.ac) _highlight(Icons.ac_unit_outlined, 'AC', 'Room'),
+    ];
+    if (highlights.isEmpty) return const SizedBox.shrink();
+    return Wrap(spacing: 8, runSpacing: 8, children: highlights);
+  }
+
+  Widget _highlight(IconData icon, String value, String label) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 92),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.divider)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, color: AppColors.primaryGreen, size: 19),
+        const SizedBox(width: 7),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: const TextStyle(color: AppColors.mutedText, fontSize: 10)),
+          const SizedBox(height: 2),
+          ConstrainedBox(constraints: const BoxConstraints(maxWidth: 150), child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.darkGreen, fontSize: 12, fontWeight: FontWeight.w700))),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _roomsCard() {
+    return _infoCard([
+      ...hostel.rooms.map((room) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Container(
+          width: double.infinity, padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: AppColors.cream, borderRadius: BorderRadius.circular(12)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [Expanded(child: Text(room.type.isEmpty ? 'Room' : room.type, style: const TextStyle(color: AppColors.darkGreen, fontSize: 15, fontWeight: FontWeight.w700))), if (room.ac) _tagPill('AC')]),
+            const SizedBox(height: 8),
+            Wrap(spacing: 14, runSpacing: 7, children: [
+              if (room.rent.isNotEmpty) _roomMeta('Rent', room.rent),
+              if (room.securityFee.isNotEmpty) _roomMeta('Security', room.securityFee),
+              if (room.totalBeds > 0) _roomMeta('Beds', '${room.availableBeds}/${room.totalBeds} available'),
+            ]),
+            if (room.notes.isNotEmpty) ...[const SizedBox(height: 8), Text(room.notes, style: const TextStyle(color: AppColors.mutedText, fontSize: 12, height: 1.35))],
+          ]),
+        ),
+      )),
+    ]);
+  }
+
+  Widget _roomMeta(String label, String value) => RichText(text: TextSpan(children: [TextSpan(text: '$label\n', style: const TextStyle(color: AppColors.mutedText, fontSize: 10)), TextSpan(text: value, style: const TextStyle(color: AppColors.darkGreen, fontSize: 12, fontWeight: FontWeight.w700))]));
+
+  Widget _tagPill(String value) => Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: AppColors.softGreen, borderRadius: BorderRadius.circular(8)), child: Text(value, style: const TextStyle(color: AppColors.darkGreen, fontSize: 10, fontWeight: FontWeight.w700)));
+
+  Widget _rulesCard() => _infoCard(hostel.rules.map((rule) => Padding(padding: const EdgeInsets.only(bottom: 9), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.check_circle_outline, color: AppColors.primaryGreen, size: 18), const SizedBox(width: 9), Expanded(child: Text(rule, style: const TextStyle(color: AppColors.mutedText, fontSize: 13, height: 1.35)))]))).toList());
   Widget _reviewsCard() {
     return StreamBuilder<List<HostelReview>>(
       stream: _reviewStream(),
