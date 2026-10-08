@@ -2,7 +2,7 @@ name: Flutter Build Check
 
 on:
   push:
-    branches: [main]
+    branches: [main, firestore-from-78c6-stable]
   workflow_dispatch:
 
 jobs:
