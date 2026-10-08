@@ -433,7 +433,7 @@ class HostelRepository {
   }
 
   Stream<List<HostelManager>> watchManagers(String hostelId) {
-    if (!FirebaseService.initialized) return Stream.value(const <HostelManager>[]);
+    if (!FirebaseService.initialized) return Stream.value(List<HostelManager>.from(_demoManagers[hostelId] ?? const []));
     return _collection.doc(hostelId).collection('managers').snapshots().map(
       (s) => s.docs.map(HostelManager.fromDoc).toList()
         ..sort((a, b) => a.userName.compareTo(b.userName)),
