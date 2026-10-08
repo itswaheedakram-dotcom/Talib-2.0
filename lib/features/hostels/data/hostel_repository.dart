@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/hostel.dart';
 import 'hostel_seed_data.dart';
