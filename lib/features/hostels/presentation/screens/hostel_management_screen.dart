@@ -8,7 +8,6 @@ import '../../../../core/services/active_profile_controller.dart';
 import '../../../models/hostel.dart';
 import '../../data/hostel_repository.dart';
 import '../../data/hostel_manager.dart';
-import '../../data/hostel_seed_data.dart';
 
 class HostelManagementScreen extends StatefulWidget {
   final String hostelId;
@@ -23,7 +22,6 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
   Hostel? _hostel;
   bool _loading = true;
   bool _saving = false;
-  HostelManager? _managerAccess;
   HostelManager? _manager;
   final _availability = TextEditingController();
 
@@ -118,7 +116,15 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
         rooms: hostel.rooms,
         rules: hostel.rules,
       );
-      await HostelRepository.updateHostelSafe(updated);
+      if (isOwner) {
+        await HostelRepository.updateHostelSafe(updated);
+      } else {
+        await HostelRepository().updateHostelSectionSafe(
+          hostel: hostel,
+          permission: HostelManagerPermissions.availability,
+          changes: {'availability': _availability.text.trim()},
+        );
+      }
       if (!mounted) return;
       setState(() => _hostel = updated);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hostel availability updated.')));
