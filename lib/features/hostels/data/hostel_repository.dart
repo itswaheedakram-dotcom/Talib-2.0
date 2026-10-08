@@ -118,6 +118,7 @@ class HostelRepository {
 
   static final List<Hostel> _demoHostels = List<Hostel>.from(exampleHostels);
   static final Map<String, HostelClaim> _demoClaims = {};
+  static final Map<String, Map<String, HostelManager>> _demoManagers = {};
 
   static List<Hostel> get demoHostels => List<Hostel>.unmodifiable(_demoHostels);
   static final Map<String, List<HostelReview>> _demoReviews = {
@@ -441,7 +442,7 @@ class HostelRepository {
   }
 
   Future<HostelManager?> getManager(String hostelId, String userId) async {
-    if (!FirebaseService.initialized) return null;
+    if (!FirebaseService.initialized) return _demoManagers[hostelId]?[userId];
     final doc = await _collection.doc(hostelId).collection('managers').doc(userId).get();
     return doc.exists ? HostelManager.fromDoc(doc) : null;
   }
@@ -457,7 +458,10 @@ class HostelRepository {
   }
 
   Future<void> removeManager({required String hostelId, required String userId}) async {
-    if (!FirebaseService.initialized) return;
+    if (!FirebaseService.initialized) {
+      _demoManagers[hostelId]?.remove(userId);
+      return;
+    }
     await _collection.doc(hostelId).collection('managers').doc(userId).delete();
   }
 
