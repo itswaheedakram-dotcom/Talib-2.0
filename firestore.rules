@@ -69,7 +69,17 @@ service cloud.firestore {
     match /hostelClaims/{claimId} {
       allow create: if signedIn()
         && request.resource.data.userId == request.auth.uid
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status == 'pending'
+        && request.resource.data.hostelId is string
+        && request.resource.data.hostelId.size() > 0
+        && request.resource.data.hostelName is string
+        && request.resource.data.hostelName.size() > 0
+        && request.resource.data.userName is string
+        && request.resource.data.userName.size() > 0
+        && request.resource.data.contact is string
+        && request.resource.data.contact.size() <= 100
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 2000;
       allow read: if admin() || (signedIn() && resource.data.userId == request.auth.uid);
       allow update: if admin();
       allow delete: if admin();
