@@ -47,11 +47,11 @@ jobs:
 
           if [ -f android/app/build.gradle.kts ]; then
             sed -i 's/JavaVersion\.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle.kts
-            sed -i '/^[[:space:]]*kotlinOptions[[:space:]]*{[[:space:]]*$/,/^[[:space:]]*}[[:space:]]*$/d' android/app/build.gradle.kts
+            perl -0pi -e 's/kotlinOptions\\s*\\{.*?\\}//s' android/app/build.gradle.kts
             printf '\nkotlin {\n    compilerOptions {\n        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17\n    }\n}\n' >> android/app/build.gradle.kts
           elif [ -f android/app/build.gradle ]; then
             sed -i 's/JavaVersion\.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle
-            sed -i '/^[[:space:]]*kotlinOptions[[:space:]]*{[[:space:]]*$/,/^[[:space:]]*}[[:space:]]*$/d' android/app/build.gradle
+            perl -0pi -e 's/kotlinOptions\\s*\\{.*?\\}//s' android/app/build.gradle
             printf '\nkotlin {\n    compilerOptions {\n        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17\n    }\n}\n' >> android/app/build.gradle
           fi
 
