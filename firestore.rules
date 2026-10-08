@@ -5,6 +5,14 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function admin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function hostelOwner(String hostelId) {
+      return signedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
     function mutualFollow(String uid, String otherUid) {
       return uid != otherUid
         && exists(/databases/$(database)/documents/users/$(uid)/following/$(otherUid))
@@ -46,10 +54,50 @@ service cloud.firestore {
     }
 
     match /hostels/{hostelId} {
-      allow read, write: if signedIn();
+      // Students can discover only approved listings. Owners/admins can read
+      // their own pending/rejected records.
+      allow read: if resource.data.status == 'approved'
+        || hostelOwner(hostelId)
+        || admin();
+
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.status == 'pending';
+
+      allow update: if admin()
+        || (hostelOwner(hostelId)
+          && request.resource.data.ownerId == resource.data.ownerId
+          && request.resource.data.status == resource.data.status);
+
+      allow delete: if admin() || hostelOwner(hostelId);
+
       match /reviews/{reviewId} {
-        allow read, write: if signedIn();
+        allow read: if true;
+        allow create: if signedIn()
+          && reviewId == request.auth.uid
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.rating is number
+          && request.resource.data.rating >= 1
+          && request.resource.data.rating <= 5
+          && request.resource.data.comment is string
+          && request.resource.data.comment.size() <= 2000;
+
+        allow update, delete: if signedIn()
+          && reviewId == request.auth.uid
+          && resource.data.userId == request.auth.uid;
       }
+    }
+
+    match /hostelClaims/{claimId} {
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending';
+
+      allow read: if admin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+
+      allow update: if admin();
+      allow delete: if admin();
     }
 
     match /resources/{resourceId} {
