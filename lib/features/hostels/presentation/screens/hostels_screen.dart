@@ -22,7 +22,7 @@ class _HostelsScreenState extends State<HostelsScreen> {
   HostelRepository? _repository;
   StreamSubscription<List<Hostel>>? _hostelSubscription;
 
-  List<Hostel> _hostels = List<Hostel>.from(exampleHostels);
+  List<Hostel> _hostels = HostelRepository.demoHostels.toList();
   String _city = 'All';
   String _gender = 'All';
   String _type = 'All';
@@ -47,9 +47,7 @@ class _HostelsScreenState extends State<HostelsScreen> {
         (hostels) {
           if (!mounted) return;
           setState(() {
-            _hostels = hostels.isEmpty
-                ? List<Hostel>.from(exampleHostels)
-                : hostels;
+            _hostels = hostels.isEmpty ? HostelRepository.demoHostels.toList() : hostels;
           });
         },
         onError: (_) {},
@@ -68,7 +66,7 @@ class _HostelsScreenState extends State<HostelsScreen> {
 
   List<Hostel> _filteredHostels() {
     final repository = _repository;
-    if (repository == null) return _localDiscover(_hostels);
+    if (repository == null) return _localDiscover(HostelRepository.demoHostels);
     return repository.discover(
       _hostels,
       query: _searchController.text.trim(),
