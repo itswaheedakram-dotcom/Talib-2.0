@@ -49,8 +49,8 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
         meals:_meals, ac:rooms.any((r) => r.ac), facilities:List<String>.from(_facilities), rooms:rooms,
         rules:List<String>.from(_rules), phone:_phone.text.trim(), website:_website.text.trim(),
         imageUrl:_imageUrl.text.trim(), imageUrls:_imageUrls.text.split(',').map((e)=>e.trim()).where((e)=>e.isNotEmpty).toSet().toList(),
-        description:_description.text.trim(), ownerId:user.uid,
-        ownerName:user.displayName?.trim().isNotEmpty==true ? user.displayName!.trim() : 'Hostel Owner', status:'pending',
+        description:_description.text.trim(), ownerId:user?.uid ?? 'demo-user',
+        ownerName:user?.displayName?.trim().isNotEmpty==true ? user!.displayName!.trim() : 'Hostel Owner', status:'pending',
       );
       await HostelRepository.submitHostelSafe(hostel, demo: demoMode);
       if (!mounted) return;
