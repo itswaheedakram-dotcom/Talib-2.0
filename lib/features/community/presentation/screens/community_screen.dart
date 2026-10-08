@@ -200,15 +200,17 @@ class _CommunityScreenState extends State<CommunityScreen>{
       if(instituteFilterId!=null){
         posts=posts.where((p)=>p.instituteIds.contains(instituteFilterId)||p.instituteId==instituteFilterId).toList();
       }else if(timelineTab==0){
-        // No user-selected tags is valid: For You becomes the fallback feed.
-        if(topics.isNotEmpty){
-          posts=posts.where((p){
-            final values=p.tags.isEmpty?[p.category]:p.tags;
-            return values.any((tag)=>topics.any((selected)=>TimelineTopics.matches(selected,tag)));
-          }).toList();
-        }
+        // For You is the global feed. Topic and institute tabs are separate
+        // views and must not filter this default feed.
       }else if(timelineTab==1){
         posts=posts.where((p)=>following?.contains(p.authorId)==true).toList();
+      }else if(timelineTab==2 && category!='All'){
+        // Topic tabs use exact topic matching. One post can appear in every
+        // topic it is explicitly tagged with, but never in unrelated topics.
+        posts=posts.where((p){
+          final values=p.tags.isEmpty ? [p.category] : p.tags;
+          return values.any((tag)=>TimelineTopics.matches(category,tag));
+        }).toList();
       }
       if(widget.instituteId!=null)posts=posts.where((p)=>p.instituteIds.contains(widget.instituteId)||p.instituteId==widget.instituteId).toList();
       return _postList(posts,user);
