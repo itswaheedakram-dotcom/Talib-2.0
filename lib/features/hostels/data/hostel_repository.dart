@@ -431,40 +431,6 @@ class HostelRepository {
     return doc.exists ? HostelClaim.fromDoc(doc) : null;
   }
 
-  Stream<List<HostelManager>> watchManagers(String hostelId) {
-    if (!FirebaseService.initialized) return Stream.value(List<HostelManager>.from(_demoManagers[hostelId] ?? const []));
-    return _collection.doc(hostelId).collection('managers').snapshots().map(
-      (s) => s.docs.map(HostelManager.fromDoc).toList()
-        ..sort((a, b) => a.userName.compareTo(b.userName)),
-    );
-  }
-
-  Future<HostelManager?> getManager(String hostelId, String userId) async {
-    if (!FirebaseService.initialized) return _demoManagers[hostelId]?[userId];
-    final doc = await _collection.doc(hostelId).collection('managers').doc(userId).get();
-    return doc.exists ? HostelManager.fromDoc(doc) : null;
-  }
-
-  Future<void> saveManager({required String hostelId, required HostelManager manager}) async {
-    if (!FirebaseService.initialized) return;
-    await _collection.doc(hostelId).collection('managers').doc(manager.userId).set({
-      ...manager.toMap(),
-      'hostelId': hostelId,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-  }
-
-  Future<void> removeManager({required String hostelId, required String userId}) async {
-    if (!FirebaseService.initialized) {
-      _demoManagers[hostelId]?.remove(userId);
-      return;
-    }
-    await _collection.doc(hostelId).collection('managers').doc(userId).delete();
-  }
-
-  Future<HostelManager?> getCurrentManager(String hostelId, String userId) => getManager(hostelId, userId);
-
   /// Manager updates are section-based so owner-only fields stay protected.
   Future<void> updateHostelSectionSafe({
     required Hostel hostel,
