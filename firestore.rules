@@ -59,24 +59,24 @@ service cloud.firestore {
             'roomType','availability','meals','ac','facilities','imageUrl','imageUrls',
             'description','phone','website','address','rooms','rules','updatedAt'
           ]))
-        || (managerPermission('basicInfo') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-            ['name','type','gender','description','updatedAt']))
-        || (managerPermission('photos') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-            ['imageUrl','imageUrls','updatedAt']))
-        || (managerPermission('location') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-            ['city','area','distance','address','updatedAt'])
-        || (managerPermission('pricing') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-            ['price','securityFee','roomType','updatedAt']))
-        || (managerPermission('rooms') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-            ['rooms','updatedAt'])))
-        || (managerPermission('facilities') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-            ['facilities','meals','ac','updatedAt']))
-        || (managerPermission('rules') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-            ['rules','updatedAt']))
-        || (managerPermission('availability') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-            ['availability','updatedAt']))
-        || (managerPermission('contact') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-            ['phone','website','address','updatedAt']))
+        || (managerPermission('basicInfo')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','type','gender','description','updatedAt']))
+        || (managerPermission('location')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['city','area','distance','address','updatedAt']))
+        || (managerPermission('pricing')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['price','securityFee','roomType','updatedAt']))
+        || (managerPermission('rooms')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rooms','updatedAt']))
+        || (managerPermission('photos')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['imageUrl','imageUrls','updatedAt']))
+        || (managerPermission('facilities')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['facilities','meals','ac','updatedAt']))
+        || (managerPermission('rules')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rules','updatedAt']))
+        || (managerPermission('availability')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['availability','updatedAt']))
+        || (managerPermission('contact')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['phone','website','updatedAt']))
         || (signedIn()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reviewCount', 'ratingTotal', 'rating', 'updatedAt'])
           && request.resource.data.reviewCount is number
