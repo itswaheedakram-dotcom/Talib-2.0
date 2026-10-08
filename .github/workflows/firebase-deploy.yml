@@ -2,13 +2,6 @@ name: Deploy Firebase Firestore Rules
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - firestore-from-78c6-stable
-    paths:
-      - firestore.rules
-      - firebase.json
-      - .github/workflows/firebase-deploy.yml
 
 permissions:
   contents: read
