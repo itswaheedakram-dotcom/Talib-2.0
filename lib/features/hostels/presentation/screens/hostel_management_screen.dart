@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/services/firebase_service.dart';
+import '../../../../core/services/active_profile_controller.dart';
 import '../../../models/hostel.dart';
 import '../../data/hostel_repository.dart';
 import '../../data/hostel_seed_data.dart';
@@ -43,7 +44,7 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
       } catch (_) {}
     }
     if (hostel == null) {
-      for (final item in exampleHostels) {
+      for (final item in HostelRepository.demoHostels) {
         if (item.id == widget.hostelId) {
           hostel = item;
           break;
@@ -61,8 +62,14 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
   Future<void> _save() async {
     final hostel = _hostel;
     if (hostel == null) return;
-    final user = FirebaseAuth.instance.currentUser;
-    if (!hostel.isDemo && (user == null || user.uid != hostel.ownerId)) {
+    final active = ActiveProfileController.instance.active;
+    final user = FirebaseService.initialized ? FirebaseAuth.instance.currentUser : null;
+    final effectiveUid = active?.id ?? user?.uid;
+    if (hostel.isDemo && active != null && hostel.ownerId.isNotEmpty && effectiveUid != hostel.ownerId) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only the active demo profile that owns this listing can manage it.')));
+      return;
+    }
+    if (!hostel.isDemo && (user == null || effectiveUid != hostel.ownerId)) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only the hostel owner can manage this listing.')));
       return;
     }
