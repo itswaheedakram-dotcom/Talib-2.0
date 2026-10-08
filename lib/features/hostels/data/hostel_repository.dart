@@ -118,7 +118,6 @@ class HostelRepository {
 
   static final List<Hostel> _demoHostels = List<Hostel>.from(exampleHostels);
   static final Map<String, HostelClaim> _demoClaims = {};
-  static final Map<String, Map<String, HostelManager>> _demoManagers = {};
 
   static List<Hostel> get demoHostels => List<Hostel>.unmodifiable(_demoHostels);
   static final Map<String, List<HostelReview>> _demoReviews = {
