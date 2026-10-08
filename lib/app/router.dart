@@ -34,6 +34,7 @@ import '../features/hostels/presentation/screens/list_hostel_screen.dart';
 import '../features/hostels/presentation/screens/hostel_detail_screen.dart';
 import '../features/hostels/presentation/screens/hostel_claim_screen.dart';
 import '../features/hostels/presentation/screens/hostel_management_screen.dart';
+import '../features/hostels/presentation/screens/hostel_managers_screen.dart';
 import '../features/internships/presentation/screens/internships_screen.dart';
 import '../features/jobs/presentation/screens/jobs_screen.dart';
 import '../features/groups/presentation/screens/groups_screen.dart';
@@ -79,6 +80,7 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/hostels/list',builder:(_,__)=>const ListHostelScreen()),
   GoRoute(path:'/hostel/:id/claim',builder:(_,s)=>HostelClaimScreen(hostelId:s.pathParameters['id']!,hostelName:s.uri.queryParameters['name']??'Hostel',isDemo:s.pathParameters['id']!.startsWith('example_'))),
   GoRoute(path:'/hostel/:id/manage',builder:(_,s)=>HostelManagementScreen(hostelId:s.pathParameters['id']!)),
+  GoRoute(path:'/hostel/:id/managers',builder:(_,s)=>HostelManagersScreen(hostelId:s.pathParameters['id']!)),
   GoRoute(path:'/internships',builder:(_,__)=>const InternshipsScreen()),
   GoRoute(path:'/jobs',builder:(_,__)=>const JobsScreen()),
   GoRoute(path:'/groups',builder:(_,__)=>const GroupsScreen()),
