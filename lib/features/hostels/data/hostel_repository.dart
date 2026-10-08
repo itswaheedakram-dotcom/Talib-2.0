@@ -8,7 +8,98 @@ class HostelRepository {
   final FirebaseFirestore _db;
   CollectionReference<Map<String, dynamic>> get _collection => _db.collection('hostels');
 
-  Stream<List<Hostel>> watchHostels() => _collection.snapshots().map((s) => s.docs.map(Hostel.fromDoc).where((h) => h.status == 'approved').toList()..sort((a,b) => a.name.compareTo(b.name)));
+  Stream<List<Hostel>> watchHostels() => _collection.snapshots().map(
+    (s) => _sortRecommended(
+      s.docs.map(Hostel.fromDoc).where((h) => h.status == 'approved').toList(),
+    ),
+  );
+
+  /// Central discovery filtering used by Hostel screens.
+  List<Hostel> discover(
+    Iterable<Hostel> source, {
+    String query = '',
+    String city = 'All',
+    String gender = 'All',
+    String type = 'All',
+    String roomType = 'All',
+    bool acOnly = false,
+    String sort = 'Recommended',
+  }) {
+    final normalizedQuery = query.trim().toLowerCase();
+    final result = source.where((hostel) {
+      if (hostel.status.toLowerCase() != 'approved') return false;
+      if (city != 'All' && hostel.city != city) return false;
+      if (gender != 'All' && hostel.gender != gender) return false;
+      if (type != 'All' && hostel.type != type) return false;
+      if (roomType != 'All' &&
+          hostel.roomType != roomType &&
+          !hostel.rooms.any((room) => room.type == roomType)) {
+        return false;
+      }
+      if (acOnly && !hostel.ac && !hostel.rooms.any((room) => room.ac)) {
+        return false;
+      }
+      if (normalizedQuery.isEmpty) return true;
+      final haystack = <String>[
+        hostel.name,
+        hostel.city,
+        hostel.area,
+        hostel.type,
+        hostel.gender,
+        hostel.price,
+        hostel.roomType,
+        hostel.availability,
+        hostel.meals,
+        hostel.description,
+        hostel.address,
+        hostel.website,
+        ...hostel.facilities,
+        ...hostel.rules,
+        ...hostel.rooms.map((room) => room.type),
+      ].join(' ').toLowerCase();
+      return haystack.contains(normalizedQuery);
+    }).toList();
+
+    switch (sort) {
+      case 'Price Low':
+        result.sort((a, b) => _numericValue(a.price).compareTo(_numericValue(b.price)));
+        break;
+      case 'Price High':
+        result.sort((a, b) => _numericValue(b.price).compareTo(_numericValue(a.price)));
+        break;
+      case 'Nearest':
+        result.sort((a, b) => _numericValue(a.distance).compareTo(_numericValue(b.distance)));
+        break;
+      case 'Top Rated':
+        result.sort((a, b) => b.rating.compareTo(a.rating));
+        break;
+      default:
+        result.sort((a, b) {
+          final verified = b.isVerified.compareTo(a.isVerified);
+          if (verified != 0) return verified;
+          final rating = b.rating.compareTo(a.rating);
+          if (rating != 0) return rating;
+          return a.name.compareTo(b.name);
+        });
+    }
+    return result;
+  }
+
+  List<Hostel> _sortRecommended(List<Hostel> hostels) {
+    hostels.sort((a, b) {
+      final verified = b.isVerified.compareTo(a.isVerified);
+      if (verified != 0) return verified;
+      final rating = b.rating.compareTo(a.rating);
+      if (rating != 0) return rating;
+      return a.name.compareTo(b.name);
+    });
+    return hostels;
+  }
+
+  double _numericValue(String value) {
+    final match = RegExp(r'[-+]?\d+(?:\.\d+)?').firstMatch(value.replaceAll(',', ''));
+    return match == null ? double.infinity : double.tryParse(match.group(0)!) ?? double.infinity;
+  }
   Stream<List<Hostel>> watchOwnerHostels(String ownerId) => _collection.where('ownerId', isEqualTo: ownerId).snapshots().map((s) => s.docs.map(Hostel.fromDoc).toList()..sort((a,b) => a.name.compareTo(b.name)));
 
   Future<Hostel?> getHostel(String hostelId) async {
