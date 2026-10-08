@@ -125,7 +125,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
         );
       } else {
         await HostelRepository().submitReview(
-        hostelId: hostel.id,
+          hostelId: hostel.id,
         userId: user!.uid,
         userName: user.displayName?.trim().isNotEmpty == true
             ? user.displayName!.trim()
