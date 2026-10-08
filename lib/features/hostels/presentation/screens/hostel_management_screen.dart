@@ -259,7 +259,7 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
         ),
       );
 
-  Widget _section(String title, String permission, List<Widget> children, VoidCallback save) {
+  Widget _section(String title, String permission, List<Widget> children, VoidCallback save, {String? helper, IconData icon = Icons.edit_outlined}) {
     if (!_can(permission)) return const SizedBox.shrink();
     return Card(
       color: AppColors.white,
@@ -270,7 +270,8 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(color: AppColors.darkGreen, fontSize: 18, fontWeight: FontWeight.w800)),
+            Row(children:[Icon(icon,color:AppColors.primaryGreen),const SizedBox(width:8),Expanded(child:Text(title, style: const TextStyle(color: AppColors.darkGreen, fontSize: 18, fontWeight: FontWeight.w800)))]),
+            if(helper!=null) ...[const SizedBox(height:4),Text(helper,style:const TextStyle(color:AppColors.mutedText))],
             const SizedBox(height: 12),
             ...children,
             Align(
@@ -285,6 +286,12 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
         ),
       ),
     );
+  }
+
+  int get _completion {
+    final h=_hostel; if(h==null)return 0;
+    final checks=[h.name.isNotEmpty,h.city.isNotEmpty,h.address.isNotEmpty,h.price.isNotEmpty,h.rooms.isNotEmpty,h.facilities.isNotEmpty,h.rules.isNotEmpty,h.phone.isNotEmpty,h.imageUrls.isNotEmpty||h.imageUrl.isNotEmpty];
+    return ((checks.where((x)=>x).length/checks.length)*100).round();
   }
 
   Widget _roomsSection() {
@@ -321,6 +328,8 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
     );
   }
 
+  void _duplicateRoom(int index) { final r=_rooms[index]; setState(()=>_rooms.insert(index+1,_RoomDraft(type:TextEditingController(text:r.type.text),rent:TextEditingController(text:r.rent.text),security:TextEditingController(text:r.security.text),totalBeds:TextEditingController(text:r.totalBeds.text),availableBeds:TextEditingController(text:r.availableBeds.text),notes:TextEditingController(text:r.notes.text),ac:r.ac))); }
+
   Widget _roomCard(int index) {
     final r = _rooms[index];
     return Container(
@@ -335,6 +344,7 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
         children: [
           Row(children: [
             Expanded(child: Text('Room ${index + 1}', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.darkGreen))),
+            IconButton(tooltip:'Duplicate room',onPressed: () => _duplicateRoom(index), icon: const Icon(Icons.copy_outlined)),
             IconButton(onPressed: () => setState(() { r.dispose(); _rooms.removeAt(index); }), icon: const Icon(Icons.delete_outline)),
           ]),
           _roomField(r.type, 'Room type', r.setType),
@@ -416,6 +426,7 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
       );
     }
 
+    final completion=_completion;
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
@@ -432,6 +443,12 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
         children: [
+          Card(color:AppColors.white,elevation:0,child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Row(children:[const Expanded(child:Text('Hostel setup',style:TextStyle(color:AppColors.darkGreen,fontSize:19,fontWeight:FontWeight.w800))),Text('\$completion%',style:const TextStyle(color:AppColors.primaryGreen,fontSize:20,fontWeight:FontWeight.w800))]),
+            const SizedBox(height:6),Text(completion==100?'Profile complete — ready to show students.':'Complete the missing sections to make your listing stronger.',style:const TextStyle(color:AppColors.mutedText)),
+            const SizedBox(height:10),LinearProgressIndicator(value:completion/100,minHeight:8,borderRadius:BorderRadius.circular(8)),
+          ])),),
+          const SizedBox(height:12),
           Text(h.name, style: const TextStyle(color: AppColors.darkGreen, fontSize: 24, fontWeight: FontWeight.w800)),
           const SizedBox(height: 5),
           Text(_isOwner ? 'Owner — full hostel access' : 'Manager — assigned sections only', style: const TextStyle(color: AppColors.mutedText)),
