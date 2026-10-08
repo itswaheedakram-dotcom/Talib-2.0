@@ -64,6 +64,15 @@ class _HostelClaimScreenState extends State<HostelClaimScreen> {
         if (mounted) context.push('/signin');
         return;
       }
+      final existing = await HostelRepository().getMyClaim(widget.hostelId, userId);
+      if (existing != null && (existing.status == 'pending' || existing.status == 'approved')) {
+        if (!mounted) return;
+        final message = existing.status == 'approved'
+            ? 'You already own or have an approved claim for this hostel.'
+            : 'Your claim for this hostel is already pending.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        return;
+      }
       await HostelRepository.submitClaim(
         hostelId: widget.hostelId,
         hostelName: widget.hostelName,
