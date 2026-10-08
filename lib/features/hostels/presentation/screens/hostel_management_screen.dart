@@ -7,6 +7,7 @@ import '../../../../core/services/firebase_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../models/hostel.dart';
 import '../../data/hostel_repository.dart';
+import '../../data/hostel_manager.dart';
 import '../../data/hostel_seed_data.dart';
 
 class HostelManagementScreen extends StatefulWidget {
@@ -22,6 +23,7 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
   Hostel? _hostel;
   bool _loading = true;
   bool _saving = false;
+  HostelManager? _manager;
   final _availability = TextEditingController();
 
   @override
@@ -51,9 +53,19 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
         }
       }
     }
+    HostelManager? manager;
+    final active = ActiveProfileController.instance.active;
+    final user = FirebaseService.initialized ? FirebaseAuth.instance.currentUser : null;
+    final uid = active?.id ?? user?.uid;
+    if (hostel != null && uid != null && uid != hostel.ownerId) {
+      try {
+        manager = await HostelRepository().getManager(hostel.id, uid);
+      } catch (_) {}
+    }
     if (!mounted) return;
     setState(() {
       _hostel = hostel;
+      _manager = manager;
       _availability.text = hostel?.availability ?? '';
       _loading = false;
     });
@@ -65,12 +77,10 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
     final active = ActiveProfileController.instance.active;
     final user = FirebaseService.initialized ? FirebaseAuth.instance.currentUser : null;
     final effectiveUid = active?.id ?? user?.uid;
-    if (hostel.isDemo && active != null && hostel.ownerId.isNotEmpty && effectiveUid != hostel.ownerId) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only the active demo profile that owns this listing can manage it.')));
-      return;
-    }
-    if (!hostel.isDemo && (user == null || effectiveUid != hostel.ownerId)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only the hostel owner can manage this listing.')));
+    final isOwner = effectiveUid != null && effectiveUid == hostel.ownerId;
+    final canEditAvailability = isOwner || (_manager?.can('availability') == true);
+    if (!canEditAvailability) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You do not have permission to update hostel availability.')));
       return;
     }
     setState(() => _saving = true);
