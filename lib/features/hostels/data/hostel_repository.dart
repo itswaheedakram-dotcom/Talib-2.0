@@ -75,7 +75,7 @@ class HostelRepository {
         break;
       default:
         result.sort((a, b) {
-          final verified = b.isVerified.compareTo(a.isVerified);
+          final verified = (b.isVerified ? 1 : 0).compareTo(a.isVerified ? 1 : 0);
           if (verified != 0) return verified;
           final rating = b.rating.compareTo(a.rating);
           if (rating != 0) return rating;
@@ -87,7 +87,7 @@ class HostelRepository {
 
   List<Hostel> _sortRecommended(List<Hostel> hostels) {
     hostels.sort((a, b) {
-      final verified = b.isVerified.compareTo(a.isVerified);
+      final verified = (b.isVerified ? 1 : 0).compareTo(a.isVerified ? 1 : 0);
       if (verified != 0) return verified;
       final rating = b.rating.compareTo(a.rating);
       if (rating != 0) return rating;
