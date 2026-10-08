@@ -4,6 +4,8 @@ on:
     branches: [main, firestore-from-78c6-stable]
   workflow_dispatch:
 
+# Manual rebuild trigger for firestore-from-78c6-stable.
+
 jobs:
   build:
     runs-on: ubuntu-latest
