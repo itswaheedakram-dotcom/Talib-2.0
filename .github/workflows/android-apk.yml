@@ -28,11 +28,12 @@ jobs:
         shell: bash
         run: |
           if [ -f android/app/build.gradle.kts ]; then
-            perl -0pi -e 's/^[ \t]*kotlinOptions[ \t]*\{.*?^[ \t]*\}//ms' android/app/build.gradle.kts
-            printf '\nkotlin {\n    compilerOptions {\n        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17\n    }\n}\n' >> android/app/build.gradle.kts
+            sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' android/app/build.gradle.kts
           elif [ -f android/app/build.gradle ]; then
-            perl -0pi -e 's/^[ \t]*kotlinOptions[ \t]*\{.*?^[ \t]*\}//ms' android/app/build.gradle
-            printf '\nkotlin {\n    compilerOptions {\n        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17\n    }\n}\n' >> android/app/build.gradle
+            sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/' android/app/build.gradle
+          else
+            echo "Android app Gradle file not found"
+            exit 1
           fi
 
       - name: Configure Kotlin and Java compatibility
@@ -45,12 +46,12 @@ jobs:
           fi
 
           if [ -f android/app/build.gradle.kts ]; then
+            perl -0pi -e 's/^[ \t]*kotlinOptions[ \t]*\{.*?^[ \t]*\}//ms' android/app/build.gradle.kts
             sed -i -E '/^[[:space:]]*jvmTarget[[:space:]]*=.*toString\(\)/d' android/app/build.gradle.kts
-            sed -i -E '/^[[:space:]]*kotlinOptions[[:space:]]*\{/d' android/app/build.gradle.kts
             printf '\nkotlin {\n    compilerOptions {\n        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17\n    }\n}\n' >> android/app/build.gradle.kts
           elif [ -f android/app/build.gradle ]; then
+            perl -0pi -e 's/^[ \t]*kotlinOptions[ \t]*\{.*?^[ \t]*\}//ms' android/app/build.gradle
             sed -i -E '/^[[:space:]]*jvmTarget[[:space:]]*=.*toString\(\)/d' android/app/build.gradle
-            sed -i -E '/^[[:space:]]*kotlinOptions[[:space:]]*\{/d' android/app/build.gradle
             printf '\nkotlin {\n    compilerOptions {\n        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17\n    }\n}\n' >> android/app/build.gradle
           fi
 
