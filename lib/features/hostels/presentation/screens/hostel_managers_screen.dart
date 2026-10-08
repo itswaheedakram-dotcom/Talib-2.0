@@ -159,7 +159,7 @@ class _HostelManagersScreenState extends State<HostelManagersScreen> {
               const SizedBox(height: 10),
               TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Manager name', hintText: 'Optional display name', prefixIcon: Icon(Icons.badge_outlined))),
               const SizedBox(height: 12),
-              ..._labels.entries.map((entry) => CheckboxListTile(
+              ...HostelManagerPermissions.labels.entries.map((entry) => CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(entry.value),
                 value: _permissions[entry.key] == true,
