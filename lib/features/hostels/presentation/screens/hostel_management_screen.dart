@@ -194,6 +194,14 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
             label: const Text('Save changes'),
           ),
           const SizedBox(height: 10),
+          if (isOwnerLabel(hostel)) ...[
+            OutlinedButton.icon(
+              onPressed: () => context.push('/hostel/' + Uri.encodeComponent(hostel.id) + '/managers'),
+              icon: const Icon(Icons.manage_accounts_outlined),
+              label: const Text('Manage managers'),
+            ),
+            const SizedBox(height: 10),
+          ],
           OutlinedButton.icon(
             onPressed: () => context.push('/hostel/' + Uri.encodeComponent(hostel.id), extra: hostel),
             icon: const Icon(Icons.visibility_outlined),
