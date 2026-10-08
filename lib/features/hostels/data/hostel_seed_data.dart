@@ -7,6 +7,7 @@ import '../../models/hostel.dart';
 final List<Hostel> exampleHostels = [
   Hostel(
     id: 'example_student_residency_lahore',
+    ownerId: 'demo-user-5', ownerName: 'Ahtasham Malik', isDemo: true,
     name: 'Student Residency Lahore',
     city: 'Lahore',
     area: 'Johar Town',
@@ -39,6 +40,7 @@ final List<Hostel> exampleHostels = [
   ),
   Hostel(
     id: 'example_punjab_university_hostel',
+    ownerId: 'demo-user-5', ownerName: 'Ahtasham Malik', isDemo: true,
     name: 'Punjab University Hostel',
     city: 'Lahore',
     area: 'New Campus',
@@ -54,6 +56,7 @@ final List<Hostel> exampleHostels = [
   ),
   Hostel(
     id: 'example_bahawalpur_student_house',
+    ownerId: 'demo-user-5', ownerName: 'Ahtasham Malik', isDemo: true,
     name: 'Bahawalpur Student House',
     city: 'Bahawalpur',
     area: 'University Chowk',
@@ -84,6 +87,7 @@ final List<Hostel> exampleHostels = [
   ),
   Hostel(
     id: 'example_multan_scholars_hostel',
+    ownerId: 'demo-user-5', ownerName: 'Ahtasham Malik', isDemo: true,
     name: 'Multan Scholars Hostel',
     city: 'Multan',
     area: 'Bosan Road',
