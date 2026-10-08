@@ -192,37 +192,132 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
   Future<void> _pickInstitutes() async {
     await InstituteRepository.instance.load();
     final temp = Set<String>.from(_selectedInstituteIds);
+
+    String typeFilter = 'All';
+    String? provinceFilter;
+    String? cityFilter;
+    String? townFilter;
+
     final result = await showModalBottomSheet<Set<String>>(
       context: context,
       isScrollControlled: true,
       builder: (sheet) => StatefulBuilder(
         builder: (context, setSheet) {
-          final list = InstituteRepository.instance.items;
+          final all = InstituteRepository.instance.items;
+          final provinces = all.map((i) => i.province.trim()).where((v) => v.isNotEmpty).toSet().toList()..sort();
+          final cities = all
+              .where((i) => provinceFilter == null || i.province == provinceFilter)
+              .map((i) => i.city.trim()).where((v) => v.isNotEmpty).toSet().toList()..sort();
+          final towns = all
+              .where((i) => (provinceFilter == null || i.province == provinceFilter) &&
+                  (cityFilter == null || i.city == cityFilter))
+              .map((i) => i.town.trim()).where((v) => v.isNotEmpty).toSet().toList()..sort();
+
+          final list = all.where((institute) {
+            final typeOk = typeFilter == 'All' || institute.type.toLowerCase() == typeFilter.toLowerCase();
+            final provinceOk = provinceFilter == null || institute.province == provinceFilter;
+            final cityOk = cityFilter == null || institute.city == cityFilter;
+            final townOk = townFilter == null || institute.town == townFilter;
+            return typeOk && provinceOk && cityOk && townOk;
+          }).toList();
+
           return SafeArea(
             child: SizedBox(
-              height: MediaQuery.of(context).size.height * .78,
+              height: MediaQuery.of(context).size.height * .86,
               child: Column(
                 children: [
                   const Padding(
                     padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
                     child: Text('Tag Institutes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.darkGreen)),
                   ),
-                  Expanded(
-                    child: ListView(
-                      children: list.map((institute) {
-                        return CheckboxListTile(
-                          value: temp.contains(institute.id),
-                          title: Text(institute.name),
-                          subtitle: Text(institute.type + ' • ' + institute.city + ', ' + institute.province),
-                          activeColor: AppColors.primaryGreen,
-                          onChanged: (value) {
-                            setSheet(() {
-                              if (value == true) { temp.add(institute.id); } else { temp.remove(institute.id); }
-                            });
-                          },
-                        );
-                      }).toList(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: ['All', 'universities', 'colleges', 'schools'].map((type) => Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ChoiceChip(
+                            label: Text(type == 'All' ? 'All' : type[0].toUpperCase() + type.substring(1)),
+                            selected: typeFilter == type,
+                            selectedColor: AppColors.softGreen,
+                            onSelected: (_) => setSheet(() => typeFilter = type),
+                          ),
+                        )).toList(),
+                      ),
                     ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: provinceFilter,
+                            isExpanded: true,
+                            decoration: const InputDecoration(labelText: 'Province', isDense: true),
+                            items: [
+                              const DropdownMenuItem<String>(value: null, child: Text('All')),
+                              ...provinces.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))),
+                            ],
+                            onChanged: (value) => setSheet(() {
+                              provinceFilter = value;
+                              cityFilter = null;
+                              townFilter = null;
+                            }),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: cityFilter,
+                            isExpanded: true,
+                            decoration: const InputDecoration(labelText: 'City', isDense: true),
+                            items: [
+                              const DropdownMenuItem<String>(value: null, child: Text('All')),
+                              ...cities.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))),
+                            ],
+                            onChanged: (value) => setSheet(() {
+                              cityFilter = value;
+                              townFilter = null;
+                            }),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: DropdownButtonFormField<String>(
+                      value: townFilter,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Town / Area', isDense: true),
+                      items: [
+                        const DropdownMenuItem<String>(value: null, child: Text('All')),
+                        ...towns.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))),
+                      ],
+                      onChanged: (value) => setSheet(() => townFilter = value),
+                    ),
+                  ),
+                  Expanded(
+                    child: list.isEmpty
+                        ? const Center(child: Text('No institutes match these filters.'))
+                        : ListView(
+                            children: list.map((institute) => CheckboxListTile(
+                              value: temp.contains(institute.id),
+                              title: Text(institute.name),
+                              subtitle: Text(institute.type + ' • ' + institute.city + ', ' + institute.province +
+                                  (institute.town.trim().isEmpty ? '' : ' • ' + institute.town)),
+                              activeColor: AppColors.primaryGreen,
+                              onChanged: (value) => setSheet(() {
+                                if (value == true) {
+                                  temp.add(institute.id);
+                                } else {
+                                  temp.remove(institute.id);
+                                }
+                              }),
+                            )).toList(),
+                          ),
                   ),
                   Padding(
                     padding: const EdgeInsets.all(12),
@@ -236,7 +331,11 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
       ),
     );
     if (result != null) {
-      setState(() { _selectedInstituteIds..clear()..addAll(result); });
+      setState(() {
+        _selectedInstituteIds
+          ..clear()
+          ..addAll(result);
+      });
     }
   }
 
