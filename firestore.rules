@@ -60,12 +60,16 @@ service cloud.firestore {
             'description','phone','website','address','rooms','rules','updatedAt'
           ]))
         || (managerPermission('basicInfo') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-            ['name','city','area','type','gender','distance','roomType','updatedAt']))
+            ['name','type','gender','description','updatedAt']))
         || (managerPermission('photos') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
             ['imageUrl','imageUrls','updatedAt']))
-        || (managerPermission('roomsPricing') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-            ['price','securityFee','roomType','rooms','updatedAt']))
-        || (managerPermission('facilitiesMeals') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+        || (managerPermission('location') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+            ['city','area','distance','address','updatedAt'])
+        || (managerPermission('pricing') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+            ['price','securityFee','roomType','updatedAt']))
+        || (managerPermission('rooms') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+            ['rooms','updatedAt'])))
+        || (managerPermission('facilities') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
             ['facilities','meals','ac','updatedAt']))
         || (managerPermission('rules') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
             ['rules','updatedAt']))
@@ -86,18 +90,22 @@ service cloud.firestore {
       allow delete: if admin() || hostelOwner();
 
       match /managers/{managerId} {
-        allow read: if admin() || hostelOwner()
+        function parentHostelOwner() {
+          return signedIn()
+            && get(/databases/$(database)/documents/hostels/$(hostelId)).data.ownerId == request.auth.uid;
+        }
+        allow read: if admin() || parentHostelOwner()
           || (signedIn() && managerId == request.auth.uid && resource.data.status == 'active');
-        allow create: if hostelOwner()
+        allow create: if parentHostelOwner()
           && request.resource.data.userId == managerId
           && request.resource.data.hostelId == hostelId
           && request.resource.data.status == 'active'
           && request.resource.data.permissions is map;
-        allow update: if hostelOwner()
+        allow update: if parentHostelOwner()
           && request.resource.data.userId == resource.data.userId
           && request.resource.data.hostelId == resource.data.hostelId
           && request.resource.data.permissions is map;
-        allow delete: if hostelOwner();
+        allow delete: if parentHostelOwner();
       }
 
       match /reviews/{reviewId} {
