@@ -4,6 +4,7 @@ import '../../models/hostel.dart';
 import 'hostel_seed_data.dart';
 import 'hostel_review.dart';
 import 'hostel_claim.dart';
+import 'hostel_manager.dart';
 import '../../../core/services/firebase_service.dart';
 
 class HostelRepository {
@@ -305,6 +306,99 @@ class HostelRepository {
       return;
     }
     await FirebaseFirestore.instance.collection('hostels').doc(hostel.id).delete();
+  }
+
+  static final Map<String, List<HostelManager>> _demoManagers = {};
+
+  Stream<List<HostelManager>> watchManagers(String hostelId) {
+    if (!FirebaseService.initialized) {
+      return Stream.value(List<HostelManager>.from(_demoManagers[hostelId] ?? const []));
+    }
+    return _db.collection('hostels').doc(hostelId).collection('managers').snapshots().map(
+      (s) => s.docs.map(HostelManager.fromDoc).toList(),
+    );
+  }
+
+  Future<HostelManager?> getManager(String hostelId, String userId) async {
+    if (!FirebaseService.initialized) {
+      for (final manager in _demoManagers[hostelId] ?? const <HostelManager>[]) {
+        if (manager.userId == userId && manager.status == 'active') return manager;
+      }
+      return null;
+    }
+    final doc = await _db.collection('hostels').doc(hostelId).collection('managers').doc(userId).get();
+    if (!doc.exists) return null;
+    final manager = HostelManager.fromDoc(doc);
+    return manager.status == 'active' ? manager : null;
+  }
+
+  Future<void> addManager({
+    required String hostelId,
+    required String userId,
+    required String userName,
+    required Map<String, bool> permissions,
+  }) async {
+    if (userId.trim().isEmpty) throw ArgumentError('Manager user ID is required');
+    final manager = HostelManager(
+      id: userId,
+      hostelId: hostelId,
+      userId: userId.trim(),
+      userName: userName.trim().isEmpty ? 'Manager' : userName.trim(),
+      status: 'active',
+      permissions: Map<String, bool>.from(permissions),
+      createdAt: DateTime.now(),
+    );
+    if (!FirebaseService.initialized) {
+      final list = _demoManagers.putIfAbsent(hostelId, () => <HostelManager>[]);
+      final index = list.indexWhere((item) => item.userId == manager.userId);
+      if (index >= 0) {
+        list[index] = manager;
+      } else {
+        list.add(manager);
+      }
+      return;
+    }
+    await _db.collection('hostels').doc(hostelId).collection('managers').doc(manager.userId).set({
+      ...manager.toMap(),
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> updateManagerPermissions({
+    required String hostelId,
+    required String userId,
+    required Map<String, bool> permissions,
+  }) async {
+    if (!FirebaseService.initialized) {
+      final list = _demoManagers[hostelId] ?? <HostelManager>[];
+      final index = list.indexWhere((item) => item.userId == userId);
+      if (index >= 0) {
+        final old = list[index];
+        list[index] = HostelManager(
+          id: old.id, hostelId: old.hostelId, userId: old.userId, userName: old.userName,
+          status: old.status, permissions: Map<String, bool>.from(permissions), createdAt: old.createdAt,
+        );
+        _demoManagers[hostelId] = list;
+      }
+      return;
+    }
+    await _db.collection('hostels').doc(hostelId).collection('managers').doc(userId).update({
+      'permissions': permissions,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> removeManager(String hostelId, String userId) async {
+    if (!FirebaseService.initialized) {
+      final list = _demoManagers[hostelId];
+      list?.removeWhere((item) => item.userId == userId);
+      return;
+    }
+    await _db.collection('hostels').doc(hostelId).collection('managers').doc(userId).update({
+      'status': 'revoked',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Stream<List<HostelClaim>> watchOwnerClaims(String userId) {
