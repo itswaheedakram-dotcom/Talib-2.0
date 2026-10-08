@@ -1,5 +1,34 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+class HostelManagerPermissions {
+  static const basicInfo = 'basicInfo';
+  static const location = 'location';
+  static const pricing = 'pricing';
+  static const rooms = 'rooms';
+  static const availability = 'availability';
+  static const photos = 'photos';
+  static const facilities = 'facilities';
+  static const contact = 'contact';
+
+  static const all = <String>[
+    basicInfo, location, pricing, rooms, availability, photos, facilities, contact,
+  ];
+
+  static String label(String permission) {
+    switch (permission) {
+      case basicInfo: return 'Basic information';
+      case location: return 'Location';
+      case pricing: return 'Pricing';
+      case rooms: return 'Rooms';
+      case availability: return 'Availability';
+      case photos: return 'Photos';
+      case facilities: return 'Facilities & meals';
+      case contact: return 'Contact & website';
+      default: return permission;
+    }
+  }
+}
+
 class HostelManager {
   final String id;
   final String hostelId;
