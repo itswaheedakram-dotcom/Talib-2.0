@@ -260,6 +260,16 @@ class HostelRepository {
     });
   }
 
+  Future<bool> canManageHostel(String hostelId, String userId) async {
+    final hostel = await getHostel(hostelId);
+    if (hostel == null || userId.trim().isEmpty) return false;
+    if (hostel.ownerId == userId) return true;
+    final manager = await getManager(hostelId, userId);
+    return manager != null && manager.status == 'active';
+  }
+
+  Future<HostelManager?> managerAccess(String hostelId, String userId) =>
+      getManager(hostelId, userId);
   static Future<String> submitHostelSafe(Hostel hostel, {required bool demo}) async {
     if (demo || !FirebaseService.initialized) {
       final id = 'demo_hostel_${DateTime.now().microsecondsSinceEpoch}';
