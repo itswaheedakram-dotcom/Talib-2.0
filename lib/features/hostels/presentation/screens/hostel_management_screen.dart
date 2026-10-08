@@ -154,6 +154,13 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
               ),
             )),
           const SizedBox(height: 12),
+          if ((active?.id ?? user?.uid) == hostel.ownerId)
+            OutlinedButton.icon(
+              onPressed: () => context.push('/hostel/' + Uri.encodeComponent(hostel.id) + '/managers'),
+              icon: const Icon(Icons.manage_accounts_outlined),
+              label: const Text('Manage managers'),
+            ),
+          const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: _saving ? null : _save,
             style: FilledButton.styleFrom(backgroundColor: AppColors.primaryGreen, foregroundColor: AppColors.white),
