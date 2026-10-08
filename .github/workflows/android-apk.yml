@@ -99,3 +99,5 @@ jobs:
 # Hostel editor rebuild trigger: 2026-10-08T17:53:36.075Z
 
 # rebuild after hostel demo helper fix
+
+# trigger after HostelRoom import fix
