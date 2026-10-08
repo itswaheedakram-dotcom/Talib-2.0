@@ -26,6 +26,7 @@ class _HostelsScreenState extends State<HostelsScreen> {
   String _roomType = 'All';
   String _sort = 'Recommended';
   bool _acOnly = false;
+  bool _searchOpen = false;
 
   @override
   void initState() {
@@ -350,13 +351,46 @@ class _HostelsScreenState extends State<HostelsScreen> {
         title: const Text('Hostels'),
         actions: <Widget>[
           IconButton(
+            tooltip: 'Search',
+            onPressed: () {
+              setState(() {
+                _searchOpen = !_searchOpen;
+                if (!_searchOpen) _searchController.clear();
+              });
+            },
+            icon: Icon(_searchOpen ? Icons.close_rounded : Icons.search_rounded),
+          ),
+          IconButton(
+            tooltip: 'Filters',
+            onPressed: _showFilters,
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: <Widget>[
+                const Icon(Icons.tune_rounded),
+                if (_hasActiveFilters)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primaryGreen,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
             tooltip: 'List your hostel',
             onPressed: () => context.push('/hostels/list'),
             icon: const Icon(Icons.add_business_outlined),
           ),
           Center(
             child: Padding(
-              padding: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.only(right: 12),
               child: Text(
                 '${filtered.length}',
                 style: const TextStyle(
@@ -370,60 +404,32 @@ class _HostelsScreenState extends State<HostelsScreen> {
       ),
       body: Column(
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (_) => setState(() {}),
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: 'Search hostels, cities, areas...',
-                prefixIcon: const Icon(
-                  Icons.search_rounded,
-                  color: AppColors.primaryGreen,
-                ),
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    if (_searchController.text.isNotEmpty)
-                      IconButton(
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {});
-                        },
-                        icon: const Icon(Icons.clear_rounded),
-                      ),
-                    IconButton(
-                      tooltip: 'Filters',
-                      onPressed: _showFilters,
-                      icon: Stack(
-                        clipBehavior: Clip.none,
-                        children: <Widget>[
-                          const Icon(
-                            Icons.tune_rounded,
-                            color: AppColors.primaryGreen,
-                          ),
-                          if (_hasActiveFilters)
-                            Positioned(
-                              right: -2,
-                              top: -2,
-                              child: Container(
-                                width: 7,
-                                height: 7,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.primaryGreen,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
+          if (_searchOpen)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+              child: TextField(
+                controller: _searchController,
+                autofocus: true,
+                onChanged: (_) => setState(() {}),
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: 'Search hostels, cities, areas...',
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: AppColors.primaryGreen,
+                  ),
+                  suffixIcon: _searchController.text.isEmpty
+                      ? null
+                      : IconButton(
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.clear_rounded),
+                        ),
                 ),
               ),
             ),
-          ),
           if (_hasActiveFilters)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
