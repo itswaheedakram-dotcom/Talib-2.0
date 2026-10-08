@@ -39,6 +39,27 @@ service cloud.firestore {
           && request.resource.data.ownerId == resource.data.ownerId
           && request.resource.data.status == resource.data.status)
         || (signedIn()
+          && exists(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid))
+          && get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.status == 'active'
+          && request.resource.data.ownerId == resource.data.ownerId
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.isVerified == resource.data.isVerified
+          && request.resource.data.isDemo == resource.data.isDemo
+          && request.resource.data.rating == resource.data.rating
+          && request.resource.data.reviewCount == resource.data.reviewCount
+          && request.resource.data.ratingTotal == resource.data.ratingTotal
+          && (
+            (get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.permissions.basicInfo == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','city','area','type','gender','distance','updatedAt']))
+            || (get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.permissions.location == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['address','updatedAt']))
+            || (get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.permissions.pricing == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['price','securityFee','roomType','updatedAt']))
+            || (get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.permissions.rooms == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rooms','updatedAt']))
+            || (get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.permissions.availability == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['availability','updatedAt']))
+            || (get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.permissions.facilities == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['meals','ac','facilities','rules','updatedAt']))
+            || (get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.permissions.photos == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['imageUrl','imageUrls','updatedAt']))
+            || (get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.permissions.description == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['description','updatedAt']))
+            || (get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.permissions.contact == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['phone','website','updatedAt']))
+          ))
+        || (signedIn()
           && request.resource.data.diff(resource.data).affectedKeys()
               .hasOnly(['reviewCount', 'ratingTotal', 'rating', 'updatedAt'])
           && request.resource.data.reviewCount is number
@@ -64,6 +85,23 @@ service cloud.firestore {
           && reviewId == request.auth.uid
           && resource.data.userId == request.auth.uid;
       }
+    }
+
+    match /hostels/{hostelId}/managers/{managerId} {
+      allow read: if admin()
+        || (signedIn() && (
+          resource.data.userId == request.auth.uid
+          || get(/databases/$(database)/documents/hostels/$(hostelId)).data.ownerId == request.auth.uid
+        ));
+      allow create, update: if signedIn()
+        && get(/databases/$(database)/documents/hostels/$(hostelId)).data.ownerId == request.auth.uid
+        && request.resource.data.hostelId == hostelId
+        && request.resource.data.userId == managerId
+        && request.resource.data.status == 'active'
+        && request.resource.data.permissions is map;
+      allow delete: if admin()
+        || (signedIn()
+          && get(/databases/$(database)/documents/hostels/$(hostelId)).data.ownerId == request.auth.uid);
     }
 
     match /hostelClaims/{claimId} {
