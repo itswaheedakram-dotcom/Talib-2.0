@@ -1,4 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,6 +23,7 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
   final _imageUrl = TextEditingController(), _imageUrls = TextEditingController(), _ruleInput = TextEditingController();
   String _gender = HostelRegistry.genders.first, _type = HostelRegistry.types.first, _meals = HostelRegistry.mealOptions.first;
   bool _saving = false;
+  bool _uploadingImage = false;
   final List<String> _facilities = [], _rules = [];
   final List<_RoomDraft> _rooms = [];
 
@@ -56,6 +59,34 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hostel could not be submitted. Please try again.')));
     } finally { if (mounted) setState(() => _saving = false); }
+  }
+
+
+  Future<void> _pickAndUploadImage() async {
+    if (!FirebaseService.initialized) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Demo mode uses image URLs. Enable Firebase to upload hostel photos.')));
+      return;
+    }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) { if (mounted) context.push('/signin'); return; }
+    try {
+      final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 82);
+      if (picked == null) return;
+      setState(() => _uploadingImage = true);
+      final bytes = await picked.readAsBytes();
+      final extension = picked.name.contains('.') ? picked.name.split('.').last.toLowerCase() : 'jpg';
+      final ref = FirebaseStorage.instance.ref('hostels/' + user.uid + '/' + DateTime.now().millisecondsSinceEpoch.toString() + '.' + extension);
+      await ref.putData(bytes, SettableMetadata(contentType: 'image/' + extension));
+      final url = await ref.getDownloadURL();
+      if (!mounted) return;
+      setState(() => _imageUrl.text = url);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Main hostel photo uploaded.')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Photo upload failed. You can paste an image URL instead.')));
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
+    }
   }
 
   @override Widget build(BuildContext context) => Scaffold(
@@ -96,6 +127,7 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
       const SizedBox(height:18),
       _section('Gallery','Use direct image URLs for the main photo and gallery.',Icons.photo_library_outlined),
       _field(_imageUrl,'Main Photo URL (optional)',Icons.image_outlined,keyboard:TextInputType.url,onChanged:(_)=>setState((){})),
+      Align(alignment:Alignment.centerLeft,child:OutlinedButton.icon(onPressed:_uploadingImage?null:_pickAndUploadImage,icon:_uploadingImage?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:AppColors.primaryGreen)):const Icon(Icons.upload_outlined),label:Text(_uploadingImage?'Uploading...':'Upload Main Photo'))),
       _imagePreview(),
       _field(_imageUrls,'Additional Photo URLs (comma separated)',Icons.collections_outlined,maxLines:2,keyboard:TextInputType.url),
       const SizedBox(height:6),
