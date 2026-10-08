@@ -12,8 +12,13 @@ import '../../data/hostel_room.dart';
 
 class HostelManagementScreen extends StatefulWidget {
   final String hostelId;
+  final Hostel? initialHostel;
 
-  const HostelManagementScreen({super.key, required this.hostelId});
+  const HostelManagementScreen({
+    super.key,
+    required this.hostelId,
+    this.initialHostel,
+  });
 
   @override
   State<HostelManagementScreen> createState() => _HostelManagementScreenState();
@@ -61,9 +66,9 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
   }
 
   Future<void> _load() async {
-    Hostel? hostel;
+    Hostel? hostel = widget.initialHostel;
 
-    // Demo hostels must be resolved locally first. This keeps the management
+    // When the detail screen already has the hostel object, use it directly. This keeps the management
     // screen usable before Firebase is connected/deployed.
     for (final item in HostelRepository.demoHostels) {
       if (item.id == widget.hostelId) {
@@ -362,6 +367,27 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    try {
+      return _buildScreen(context);
+    } catch (error) {
+      return Scaffold(
+        backgroundColor: AppColors.cream,
+        appBar: AppBar(title: const Text('Manage Hostel')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Manage Hostel could not be loaded.\n$error',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.mutedText),
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildScreen(BuildContext context) {
     if (_loading) {
       return const Scaffold(
         backgroundColor: AppColors.cream,
