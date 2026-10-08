@@ -128,6 +128,8 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
     if (hostel == null) {
       return const Scaffold(backgroundColor: AppColors.cream, body: Center(child: Text('Hostel not found.')));
     }
+    final active = ActiveProfileController.instance.active;
+    final user = FirebaseService.initialized ? FirebaseAuth.instance.currentUser : null;
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(title: const Text('Manage Hostel')),
