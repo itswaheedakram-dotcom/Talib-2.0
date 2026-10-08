@@ -7,6 +7,8 @@ import '../../../../app/theme.dart';
 import '../../data/hostel_repository.dart';
 import '../../data/hostel_review.dart';
 import '../../data/hostel_seed_data.dart';
+import '../../../../core/services/firebase_service.dart';
+import 'package:go_router/go_router.dart';
 import '../../../models/hostel.dart';
 
 class HostelDetailScreen extends StatefulWidget {
@@ -68,7 +70,9 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
-      final review = await HostelRepository().getMyReview(hostel.id, user.uid);
+      final review = hostel.isDemo
+          ? await HostelRepository.demoMyReview(hostel.id, user.uid)
+          : await HostelRepository().getMyReview(hostel.id, user.uid);
       if (!mounted) return;
       setState(() {
         _myReview = review;
@@ -85,7 +89,9 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
   Stream<List<HostelReview>> _reviewStream() {
     if (hostel.id.isEmpty) return const Stream<List<HostelReview>>.empty();
     try {
-      return HostelRepository().watchReviews(hostel.id);
+      return hostel.isDemo
+          ? HostelRepository.demoReviewStream(hostel.id)
+          : HostelRepository().watchReviews(hostel.id);
     } catch (_) {
       return const Stream<List<HostelReview>>.empty();
     }
@@ -108,15 +114,25 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
 
     setState(() => _savingReview = true);
     try {
-      await HostelRepository().submitReview(
+      if (hostel.isDemo || !FirebaseService.initialized) {
+        await HostelRepository.submitDemoReview(
+          hostelId: hostel.id,
+          userId: user.uid,
+          userName: user.displayName?.trim().isNotEmpty == true ? user.displayName!.trim() : 'Demo Member',
+          rating: _myRating,
+          comment: _commentController.text.trim(),
+        );
+      } else {
+        await HostelRepository().submitReview(
         hostelId: hostel.id,
         userId: user.uid,
         userName: user.displayName?.trim().isNotEmpty == true
             ? user.displayName!.trim()
             : 'Member',
         rating: _myRating,
-        comment: _commentController.text.trim(),
-      );
+          comment: _commentController.text.trim(),
+        );
+      }
       await _loadMyReview();
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -199,6 +215,29 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
             const SizedBox(height: 6),
             _ratingSummary(hostel.rating, hostel.reviewCount),
           ],
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              if (hostel.isDemo || hostel.ownerId.isEmpty)
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push('/hostel/' + Uri.encodeComponent(hostel.id) + '/claim?name=' + Uri.encodeComponent(hostel.name)),
+                    icon: const Icon(Icons.verified_user_outlined),
+                    label: const Text('Claim Hostel'),
+                  ),
+                ),
+              if (hostel.isDemo || hostel.ownerId.isNotEmpty) ...[
+                if (hostel.isDemo || hostel.ownerId.isEmpty) const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push('/hostel/' + Uri.encodeComponent(hostel.id) + '/manage'),
+                    icon: const Icon(Icons.settings_outlined),
+                    label: const Text('Manage'),
+                  ),
+                ),
+              ],
+            ],
+          ),
           const SizedBox(height: 14),
           _quickHighlights(),
           const SizedBox(height: 14),
