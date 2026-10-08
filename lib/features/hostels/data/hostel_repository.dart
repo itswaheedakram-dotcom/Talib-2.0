@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/hostel.dart';
 import 'hostel_seed_data.dart';
 import 'hostel_review.dart';
+import 'hostel_claim.dart';
+import '../../../core/services/firebase_service.dart';
 
 class HostelRepository {
   HostelRepository({FirebaseFirestore? firestore}) : _db = firestore ?? FirebaseFirestore.instance;
@@ -109,6 +111,135 @@ class HostelRepository {
     return Hostel.fromDoc(doc);
   }
 
+
+
+  static final Map<String, HostelClaim> _demoClaims = {};
+  static final Map<String, List<HostelReview>> _demoReviews = {
+    'example_student_residency_lahore': [
+      const HostelReview(id: 'demo-review-1', userId: 'demo-student-1', userName: 'Demo Student', rating: 5, comment: 'Clean rooms and good study environment.'),
+    ],
+    'example_girls_campus_hostel': [
+      const HostelReview(id: 'demo-review-2', userId: 'demo-student-2', userName: 'Demo Member', rating: 4, comment: 'Good location and useful facilities.'),
+    ],
+  };
+
+  static Stream<List<HostelReview>> demoReviewStream(String hostelId) {
+    return Stream.value(List<HostelReview>.from(_demoReviews[hostelId] ?? const []));
+  }
+
+  static Future<HostelReview?> demoMyReview(String hostelId, String userId) async {
+    for (final review in _demoReviews[hostelId] ?? const <HostelReview>[]) {
+      if (review.userId == userId) return review;
+    }
+    return null;
+  }
+
+  static Future<void> submitDemoReview({
+    required String hostelId,
+    required String userId,
+    required String userName,
+    required double rating,
+    required String comment,
+  }) async {
+    final reviews = _demoReviews.putIfAbsent(hostelId, () => <HostelReview>[]);
+    final index = reviews.indexWhere((r) => r.userId == userId);
+    final review = HostelReview(
+      id: index >= 0 ? reviews[index].id : 'demo-$userId',
+      userId: userId,
+      userName: userName.isEmpty ? 'Demo Member' : userName,
+      rating: rating,
+      comment: comment.trim(),
+      createdAt: DateTime.now(),
+    );
+    if (index >= 0) {
+      reviews[index] = review;
+    } else {
+      reviews.insert(0, review);
+    }
+  }
+
+  static Future<String> submitClaim({
+    required String hostelId,
+    required String hostelName,
+    required String userId,
+    required String userName,
+    required String contact,
+    required String note,
+    required bool demo,
+  }) async {
+    if (demo || !FirebaseService.initialized) {
+      final id = 'demo-claim-$hostelId-$userId';
+      _demoClaims[id] = HostelClaim(
+        id: id,
+        hostelId: hostelId,
+        hostelName: hostelName,
+        userId: userId,
+        userName: userName,
+        contact: contact,
+        note: note,
+        status: 'pending',
+        createdAt: DateTime.now(),
+      );
+      return id;
+    }
+    final db = FirebaseFirestore.instance;
+    final ref = db.collection('hostelClaims').doc();
+    await ref.set({
+      'hostelId': hostelId,
+      'hostelName': hostelName,
+      'userId': userId,
+      'userName': userName,
+      'contact': contact,
+      'note': note,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    return ref.id;
+  }
+
+  static Future<void> updateHostelSafe(Hostel hostel) async {
+    if (hostel.isDemo || !FirebaseService.initialized) return;
+    await FirebaseFirestore.instance.collection('hostels').doc(hostel.id).update({
+      ...hostel.toMap(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<List<HostelClaim>> watchOwnerClaims(String userId) {
+    return _db.collection('hostelClaims').where('userId', isEqualTo: userId).snapshots().map(
+      (s) => s.docs.map(HostelClaim.fromDoc).toList(),
+    );
+  }
+
+  Stream<List<HostelClaim>> watchAllClaims() {
+    return _db.collection('hostelClaims').orderBy('createdAt', descending: true).snapshots().map(
+      (s) => s.docs.map(HostelClaim.fromDoc).toList(),
+    );
+  }
+
+  Future<void> approveClaim(HostelClaim claim) async {
+    final batch = _db.batch();
+    batch.update(_db.collection('hostelClaims').doc(claim.id), {
+      'status': 'approved',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    batch.update(_collection.doc(claim.hostelId), {
+      'ownerId': claim.userId,
+      'ownerName': claim.userName,
+      'isDemo': false,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+  }
+
+  Future<void> rejectClaim(String claimId) async {
+    await _db.collection('hostelClaims').doc(claimId).update({
+      'status': 'rejected',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Stream<List<HostelReview>> watchReviews(String hostelId) => _collection.doc(hostelId).collection('reviews').orderBy('createdAt', descending: true).snapshots().map((s) => s.docs.map(HostelReview.fromDoc).toList());
 
   Future<HostelReview?> getMyReview(String hostelId, String userId) async {
@@ -117,6 +248,10 @@ class HostelRepository {
   }
 
   Future<void> submitReview({required String hostelId, required String userId, required String userName, required double rating, required String comment}) async {
+    if (!FirebaseService.initialized) {
+      await submitDemoReview(hostelId: hostelId, userId: userId, userName: userName, rating: rating, comment: comment);
+      return;
+    }
     final ref = _collection.doc(hostelId).collection('reviews').doc(userId);
     await _db.runTransaction((tx) async {
       final old = await tx.get(ref);
