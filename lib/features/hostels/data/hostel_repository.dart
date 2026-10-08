@@ -113,7 +113,10 @@ class HostelRepository {
 
 
 
+  static final List<Hostel> _demoHostels = List<Hostel>.from(exampleHostels);
   static final Map<String, HostelClaim> _demoClaims = {};
+
+  static List<Hostel> get demoHostels => List<Hostel>.unmodifiable(_demoHostels);
   static final Map<String, List<HostelReview>> _demoReviews = {
     'example_student_residency_lahore': [
       const HostelReview(id: 'demo-review-1', userId: 'demo-student-1', userName: 'Demo Student', rating: 5, comment: 'Clean rooms and good study environment.'),
@@ -199,11 +202,64 @@ class HostelRepository {
   }
 
   static Future<void> updateHostelSafe(Hostel hostel) async {
-    if (hostel.isDemo || !FirebaseService.initialized) return;
+    if (hostel.isDemo || !FirebaseService.initialized) {
+      final index = _demoHostels.indexWhere((item) => item.id == hostel.id);
+      if (index >= 0) _demoHostels[index] = hostel;
+      return;
+    }
     await FirebaseFirestore.instance.collection('hostels').doc(hostel.id).update({
       ...hostel.toMap(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  static Future<String> submitHostelSafe(Hostel hostel, {required bool demo}) async {
+    if (demo || !FirebaseService.initialized) {
+      final id = 'demo_hostel_${DateTime.now().microsecondsSinceEpoch}';
+      final copy = Hostel(
+        id: id,
+        name: hostel.name,
+        city: hostel.city,
+        area: hostel.area,
+        type: hostel.type,
+        gender: hostel.gender,
+        distance: hostel.distance,
+        price: hostel.price,
+        securityFee: hostel.securityFee,
+        roomType: hostel.roomType,
+        availability: hostel.availability,
+        meals: hostel.meals,
+        ac: hostel.ac,
+        facilities: hostel.facilities,
+        imageUrls: hostel.imageUrls,
+        description: hostel.description,
+        phone: hostel.phone,
+        website: hostel.website,
+        imageUrl: hostel.imageUrl,
+        address: hostel.address,
+        ownerId: hostel.ownerId.isEmpty ? 'demo-user' : hostel.ownerId,
+        ownerName: hostel.ownerName.isEmpty ? 'Demo Hostel Owner' : hostel.ownerName,
+        status: 'approved',
+        isVerified: false,
+        isDemo: true,
+        rating: 0,
+        reviewCount: 0,
+        ratingTotal: 0,
+        rooms: hostel.rooms,
+        rules: hostel.rules,
+      );
+      _demoHostels.add(copy);
+      return id;
+    }
+    return HostelRepository().submitHostel(hostel);
+  }
+
+  static Future<void> deleteHostelSafe(Hostel hostel) async {
+    if (hostel.isDemo || !FirebaseService.initialized) {
+      _demoHostels.removeWhere((item) => item.id == hostel.id);
+      return;
+    }
+    await FirebaseFirestore.instance.collection('hostels').doc(hostel.id).delete();
   }
 
   Stream<List<HostelClaim>> watchOwnerClaims(String userId) {
