@@ -36,8 +36,10 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
     final subcategories = TextEditingController(text: existing?.subcategories.join(', ') ?? '');
     final programLabel = TextEditingController(text: existing?.programLabel ?? 'Programs / courses');
     final eligibilityLabel = TextEditingController(text: existing?.eligibilityLabel ?? 'Eligibility criteria');
+    final featuredProgramLabel = TextEditingController(text: existing?.featuredProgramLabel ?? 'Featured / next program');
     final order = TextEditingController(text: (existing?.sortOrder ?? (_catalog.allTypes.length + 1) * 10).toString());
     var iconKey = existing?.iconKey ?? 'school';
+    var showMinimumScore = existing?.showMinimumScore ?? true;
     var enabled = existing?.enabled ?? true;
     var idWasEdited = existing != null;
 
@@ -106,6 +108,17 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
                 ),
                 const SizedBox(height: 10),
                 TextField(
+                  controller: featuredProgramLabel,
+                  decoration: const InputDecoration(labelText: 'Featured program field label'),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Show minimum percentage / CGPA field'),
+                  value: showMinimumScore,
+                  onChanged: (value) => setDialogState(() => showMinimumScore = value),
+                ),
+                const SizedBox(height: 10),
+                TextField(
                   controller: order,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: 'Display order'),
@@ -139,6 +152,7 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
       subcategories.dispose();
       programLabel.dispose();
       eligibilityLabel.dispose();
+      featuredProgramLabel.dispose();
       order.dispose();
       return;
     }
@@ -171,6 +185,10 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
           eligibilityLabel: eligibilityLabel.text.trim().isEmpty
               ? 'Eligibility criteria'
               : eligibilityLabel.text.trim(),
+          featuredProgramLabel: featuredProgramLabel.text.trim().isEmpty
+              ? 'Featured / next program'
+              : featuredProgramLabel.text.trim(),
+          showMinimumScore: showMinimumScore,
           enabled: enabled,
           sortOrder: int.tryParse(order.text.trim()) ?? 100,
         ));
@@ -192,6 +210,7 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
     subcategories.dispose();
     programLabel.dispose();
     eligibilityLabel.dispose();
+    featuredProgramLabel.dispose();
     order.dispose();
   }
 
@@ -236,7 +255,7 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
                 title: Text(type.label, style: const TextStyle(fontWeight: FontWeight.w700)),
                 subtitle: Text(type.subcategories.isEmpty
                     ? type.id
-                    : '${type.id} • ${type.programLabel} • ${type.subcategories.join(', ')}'),
+                    : '${type.id} • ${type.programLabel} • ${type.eligibilityLabel} • ${type.subcategories.join(', ')}'),
                 isThreeLine: type.subcategories.length > 3,
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                   if (!type.enabled)
