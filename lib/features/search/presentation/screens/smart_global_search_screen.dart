@@ -33,7 +33,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
   final _controller=TextEditingController();
   List<_Hit> _hits=[];
   ParsedGlobalQuery? _parsed;
-  bool _loading=false, _searched=false;
+  bool _loading=false, _searched=false, _revealResults=false;
   String? _error;
   String? _loadedMode;
   bool _institutesLoaded=false, _opportunitiesLoaded=false;
@@ -63,7 +63,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
     final q=SmartSearchParser.parse(text);
     final mode=_demo?'demo':'real';
     if(_loadedMode!=mode){_loadedMode=mode;_institutesLoaded=false;_opportunitiesLoaded=false;_hostelCache=null;}
-    setState(() { _parsed=q; _hits=[]; _loading=true; _searched=true; _error=null; });
+    setState(() { _parsed=q; _hits=[]; _loading=true; _searched=true; _error=null; _revealResults=false; });
     final hits=< _Hit>[];
     try {
       final ir=InstituteRepository.instance;
@@ -182,11 +182,23 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
 
       hits.sort((a,b)=>b.score.compareTo(a.score));
       if(!mounted)return;
-      setState(() { _hits=hits.take(60).toList(); _loading=false; });
+      await _finishThinking(q);
+      if(!mounted)return;
+      setState(() { _hits=hits.take(60).toList(); _loading=false; _revealResults=true; });
     } catch (_) {
       if(!mounted)return;
-      setState(() { _loading=false; _error='Search complete nahi ho saki. Dobara try karein.'; });
+      await _finishThinking(q);
+      if(!mounted)return;
+      setState(() { _loading=false; _revealResults=true; _error='Search complete nahi ho saki. Dobara try karein.'; });
     }
+  }
+
+  Future<void> _finishThinking(ParsedGlobalQuery q) async {
+    // Let the word-by-word narration finish before showing any result cards.
+    final wordCount=q.summary.split(RegExp(r'\\s+')).where((word)=>word.isNotEmpty).length;
+    final narration=Duration(milliseconds:wordCount*420);
+    final minimum=const Duration(milliseconds:6500);
+    await Future<void>.delayed(narration>minimum?narration:minimum);
   }
 
   Future<List<Hostel>> _realHostels() async {
@@ -284,8 +296,8 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
         if(_parsed!=null)_understood(_parsed!),
         if(_error!=null)Padding(padding:const EdgeInsets.all(16),child:Text(_error!)),
         Expanded(
-          child: _loading
-              ? const _SearchResultShimmer()
+          child: _loading || !_revealResults
+              ? (_searched ? const _SearchResultShimmer() : const SizedBox.shrink())
               : _searched && _hits.isEmpty && _error==null
                   ? const Center(child:Padding(padding:EdgeInsets.all(24),child:Text('Matching listing nahi mili. Query ya location badal kar dekhein.',textAlign:TextAlign.center)))
                   : ListView.separated(
@@ -457,7 +469,7 @@ class _WordByWordTextState extends State<_WordByWordText> {
     _visibleWords=0;
     final count=_words.length;
     if(count==0)return;
-    _timer=Timer.periodic(const Duration(milliseconds:115),(timer){
+    _timer=Timer.periodic(const Duration(milliseconds:420),(timer){
       if(!mounted)return;
       setState(()=>_visibleWords=(_visibleWords+1).clamp(0,count));
       if(_visibleWords>=count)timer.cancel();
