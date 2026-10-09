@@ -256,11 +256,11 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
     final remoteProvinceCities = _locations.options(
       type: 'city', parentName: _province.text, country: _country.text,
     );
-    final cities = <String>{
-      ..._citiesForProvince(_province.text),
-      ...remoteDistrictCities,
-      ...remoteProvinceCities,
-    }.toList()
+    final cities = (_district.text.trim().isNotEmpty
+        ? remoteDistrictCities
+        : <String>{..._citiesForProvince(_province.text), ...remoteProvinceCities}.toList())
+      .toSet()
+      .toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final areas = _locations.options(type: 'area', parentName: _city.text, country: _country.text);
     if (_type.isNotEmpty && !types.any((type) => type.id == _type) && types.isNotEmpty) {
