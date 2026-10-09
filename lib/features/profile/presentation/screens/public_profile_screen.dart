@@ -20,6 +20,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   Future<void> _review(String name) async {
     final current = me;
     final identity = ActiveProfileController.instance;
+    if (identity.isDemo && !widget.id.startsWith('demo-user-')) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Demo profiles can review other demo profiles only. Switch to your real account to review a real user.')));
+      return;
+    }
     if (identity.isDemo && identity.effectiveUid == widget.id) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You cannot rate your own profile.')));
       return;
@@ -400,7 +404,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
               ],
               if (me != null && me!.uid != widget.id) ...[
                 const SizedBox(height: 14),
-                SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: () => _review(name), icon: const Icon(Icons.star_outline), label: const Text('Write a Review'))),
+                if (ActiveProfileController.instance.isDemo)
+                  const Text('Demo profiles can review demo profiles only. Switch to your real account to review this user.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey))
+                else
+                  SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: () => _review(name), icon: const Icon(Icons.star_outline), label: const Text('Write a Review'))),
               ],
               const SizedBox(height: 18), const Text('Public Reviews', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)), const SizedBox(height: 6),
               if (docs.isEmpty) const Text('No reviews yet. Be the first to share useful feedback.', style: TextStyle(color: Colors.grey)),
