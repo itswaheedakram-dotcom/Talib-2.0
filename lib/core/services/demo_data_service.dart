@@ -177,6 +177,55 @@ class DemoDataService extends ChangeNotifier {
   List<Map<String,dynamic>> resources(String uid)=>List.unmodifiable(_resources);
   void addResource(String uid,String title,String url,String description){_resources.insert(0,{'id':'demo-resource-${++_seq}','title':title,'url':url,'description':description,'authorId':uid,'createdAt':DateTime.now()});_emit();}
 
+  Map<String,dynamic> reputation(String uid) {
+    final authoredPosts = _posts.values.where((p) => p.authorId == uid).toList();
+    final authoredComments = _comments.values
+        .expand((items) => items)
+        .where((comment) => comment.authorId == uid)
+        .length;
+    var likes = 0;
+    var commentCount = 0;
+    var bestAnswers = 0;
+    for (final post in authoredPosts) {
+      likes += post.likesCount;
+      commentCount += post.commentsCount;
+      if (post.bestAnswerId.isNotEmpty) bestAnswers++;
+    }
+    final followers = followerCount(uid);
+    final userReviews = _reviews[uid] ?? const <Map<String, dynamic>>[];
+    var ratingSum = 0;
+    var validRatings = 0;
+    for (final review in userReviews) {
+      final rating = (review['rating'] as num?)?.toInt() ?? 0;
+      if (rating >= 1 && rating <= 5) {
+        ratingSum += rating;
+        validRatings++;
+      }
+    }
+    final average = validRatings == 0 ? 0.0 : ratingSum / validRatings;
+    final score = authoredPosts.length * 5 + authoredComments * 3 +
+        likes * 2 + commentCount + bestAnswers * 10 + followers +
+        (average * 2).round();
+    final badges = <String>[];
+    if (authoredPosts.isNotEmpty) badges.add('First Post');
+    if (authoredComments >= 5) badges.add('Helpful Voice');
+    if (likes >= 10) badges.add('Popular Contributor');
+    if (bestAnswers > 0) badges.add('Answer Expert');
+    if (followers >= 10) badges.add('Community Builder');
+    if (average >= 4.5 && validRatings >= 5) badges.add('Trusted Member');
+    return {
+      'score': score,
+      'posts': authoredPosts.length,
+      'comments': authoredComments,
+      'likes': likes,
+      'bestAnswers': bestAnswers,
+      'followers': followers,
+      'rating': average,
+      'reviews': validRatings,
+      'badges': badges,
+    };
+  }
+
   List<Map<String,dynamic>> reviews(String uid)=>List.unmodifiable(_reviews[uid]??const []);
   void addReview(String target,String reviewer,String reviewerName,int rating,String text){final reviews=_reviews[target]??= <Map<String,dynamic>>[];final index=reviews.indexWhere((r)=>r['reviewerId']==reviewer);final item={'id':reviewer,'reviewerId':reviewer,'reviewerName':reviewerName,'rating':rating,'text':text,'createdAt':DateTime.now()};if(index>=0){reviews[index]=item;}else{reviews.insert(0,item);}_emit();}
 
