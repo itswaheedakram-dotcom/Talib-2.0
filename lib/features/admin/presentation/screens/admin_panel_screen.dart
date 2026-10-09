@@ -25,12 +25,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     'view_audit_logs': 'View admin activity logs',
   };
 
-  @override
-  void initState() {
-    super.initState();
-    _access.start();
-  }
-
   Future<void> _showCreateManagerDialog() async {
     final uidController = TextEditingController();
     final selected = <String, bool>{
