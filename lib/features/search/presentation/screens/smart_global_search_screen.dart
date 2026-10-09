@@ -37,6 +37,11 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
   String? _loadedMode;
   bool _institutesLoaded=false, _opportunitiesLoaded=false;
   List<Hostel>? _hostelCache;
+  String _filterCity='All', _filterArea='All', _filterGender='All';
+  String _filterHostelType='All', _filterRoomType='All';
+  String _filterInstituteType='All', _filterProgram='All', _filterSector='All';
+  String _filterAdmissionStatus='All', _filterFeeRange='All';
+  bool _filterAcOnly=false;
   bool get _demo => ActiveProfileController.instance.isDemo || !FirebaseService.initialized;
 
   static const _scholarships=[
@@ -73,6 +78,12 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
       for(final h in hostels) {
         if(q.category!=GlobalSearchCategory.all&&q.category!=GlobalSearchCategory.hostels)continue;
         if(h.status.toLowerCase()!='approved')continue;
+        if(_filterCity!='All'&&h.city!=_filterCity)continue;
+        if(_filterArea!='All'&&h.area!=_filterArea)continue;
+        if(_filterGender!='All'&&h.gender!=_filterGender)continue;
+        if(_filterHostelType!='All'&&h.type!=_filterHostelType)continue;
+        if(_filterRoomType!='All'&&h.roomType!=_filterRoomType&&!h.rooms.any((room)=>room.type==_filterRoomType))continue;
+        if(_filterAcOnly&&!h.ac&&!h.rooms.any((room)=>room.ac))continue;
         if(q.location!=null&&!' ${h.city} ${h.address}'.toLowerCase().contains(q.location!.toLowerCase()))continue;
         if(q.area!=null&&!' ${h.area} ${h.address}'.toLowerCase().contains(q.area!.toLowerCase()))continue;
         if(q.gender!=null&&h.gender.toLowerCase()!=q.gender!.toLowerCase())continue;
@@ -89,6 +100,11 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
         if(q.category==GlobalSearchCategory.scholarships&&o.kind!='scholarship')continue;
         if(q.wantsOpenAdmissions&&q.category==GlobalSearchCategory.admissions&&!o.status.toLowerCase().contains('open'))continue;
         final parent=ir.byId(o.instituteId);
+        if(_filterAdmissionStatus!='All'&&parent!=null&&parent.admissionStatus!=_filterAdmissionStatus)continue;
+        if(_filterInstituteType!='All'&&parent!=null&&parent.type!=_filterInstituteType)continue;
+        if(_filterProgram!='All'&&_filterProgram!='All'&&parent!=null&&!parent.programs.any((p)=>p.toLowerCase()==_filterProgram.toLowerCase())&&parent.nextProgram.toLowerCase()!=_filterProgram.toLowerCase())continue;
+        if(_filterSector!='All'&&parent!=null&&parent.sector!=_filterSector)continue;
+        if(_filterFeeRange!='All'&&parent!=null&&parent.feeRange!=_filterFeeRange)continue;
         if(q.location!=null&&parent!=null&&!' ${parent.city} ${parent.province} ${parent.address}'.toLowerCase().contains(q.location!.toLowerCase()))continue;
         final score=_score(q,o.title,[o.kind,o.status,o.academicYear,o.intake,o.eligibility,o.description,o.provider,o.feeDetails,parent?.name??'',parent?.city??'',parent?.programs.join(' ')??'']);
         if(score>0)hits.add(_Hit(o.title,_title(o.kind),'${o.status} • ${o.academicYear} • ${parent?.name??o.provider}',parent?.city??'',parent==null?'/institutes':'/institute/${parent.id}/opportunities',Icons.event_available_outlined,score,o));
@@ -177,6 +193,13 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
   bool _instituteAllowed(Institute i,ParsedGlobalQuery q) {
     if(q.category!=GlobalSearchCategory.all&&q.category!=GlobalSearchCategory.institutes&&q.category!=GlobalSearchCategory.admissions&&q.category!=GlobalSearchCategory.scholarships)return false;
     if(q.location!=null&&!' ${i.city} ${i.district} ${i.province} ${i.address}'.toLowerCase().contains(q.location!.toLowerCase()))return false;
+    if(_filterCity!='All'&&i.city!=_filterCity)return false;
+    if(_filterArea!='All'&&i.area!=_filterArea&&i.town!=_filterArea)return false;
+    if(_filterInstituteType!='All'&&i.type!=_filterInstituteType)return false;
+    if(_filterProgram!='All'&&_filterProgram!=''&&!i.programs.any((p)=>p.toLowerCase()==_filterProgram.toLowerCase())&&i.nextProgram.toLowerCase()!=_filterProgram.toLowerCase())return false;
+    if(_filterSector!='All'&&i.sector!=_filterSector)return false;
+    if(_filterAdmissionStatus!='All'&&i.admissionStatus!=_filterAdmissionStatus)return false;
+    if(_filterFeeRange!='All'&&i.feeRange!=_filterFeeRange)return false;
     if(q.area!=null&&!' ${i.area} ${i.town} ${i.address}'.toLowerCase().contains(q.area!.toLowerCase()))return false;
     if(q.program!=null&&!' ${i.programs.join(' ')} ${i.nextProgram} ${i.name} ${i.description}'.toLowerCase().contains(q.program!.toLowerCase())&&q.program!.toLowerCase()!='bs')return false;
     if(q.instituteName!=null) {
@@ -290,23 +313,23 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
     final sectors=<String>{...instituteItems.map((i)=>i.sector)}..removeWhere((v)=>v.trim().isEmpty);
     final feeRanges=<String>{...instituteItems.map((i)=>i.feeRange)}..removeWhere((v)=>v.trim().isEmpty);
     final catalog=InstituteCatalog.instance;
-    String city=parsed.location??'All';
-    String area=parsed.area??'All';
+    String city=_filterCity!='All'?_filterCity:(parsed.location??'All');
+    String area=_filterArea!='All'?_filterArea:(parsed.area??'All');
     String budget=parsed.maxBudget?.toString()??'';
-    String gender=parsed.gender??'All';
-    String hostelType='All';
-    String roomType='All';
-    String instituteType='All';
-    String program=parsed.program??'All';
-    String sector='All';
-    String admissionStatus='All';
-    String feeRange='All';
-    bool acOnly=false;
+    String gender=_filterGender!='All'?_filterGender:(parsed.gender??'All');
+    String hostelType=_filterHostelType;
+    String roomType=_filterRoomType;
+    String instituteType=_filterInstituteType;
+    String program=_filterProgram!='All'?_filterProgram:(parsed.program??'All');
+    String sector=_filterSector;
+    String admissionStatus=_filterAdmissionStatus;
+    String feeRange=_filterFeeRange;
+    bool acOnly=_filterAcOnly;
     final budgetController=TextEditingController(text:budget);
-    List<DropdownMenuItem<String>> options(Iterable<String> values,{String all='All'})=>[
-      DropdownMenuItem(value:all,child:Text(all)),
-      ...values.toSet().where((v)=>v.trim().isNotEmpty).toList()..sort().map((v)=>DropdownMenuItem(value:v,child:Text(v))),
-    ];
+    List<DropdownMenuItem<String>> options(Iterable<String> values,{String all='All'}){
+      final sorted=values.toSet().where((v)=>v.trim().isNotEmpty).toList()..sort();
+      return [DropdownMenuItem(value:all,child:Text(all)),...sorted.map((v)=>DropdownMenuItem(value:v,child:Text(v)))];
+    }
     final applied=await showModalBottomSheet<bool>(
       context:context,showDragHandle:true,isScrollControlled:true,
       builder:(sheetContext)=>StatefulBuilder(builder:(context,setSheet)=>Padding(
@@ -358,6 +381,12 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
               if(sector!='All')parts.add(sector);
               if(admissionStatus!='All')parts.add(admissionStatus);
               if(feeRange!='All')parts.add(feeRange);
+              setState((){
+                _filterCity=city;_filterArea=area;_filterGender=gender;
+                _filterHostelType=hostelType;_filterRoomType=roomType;_filterAcOnly=acOnly;
+                _filterInstituteType=instituteType;_filterProgram=program;_filterSector=sector;
+                _filterAdmissionStatus=admissionStatus;_filterFeeRange=feeRange;
+              });
               _controller.text=parts.where((v)=>v.trim().isNotEmpty).join(' ');
               Navigator.pop(sheetContext,true);
             },
