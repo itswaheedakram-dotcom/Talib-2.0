@@ -92,7 +92,7 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
       ratingTotal: old.ratingTotal,
     );
     try {
-      await HostelRepository().updateHostel(updated);
+      await HostelRepository.saveHostel(updated);
       if (!mounted) return;
       setState(() => _saved = true);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
