@@ -146,7 +146,7 @@ class _DisciplineInfoScreenState extends State<DisciplineInfoScreen> {
                     hintText: 'e.g. BS Computer Science',
                     prefixIcon: Icon(Icons.school_outlined),
                   ),
-                  onSubmitted: (_) => _saving ? null : _addProgram(institute),
+                  onSubmitted: (_) { if (!_saving) _addProgram(institute); },
                 ),
               ),
               const SizedBox(width: 8),
