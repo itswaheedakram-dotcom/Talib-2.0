@@ -24,9 +24,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You cannot rate your own profile.')));
       return;
     }
-    if (identity.isDemo) {
+    if (widget.id.startsWith('demo-user-')) {
       var rating = 5;
-      if (identity.effectiveUid == null) {
+      if (!identity.isDemo || identity.effectiveUid == null || !identity.effectiveUid!.startsWith('demo-user-')) {
         final reviewer = await showDialog<ActiveDemoProfile>(
           context: context,
           builder: (dialogContext) => AlertDialog(
@@ -184,17 +184,19 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () => context.push(
-                            '/chat/' +
-                                DemoDataService.instance.conversationId(
-                                  currentId,
-                                  widget.id,
-                                ) +
-                                '?uid=' +
-                                widget.id +
-                                '&name=' +
-                                Uri.encodeComponent(name),
-                          ),
+                          onPressed: DemoDataService.instance.isMutual(currentId, widget.id)
+                              ? () => context.push(
+                                    '/chat/' +
+                                        DemoDataService.instance.conversationId(
+                                          currentId,
+                                          widget.id,
+                                        ) +
+                                        '?uid=' +
+                                        widget.id +
+                                        '&name=' +
+                                        Uri.encodeComponent(name),
+                                  )
+                              : null,
                           icon: const Icon(Icons.chat_bubble_outline),
                           label: const Text('Message'),
                         ),
