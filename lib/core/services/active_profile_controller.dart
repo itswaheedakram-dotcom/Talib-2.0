@@ -3,11 +3,12 @@ import 'package:flutter/foundation.dart';
 class ActiveDemoProfile {
   final String id;
   final String name;
+  final String username;
   final String city;
   final String level;
   final String institute;
   final String program;
-  const ActiveDemoProfile({required this.id,required this.name,required this.city,required this.level,required this.institute,required this.program});
+  const ActiveDemoProfile({required this.id,required this.name,this.username='',required this.city,required this.level,required this.institute,required this.program});
 }
 
 class ActiveProfileController extends ChangeNotifier {
@@ -35,4 +36,5 @@ const temporaryProfiles=<ActiveDemoProfile>[
   ActiveDemoProfile(id:'demo-user-3',name:'Hira Ahmed',city:'Islamabad',level:'MS Education',institute:'NUST Islamabad',program:'Education'),
   ActiveDemoProfile(id:'demo-user-4',name:'Usman Malik',city:'Faisalabad, Punjab',level:'BS Business Administration',institute:'University of Agriculture Faisalabad',program:'Business Administration'),
   ActiveDemoProfile(id:'demo-user-5',name:'Ahtasham Malik',city:'Lahore, Punjab',level:'BS Business Administration',institute:'University of the Punjab',program:'Business Administration'),
+  ActiveDemoProfile(id:'demo-user-6',name:'Waheed Akram',username:'waheed',city:'Pakistan',level:'Community Member',institute:'',program:''),
 ];
