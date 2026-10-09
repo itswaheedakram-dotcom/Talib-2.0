@@ -144,12 +144,37 @@ class InstituteDetailScreen extends StatelessWidget {
             _info(Icons.info_outline, 'About', institute.description),
             _info(Icons.location_on_outlined, 'City', institute.city),
             _info(Icons.account_balance_outlined, 'Type', typeLabel),
+            if (institute.subcategory.isNotEmpty) _info(Icons.category_outlined, 'Subcategory', institute.subcategory),
             _info(Icons.location_city_outlined, 'Campus', institute.campus.isEmpty ? 'Not provided' : institute.campus),
             _info(Icons.map_outlined, 'Province', institute.province.isEmpty ? 'Not provided' : institute.province),
             _info(Icons.business_outlined, 'Sector', institute.sector),
             _info(Icons.phone_outlined, 'Contact', institute.contact.isEmpty ? 'Not provided' : institute.contact),
             _info(Icons.language_outlined, 'Website', institute.website.isEmpty ? 'Not provided' : institute.website),
+            if (institute.applicationUrl.isNotEmpty) _info(Icons.open_in_new_outlined, 'Application URL', institute.applicationUrl),
           ])),
+          if (institute.website.trim().isNotEmpty || institute.contact.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Wrap(spacing: 8, runSpacing: 8, children: [
+                if (institute.website.trim().isNotEmpty)
+                  OutlinedButton.icon(
+                    onPressed: () => _openExternal(context, institute.website),
+                    icon: const Icon(Icons.language_outlined),
+                    label: const Text('Open Website'),
+                  ),
+                if (institute.contact.trim().isNotEmpty)
+                  OutlinedButton.icon(
+                    onPressed: () => _openExternal(
+                      context,
+                      institute.contact.contains('@')
+                          ? 'mailto:${institute.contact.trim()}'
+                          : 'tel:${institute.contact.trim()}',
+                    ),
+                    icon: const Icon(Icons.call_outlined),
+                    label: Text(institute.contact.contains('@') ? 'Email Institute' : 'Call Institute'),
+                  ),
+              ]),
+            ),
           const SizedBox(height: 10),
           _section('Admission', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Wrap(spacing: 8, runSpacing: 8, children: [
