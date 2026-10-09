@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 /// Deterministic, offline natural-language query parser for Smart Global Search.
 /// No network AI or paid inference service is used.
 enum GlobalSearchCategory { institutes, admissions, hostels, scholarships, resources, community, people, all }
@@ -53,7 +51,7 @@ abstract final class SmartSearchParser {
     'Gulberg': ['gulberg'],
     'Bosan Road': ['bosan road', 'bosan'],
     'New Campus': ['new campus'],
-    'Bahhdad-ul-Jadeed': ['baghdad-ul-jadeed', 'baghdad ul jadeed'],
+    'Baghdad-ul-Jadeed': ['baghdad-ul-jadeed', 'baghdad ul jadeed'],
   };
 
   static String normalize(String input) {
@@ -71,7 +69,7 @@ abstract final class SmartSearchParser {
       'under': 'under', 'less than': 'under', 'kam': 'under',
       'fees': 'fee', 'rupees': 'rs', 'pkr': 'rs',
     };
-    replacements.forEach((from, to) => value = value.replaceAll(from, to));
+    replacements.forEach((from, to) => value = value.replaceAll(RegExp('\\\\b${RegExp.escape(from)}\\\\b'), to));
     value = value.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
     return value.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
