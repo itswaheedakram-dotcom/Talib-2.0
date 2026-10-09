@@ -56,10 +56,17 @@ service cloud.firestore {
           || resource.data.createdBy == request.auth.uid
         ));
 
-      allow create: if signedIn()
-        && request.resource.data.status == 'pending'
-        && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.ownerId == '';
+      allow create: if (signedIn()
+          && request.resource.data.status == 'pending'
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.ownerId == '')
+        || (admin()
+          || managerAdminPermission('ownership_claim_review'))
+          && request.resource.data.status == 'approved'
+          && request.resource.data.ownerId is string
+          && request.resource.data.ownerId.size() > 0
+          && request.resource.data.representativeId == request.resource.data.ownerId
+          && request.resource.data.ownershipVerified == true;
 
       allow update: if admin()
         || managerAdminPermission('manage_institutes')
