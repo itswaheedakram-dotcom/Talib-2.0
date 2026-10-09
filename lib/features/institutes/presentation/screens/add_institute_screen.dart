@@ -41,6 +41,8 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
   final _customFacility = TextEditingController();
   final Set<String> _selectedPrograms = {};
   final Set<String> _selectedFacilities = {};
+  final Set<String> _customPrograms = {};
+  final Set<String> _customFacilities = {};
 
   final _catalog = InstituteCatalog.instance;
   final _repository = InstituteRepository.instance;
@@ -109,13 +111,28 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
     Set<String> selected,
     TextEditingController output,
     TextEditingController custom,
+    Set<String> customItems,
   ) {
     final value = custom.text.trim();
     if (value.isEmpty) return;
     setState(() {
       selected.add(value);
+      customItems.add(value);
       output.text = selected.join(', ');
       custom.clear();
+    });
+  }
+
+  void _removeCustomItem(
+    Set<String> selected,
+    Set<String> customItems,
+    TextEditingController output,
+    String item,
+  ) {
+    setState(() {
+      selected.remove(item);
+      customItems.remove(item);
+      output.text = selected.join(', ');
     });
   }
 
@@ -300,6 +317,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
               selected: _selectedPrograms,
               output: _programs,
               custom: _customProgram,
+              customItems: _customPrograms,
               hint: 'Add another program or course',
             ),
             _field(_nextProgram, selectedType?.featuredProgramLabel ?? 'Featured / next program', Icons.school_outlined),
@@ -370,6 +388,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
               selected: _selectedFacilities,
               output: _facilities,
               custom: _customFacility,
+              customItems: _customFacilities,
               hint: 'Add another facility',
             ),
             ExpansionTile(
@@ -517,6 +536,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
     required Set<String> selected,
     required TextEditingController output,
     required TextEditingController custom,
+    required Set<String> customItems,
     required String hint,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 14),
@@ -528,11 +548,21 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
         Wrap(
           spacing: 8,
           runSpacing: 4,
-          children: suggestions.map((item) => FilterChip(
-            label: Text(item),
-            selected: selected.contains(item),
-            onSelected: _saving ? null : (_) => _toggleItem(selected, output, item),
-          )).toList(),
+          children: [
+            ...suggestions.map((item) => FilterChip(
+              label: Text(item),
+              selected: selected.contains(item),
+              onSelected: _saving ? null : (_) => _toggleItem(selected, output, item),
+            )),
+            ...customItems.where((item) => !suggestions.contains(item)).map((item) => InputChip(
+              label: Text(item),
+              selected: selected.contains(item),
+              showCheckmark: true,
+              deleteIcon: const Icon(Icons.close, size: 16),
+              onDeleted: _saving ? null : () => _removeCustomItem(selected, customItems, output, item),
+              onSelected: _saving ? null : (_) => _toggleItem(selected, output, item),
+            )),
+          ],
         ),
         const SizedBox(height: 8),
         Row(
@@ -546,13 +576,13 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
                   labelText: hint,
                   prefixIcon: const Icon(Icons.add_circle_outline),
                 ),
-                onSubmitted: (_) => _addCustomItem(selected, output, custom),
+                onSubmitted: (_) => _addCustomItem(selected, output, custom, customItems),
               ),
             ),
             const SizedBox(width: 8),
             IconButton.filledTonal(
               tooltip: 'Add item',
-              onPressed: _saving ? null : () => _addCustomItem(selected, output, custom),
+              onPressed: _saving ? null : () => _addCustomItem(selected, output, custom, customItems),
               icon: const Icon(Icons.add),
             ),
           ],
