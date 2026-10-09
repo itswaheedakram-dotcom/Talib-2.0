@@ -71,7 +71,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
         if(q.area!=null&&!' ${h.area} ${h.address}'.toLowerCase().contains(q.area!.toLowerCase()))continue;
         if(q.gender!=null&&h.gender.toLowerCase()!=q.gender!.toLowerCase())continue;
         if(q.maxBudget!=null&&_money(h.price)>q.maxBudget!)continue;
-        final score=_score(q,h.name,[h.city,h.area,h.type,h.gender,h.price,h.roomType,h.availability,h.meals,h.description,h.address,h.facilities.join(' ')])+(q.wantsBestRated?h.rating*2:0)+(h.isVerified?1:0);
+        final score=_score(q,h.name,['hostel',h.city,h.area,h.type,h.gender,h.price,h.roomType,h.availability,h.meals,h.description,h.address,h.facilities.join(' ')])+(q.wantsBestRated?h.rating*2:0)+(h.isVerified?1:0);
         if(score>0)hits.add(_Hit(h.name,'Hostel','${h.price} • ${h.gender} • ${h.rating.toStringAsFixed(1)} ★',[h.area,h.city].where((e)=>e.isNotEmpty).join(', '),'/hostel/${h.id}',Icons.hotel_outlined,score,h));
       }
 
@@ -90,7 +90,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
 
       if(q.category==GlobalSearchCategory.all||q.category==GlobalSearchCategory.scholarships) {
         for(final s in _scholarships) {
-          final score=_score(q,s.$1,[s.$2,s.$3,s.$4,s.$5]);
+          final score=_score(q,s.$1,['scholarship',s.$2,s.$3,s.$4,s.$5]);
           if(score>0)hits.add(_Hit(s.$1,'Scholarship','${s.$2} • ${s.$3} • ${s.$5}',s.$4,'/scholarships',Icons.card_giftcard_outlined,score));
         }
       }
@@ -101,7 +101,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
           final docs=await FirebaseFirestore.instance.collection('resources').limit(100).get();
           for(final d in docs.docs) {
             final data=d.data(),title=(data['title']??'Study Resource').toString(),desc=(data['description']??'').toString();
-            final score=_score(q,title,[desc,(data['category']??'').toString()]);
+            final score=_score(q,title,['resource','study material',desc,(data['category']??'').toString()]);
             if(score>0)hits.add(_Hit(title,'Resource',desc,'Study material','/resources',Icons.menu_book_outlined,score));
           }
         } catch (_) {}
@@ -113,7 +113,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
         try {
           final posts=await DatabaseService().postsStream().first;
           for(final Post post in posts) {
-            final score=_score(q,post.text,[post.authorName,post.category,post.tags.join(' '),post.attachments.map((a)=>a.values.join(' ')).join(' ')]);
+            final score=_score(q,post.text,['community','post',post.authorName,post.category,post.tags.join(' '),post.attachments.map((a)=>a.values.join(' ')).join(' ')]);
             if(score>0)hits.add(_Hit(post.text.length>76?' ${post.text.substring(0,76)}…':post.text,'Community • ${post.category}','By ${post.authorName} • ${post.likesCount} likes • ${post.commentsCount} comments','', '/community/post/${post.id}',Icons.forum_outlined,score,post));
           }
         } catch (_) {}
@@ -124,7 +124,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
       if(q.category==GlobalSearchCategory.all||q.category==GlobalSearchCategory.people) {
         if(_demo) {
           for(final person in temporaryProfiles) {
-            final score=_score(q,person.name,[person.username,person.city,person.level,person.institute,person.program]);
+            final score=_score(q,person.name,['people','student','profile',person.username,person.city,person.level,person.institute,person.program]);
             if(score>0)hits.add(_Hit(person.name,'Student / Profile','${person.level} • ${person.institute}',person.city,'/profile/${person.id}',Icons.person_outline,score));
           }
         } else {
@@ -133,7 +133,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
             for(final doc in docs.docs) {
               final data=doc.data();
               final name=(data['name']??data['displayName']??data['fullName']??'Student').toString();
-              final score=_score(q,name,[(data['username']??'').toString(),(data['city']??'').toString(),(data['institute']??'').toString(),(data['program']??'').toString(),(data['bio']??'').toString()]);
+              final score=_score(q,name,['people','student','profile',(data['username']??'').toString(),(data['city']??'').toString(),(data['institute']??'').toString(),(data['program']??'').toString(),(data['bio']??'').toString()]);
               if(score>0)hits.add(_Hit(name,'Profile',[(data['program']??'').toString(),(data['institute']??'').toString()].where((v)=>v.isNotEmpty).join(' • '),(data['city']??'').toString(),'/profile/${doc.id}',Icons.person_outline,score));
             }
           } catch (_) {}
@@ -149,7 +149,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
           for(final data in docs) {
             final title=(data['title']??'Study Resource').toString();
             final description=(data['description']??'').toString();
-            final score=_score(q,title,[description,(data['url']??'').toString()]);
+            final score=_score(q,title,['resource','study material',description,(data['url']??'').toString()]);
             if(score>0)hits.add(_Hit(title,'Resource',description,'Study material','/resources',Icons.menu_book_outlined,score));
           }
         } catch (_) {}
