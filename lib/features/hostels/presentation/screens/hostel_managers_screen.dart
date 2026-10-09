@@ -99,7 +99,28 @@ class _HostelManagersScreenState extends State<HostelManagersScreen> {
       ])));
   }
 
-  @override Widget build(BuildContext context){
+  @override Widget build(BuildContext context) {
+    try {
+      return _buildScreen(context);
+    } catch (error) {
+      return Scaffold(
+        backgroundColor: AppColors.cream,
+        appBar: AppBar(title: const Text('Manage Managers')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Manage Managers could not be loaded.\\n$error',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.mutedText),
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildScreen(BuildContext context) {
     if(_loading)return const Scaffold(backgroundColor:AppColors.cream,body:Center(child:CircularProgressIndicator(color:AppColors.primaryGreen)));
     if(_hostel==null)return Scaffold(backgroundColor:AppColors.cream,appBar:AppBar(title:const Text('Manage Managers')),body:const Center(child:Text('Hostel nahi mila.')));
     if(!isOwner)return Scaffold(backgroundColor:AppColors.cream,appBar:AppBar(title:const Text('Manage Managers')),body:const Center(child:Padding(padding:EdgeInsets.all(24),child:Text('Sirf hostel owner managers ko manage kar sakta hai.',textAlign:TextAlign.center))));
