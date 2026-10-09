@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/services/active_profile_controller.dart';
 import '../../../models/institute.dart';
 import '../../data/institute_catalog.dart';
 import '../../data/institute_repository.dart';
@@ -105,6 +106,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
       name: _name.text.trim(),
       type: _type,
       subcategory: subcategory,
+      createdBy: ActiveProfileController.instance.effectiveUid ?? '',
       campus: _campus.text.trim(),
       province: _province.text.trim(),
       city: _city.text.trim(),
@@ -153,6 +155,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
   @override
   Widget build(BuildContext context) {
     final types = _catalog.types;
+    final selectedType = _catalog.byId(_type);
     final subcategories = _catalog.subcategoriesFor(_type);
     if (_type.isNotEmpty && !types.any((type) => type.id == _type) && types.isNotEmpty) {
       _type = types.first.id;
@@ -174,7 +177,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
             Text('Institute profile', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 5),
             Text(
-              'Enter what you know. Optional details can be completed later by the verified institute representative.',
+              'Enter what you know. Required details are marked. Optional information can be completed later by the approved institute representative.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
@@ -229,11 +232,11 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
               onChanged: (value) => setState(() => _sector = value ?? _sector),
             ),
             const SizedBox(height: 16),
-            Text('Programs & eligibility', style: Theme.of(context).textTheme.titleMedium),
+            Text('${_catalog.labelFor(_type)} details', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 10),
-            _field(_programs, 'Programs / courses (comma separated)', Icons.menu_book_outlined, maxLines: 2),
+            _field(_programs, selectedType?.programLabel ?? 'Programs / courses', Icons.menu_book_outlined, maxLines: 2),
             _field(_nextProgram, 'Featured / next program', Icons.school_outlined),
-            _field(_eligibility, 'Eligibility criteria', Icons.rule_outlined, maxLines: 3),
+            _field(_eligibility, selectedType?.eligibilityLabel ?? 'Eligibility criteria', Icons.rule_outlined, maxLines: 3),
             _field(_minScore, 'Minimum percentage / CGPA', Icons.percent,
                 keyboard: const TextInputType.numberWithOptions(decimal: true)),
             const SizedBox(height: 8),
@@ -288,7 +291,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
                 Icon(Icons.info_outline, color: AppColors.primaryGreen),
                 SizedBox(width: 9),
                 Expanded(child: Text(
-                  'This suggestion stays private until it is approved. Demo submissions stay in Demo mode and never write to Firebase.',
+                  'This listing stays private until an admin approves it. The submitter can later request to claim the institute profile after verification. Demo submissions stay isolated from Firebase.',
                 )),
               ]),
             ),
