@@ -122,6 +122,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _demoInfo(Icons.location_on_outlined, 'City', p.city),
                 ])),
                 const SizedBox(height: 12),
+                AnimatedBuilder(
+                  animation: DemoDataService.instance,
+                  builder: (context, _) {
+                    final reviews = DemoDataService.instance.reviews(p.id);
+                    var sum = 0;
+                    for (final review in reviews) {
+                      sum += (review['rating'] as num?)?.toInt() ?? 0;
+                    }
+                    final average = reviews.isEmpty ? 0.0 : sum / reviews.length;
+                    return _section(
+                      'My Reputation',
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            const Icon(Icons.star_rounded, color: green, size: 28),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(
+                              reviews.isEmpty ? 'No reviews yet' : '${average.toStringAsFixed(1)} / 5',
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: darkGreen),
+                            )),
+                            Text('${reviews.length} reviews'),
+                          ]),
+                          const SizedBox(height: 8),
+                          Text('${DemoDataService.instance.followerCount(p.id)} followers'),
+                          if (reviews.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            ...reviews.map((review) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: CircleAvatar(
+                                backgroundColor: lightGreen,
+                                child: Text(((review['reviewerName'] ?? 'S').toString().isEmpty ? 'S' : (review['reviewerName'] ?? 'S').toString()[0]).toUpperCase()),
+                              ),
+                              title: Text((review['reviewerName'] ?? 'Student').toString()),
+                              subtitle: Text((review['text'] ?? '').toString()),
+                              trailing: Text('${review['rating'] ?? 0}/5'),
+                            )),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
                 _section('Test Mode', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Text('The app is currently using this temporary profile for profile-related testing.'),
                   const SizedBox(height: 10),
