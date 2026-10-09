@@ -295,9 +295,9 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
             onPressed:(){
               var base=parsed.original;
               const aliases=['Lahore','Lahor','Islamabad','Islam Abad','Rawalpindi','Pindi','Multan','Bahawalpur','Bahawal Poor','Faisalabad','Faisal Abad','Karachi','Krachi','Peshawar','Peshawer','Quetta','Gujranwala','Sialkot','Sargodha','Johar Town','Gulberg','Bosan Road','Bosan','New Campus','Baghdad-ul-Jadeed'];
-              for(final alias in aliases){base=base.replaceAll(RegExp(r'\\b' + RegExp.escape(alias) + r'\\b',caseSensitive:false), ' ');}
-              base=base.replaceAll(RegExp(r'\\b(?:under|below|less than|max|maximum|budget|rs|pkr)?\\s*\\d[\\d,]{3,}\\b',caseSensitive:false),' ');
-              base=base.replaceAll(RegExp(r'\\b(?:girls?|female|women|ladies|boys?|male|men)\\b',caseSensitive:false),' ');
+              for(final alias in aliases){base=base.replaceAll(RegExp(r'\b' + RegExp.escape(alias) + r'\b',caseSensitive:false), ' ');}
+              base=base.replaceAll(RegExp(r'\b(?:under|below|less than|max|maximum|budget|rs|pkr)?\s*\d[\d,]{3,}\b',caseSensitive:false),' ');
+              base=base.replaceAll(RegExp(r'\b(?:girls?|female|women|ladies|boys?|male|men)\b',caseSensitive:false),' ');
               final parts=<String>[base.trim()];
               if(city.text.trim().isNotEmpty)parts.add('in ${city.text.trim()}');
               if(area.text.trim().isNotEmpty)parts.add(area.text.trim());
