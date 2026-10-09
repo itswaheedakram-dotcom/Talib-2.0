@@ -235,7 +235,8 @@ class InstituteDetailScreen extends StatelessWidget {
                 : const Stream.empty(),
             builder: (context, snap) {
               final pending = snap.data?.docs.isNotEmpty == true;
-              final signedIn = FirebaseService.initialized && FirebaseAuth.instance.currentUser != null;
+              final demoActive = ActiveProfileController.instance.isDemo;
+              final signedIn = demoActive || (FirebaseService.initialized && FirebaseAuth.instance.currentUser != null);
               return Card(child: ListTile(
                 leading: Icon(pending ? Icons.hourglass_top : Icons.business_outlined, color: green),
                 title: Text(pending ? 'Claim under review' : 'Manage this institute'),
