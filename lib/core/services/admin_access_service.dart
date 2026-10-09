@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
+import 'firebase_service.dart';
+
 enum TalibAdminRole { none, managerAdmin, superAdmin }
 
 class AdminAccessService extends ChangeNotifier {
@@ -27,6 +29,10 @@ class AdminAccessService extends ChangeNotifier {
       isSuperAdmin || (_role == TalibAdminRole.managerAdmin && _permissions[permission] == true);
 
   void start() {
+    if (!FirebaseService.initialized) {
+      _setRole(TalibAdminRole.none, const {}, null);
+      return;
+    }
     _authSubscription ??= FirebaseAuth.instance.authStateChanges().listen((user) {
       refresh(user: user);
     });
@@ -34,6 +40,10 @@ class AdminAccessService extends ChangeNotifier {
   }
 
   Future<void> refresh({User? user}) async {
+    if (!FirebaseService.initialized) {
+      _setRole(TalibAdminRole.none, const {}, null);
+      return;
+    }
     final current = user ?? FirebaseAuth.instance.currentUser;
     if (current == null || current.isAnonymous) {
       _setRole(TalibAdminRole.none, const {}, current?.uid);
