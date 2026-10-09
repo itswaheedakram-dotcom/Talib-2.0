@@ -20,8 +20,12 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _campus = TextEditingController();
+  final _country = TextEditingController(text: 'Pakistan');
   final _province = TextEditingController();
+  final _district = TextEditingController();
   final _city = TextEditingController();
+  final _area = TextEditingController();
+  final _board = TextEditingController();
   final _town = TextEditingController();
   final _address = TextEditingController();
   final _description = TextEditingController();
@@ -75,7 +79,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
   void dispose() {
     _catalog.removeListener(_onCatalogChanged);
     for (final controller in [
-      _name, _campus, _province, _city, _town, _address, _description,
+      _name, _campus, _country, _province, _district, _city, _area, _board, _town, _address, _description,
       _website, _applicationUrl, _contact, _eligibility, _minScore, _nextProgram, _programs,
       _deadline, _fee, _facilities, _imageUrl, _customSubcategory,
       _customProgram, _customFacility,
@@ -172,12 +176,16 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
       subcategory: subcategory,
       createdBy: ActiveProfileController.instance.effectiveUid ?? '',
       campus: _campus.text.trim(),
+      country: _country.text.trim().isEmpty ? 'Pakistan' : _country.text.trim(),
       province: _province.text.trim(),
+      district: _district.text.trim(),
       city: _city.text.trim(),
-      town: _town.text.trim(),
+      area: _area.text.trim(),
+      board: _board.text.trim(),
+      town: _town.text.trim().isEmpty ? _area.text.trim() : _town.text.trim(),
       sector: _sector,
       address: _address.text.trim().isEmpty
-          ? '${_city.text.trim()}, ${_province.text.trim()}'.trim()
+          ? [_area.text.trim(), _city.text.trim(), _district.text.trim(), _province.text.trim(), _country.text.trim()].where((part) => part.isNotEmpty).join(', ')
           : _address.text.trim(),
       description: _description.text.trim(),
       website: _website.text.trim(),
@@ -279,15 +287,32 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
             ],
             const SizedBox(height: 12),
             _field(_name, 'Institute name', Icons.account_balance_outlined, required: true),
+            _locationAutocomplete(
+              controller: _country,
+              label: 'Country',
+              options: const ['Pakistan', 'United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Oman', 'Bahrain', 'Kuwait', 'United Kingdom', 'United States', 'Canada', 'Australia', 'Malaysia', 'Turkey'],
+              required: true,
+              onSelected: (_) {
+                _province.clear();
+                _district.clear();
+                _city.clear();
+                _area.clear();
+                setState(() {});
+              },
+            ),
             Row(children: [
               Expanded(
                 child: _locationAutocomplete(
                   controller: _province,
-                  label: 'Province / Region',
-                  options: const ['Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan', 'Islamabad Capital Territory', 'Azad Jammu & Kashmir', 'Gilgit-Baltistan'],
+                  label: 'Province / State / Region',
+                  options: _country.text.trim().toLowerCase() == 'pakistan'
+                      ? const ['Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan', 'Islamabad Capital Territory', 'Azad Jammu & Kashmir', 'Gilgit-Baltistan']
+                      : const [],
                   required: true,
                   onSelected: (_) {
+                    _district.clear();
                     _city.clear();
+                    _area.clear();
                     setState(() {});
                   },
                 ),
@@ -295,13 +320,49 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: _locationAutocomplete(
+                  controller: _district,
+                  label: 'District / County (optional)',
+                  options: _districtsForProvince(_province.text),
+                  required: false,
+                  onSelected: (_) {
+                    _city.clear();
+                    _area.clear();
+                    setState(() {});
+                  },
+                ),
+              ),
+            ]),
+            Row(children: [
+              Expanded(
+                child: _locationAutocomplete(
                   controller: _city,
-                  label: 'City',
+                  label: 'City / Town',
                   options: _citiesForProvince(_province.text),
                   required: true,
                 ),
               ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _locationAutocomplete(
+                  controller: _area,
+                  label: 'Area / Locality (optional)',
+                  options: const [],
+                  required: false,
+                ),
+              ),
             ]),
+            if (_type == 'schools' || _type == 'colleges')
+              _locationAutocomplete(
+                controller: _board,
+                label: 'Education board / examining authority',
+                options: const [
+                  'BISE Lahore', 'BISE Rawalpindi', 'BISE Faisalabad', 'BISE Multan',
+                  'BISE Bahawalpur', 'BISE Sargodha', 'BISE Gujranwala', 'BISE Sahiwal',
+                  'BISE Dera Ghazi Khan', 'FBISE', 'Sindh Boards', 'KPK Boards',
+                  'Balochistan Board', 'Aga Khan University Examination Board', 'Cambridge International',
+                ],
+                required: false,
+              ),
             _choiceSection(
               label: 'Ownership / sector',
               values: InstituteCatalog.sectors,
@@ -462,6 +523,26 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
       return const ['Gilgit', 'Skardu', 'Hunza', 'Ghanche', 'Ghizer'];
     }
     return const ['Lahore', 'Karachi', 'Islamabad', 'Peshawar', 'Quetta', 'Multan', 'Faisalabad', 'Hyderabad'];
+  }
+
+  List<String> _districtsForProvince(String province) {
+    final key = province.trim().toLowerCase();
+    if (key == 'punjab') {
+      return const ['Attock', 'Bahawalnagar', 'Bahawalpur', 'Bhakkar', 'Chakwal', 'Chiniot', 'Dera Ghazi Khan', 'Faisalabad', 'Gujranwala', 'Gujrat', 'Hafizabad', 'Jhang', 'Jhelum', 'Kasur', 'Khanewal', 'Khushab', 'Kot Addu', 'Lahore', 'Layyah', 'Lodhran', 'Mandi Bahauddin', 'Mianwali', 'Multan', 'Murree', 'Muzaffargarh', 'Narowal', 'Nankana Sahib', 'Okara', 'Pakpattan', 'Rahim Yar Khan', 'Rajanpur', 'Rawalpindi', 'Sahiwal', 'Sargodha', 'Sheikhupura', 'Sialkot', 'Talagang', 'Taunsa', 'Toba Tek Singh', 'Vehari', 'Wazirabad'];
+    }
+    if (key == 'sindh') {
+      return const ['Badin', 'Dadu', 'Ghotki', 'Hyderabad', 'Jacobabad', 'Jamshoro', 'Karachi Central', 'Karachi East', 'Karachi South', 'Karachi West', 'Kashmore', 'Khairpur', 'Larkana', 'Malir', 'Mirpur Khas', 'Naushahro Feroze', 'Sanghar', 'Shaheed Benazirabad', 'Shikarpur', 'Sukkur', 'Thatta', 'Tharparkar', 'Umerkot'];
+    }
+    if (key == 'khyber pakhtunkhwa' || key == 'kpk') {
+      return const ['Abbottabad', 'Bajaur', 'Bannu', 'Charsadda', 'Dera Ismail Khan', 'Hangu', 'Haripur', 'Karak', 'Khyber', 'Kohat', 'Kurram', 'Lakki Marwat', 'Lower Dir', 'Malakand', 'Mansehra', 'Mardan', 'Mohmand', 'North Waziristan', 'Nowshera', 'Orakzai', 'Peshawar', 'Shangla', 'Swabi', 'Swat', 'Tank', 'Upper Dir'];
+    }
+    if (key == 'balochistan') {
+      return const ['Awaran', 'Barkhan', 'Chagai', 'Chaman', 'Dera Bugti', 'Gwadar', 'Hub', 'Jafarabad', 'Kalat', 'Kech', 'Khuzdar', 'Killa Abdullah', 'Killa Saifullah', 'Kohlu', 'Lasbela', 'Loralai', 'Mastung', 'Musakhel', 'Naseerabad', 'Nushki', 'Panjgur', 'Pishin', 'Quetta', 'Sherani', 'Sibi', 'Sohbatpur', 'Washuk', 'Zhob', 'Ziarat'];
+    }
+    if (key == 'islamabad capital territory' || key == 'islamabad') return const ['Islamabad'];
+    if (key == 'azad jammu & kashmir' || key == 'ajk') return const ['Bagh', 'Bhimber', 'Haveli', 'Kotli', 'Mirpur', 'Muzaffarabad', 'Neelum', 'Poonch', 'Sudhanoti'];
+    if (key == 'gilgit-baltistan') return const ['Astore', 'Diamer', 'Ghanche', 'Ghizer', 'Gilgit', 'Hunza', 'Kharmang', 'Shigar', 'Skardu'];
+    return const [];
   }
 
   Widget _locationAutocomplete({
