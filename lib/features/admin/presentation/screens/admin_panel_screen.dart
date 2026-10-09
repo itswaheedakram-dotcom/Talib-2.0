@@ -288,6 +288,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             () => context.push('/admin/institute-types'),
           ),
           _section(
+            'Location Catalog',
+            'Maintain countries, provinces, districts, cities and areas; import CSV data',
+            Icons.public_outlined,
+            () => context.push('/admin/locations'),
+          ),
+          _section(
             'Institute Claims',
             'Demo-safe ownership review',
             Icons.school_outlined,
@@ -378,6 +384,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   _section('New Institute Submissions', 'Approve or reject new institute listings', Icons.fact_check_outlined, () => context.push('/admin/institute-submissions')),
                 if (_access.isSuperAdmin || canManageInstitutes)
                   _section('Institute Categories', 'Manage categories and subcategories centrally', Icons.category_outlined, () => context.push('/admin/institute-types')),
+                if (_access.isSuperAdmin || canManageInstitutes)
+                  _section('Location Catalog', 'Maintain location hierarchy and import complete CSV datasets', Icons.public_outlined, () => context.push('/admin/locations')),
                 if (canReviewClaims || _access.isSuperAdmin)
                   _section('Institute Claims', 'Review institute ownership requests', Icons.school_outlined, () => context.push('/admin/institute-claims')),
                 if (canReviewClaims || _access.isSuperAdmin)
