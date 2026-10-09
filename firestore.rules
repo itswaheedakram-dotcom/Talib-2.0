@@ -47,7 +47,48 @@ service cloud.firestore {
       allow read, write: if signedIn();
       match /comments/{commentId} { allow read, write: if signedIn(); }
     }
-    match /institutes/{instituteId} { allow read, write: if signedIn(); }
+    match /institutes/{instituteId} {
+      allow read: if resource.data.status == 'approved'
+        || admin()
+        || managerAdminPermission('manage_institutes')
+        || (signedIn() && (
+          resource.data.ownerId == request.auth.uid
+          || resource.data.createdBy == request.auth.uid
+        ));
+
+      allow create: if signedIn()
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.ownerId == '';
+
+      allow update: if admin()
+        || managerAdminPermission('manage_institutes')
+        || (managerAdminPermission('ownership_claim_review')
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'ownerId', 'representativeId', 'ownershipVerified', 'updatedAt'
+          ]))
+        || (signedIn()
+          && resource.data.ownerId == request.auth.uid
+          && request.resource.data.ownerId == resource.data.ownerId
+          && request.resource.data.representativeId == resource.data.representativeId
+          && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'type', 'subcategory', 'campus', 'province', 'city', 'town',
+            'sector', 'address', 'description', 'website', 'applicationUrl',
+            'submissionMode', 'eligibility', 'programs', 'contact', 'minScore',
+            'nextProgram', 'admissionStatus', 'admissionDeadline', 'feeRange',
+            'entryTestRequired', 'imageUrl', 'facilities', 'updatedAt'
+          ]));
+
+      allow delete: if admin() || managerAdminPermission('manage_institutes');
+    }
+
+    match /instituteTypes/{typeId} {
+      allow read: if true;
+      allow create, update, delete: if admin() || managerAdminPermission('manage_institutes');
+    }
 
     match /hostels/{hostelId} {
       function managerPermission(permission) {
