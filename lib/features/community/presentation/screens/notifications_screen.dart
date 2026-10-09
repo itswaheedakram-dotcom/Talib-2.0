@@ -15,7 +15,6 @@ class NotificationsScreen extends StatelessWidget {
     final db = DatabaseService();
     final demo = ActiveProfileController.instance.isDemo;
     final activeUid = ActiveProfileController.instance.effectiveUid ?? '';
-    final real = FirebaseAuth.instance.currentUser;
 
     // Demo identity and its notifications must work without Firebase auth.
     if (demo) {
@@ -30,6 +29,7 @@ class NotificationsScreen extends StatelessWidget {
       );
     }
 
+    final real = FirebaseAuth.instance.currentUser;
     if (!FirebaseService.initialized || real == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Notifications')),
@@ -66,7 +66,7 @@ class NotificationsScreen extends StatelessWidget {
           context,
           item,
           onTap: () => _openNotification(
-            context, item, db, uid, item['id']?.toString() ?? '', demo: true,
+            context, item, db, uid, item['id']?.toString() ?? '',
           ),
         );
       },
@@ -119,9 +119,8 @@ class NotificationsScreen extends StatelessWidget {
     Map<String, dynamic> item,
     DatabaseService db,
     String uid,
-    String id, {
-    required bool demo,
-  }) async {
+    String id,
+  ) async {
     if (id.isNotEmpty) {
       await db.markNotificationRead(uid, id);
     }
