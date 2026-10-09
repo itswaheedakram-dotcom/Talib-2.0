@@ -18,6 +18,7 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
   late String _gender, _type;
   late bool _ac;
   late Set<String> _facilities;
+  late List<Map<String, dynamic>> _rooms;
   bool _saving = false;
   bool _saved = false;
 
@@ -47,6 +48,7 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
     _type = h.type;
     _ac = h.ac;
     _facilities = h.facilities.toSet();
+    _rooms = h.rooms.map((room) => Map<String, dynamic>.from(room)).toList();
   }
 
   @override
@@ -63,6 +65,7 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
       _room.text.trim().isNotEmpty, _phone.text.trim().isNotEmpty,
       _description.text.trim().isNotEmpty, _photos.text.trim().isNotEmpty,
       _facilities.isNotEmpty, _availability.text.trim().isNotEmpty,
+      _rooms.isNotEmpty,
     ];
     return ((checks.where((v) => v).length / checks.length) * 100).round();
   }
@@ -85,6 +88,7 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
       roomType: _room.text.trim(), availability: _availability.text.trim(),
       meals: _meals.text.trim(), ac: _ac, facilities: _facilities.toList(),
       imageUrl: photoList.isEmpty ? '' : photoList.first, imageUrls: photoList,
+      rooms: _rooms.map((room) => Map<String, dynamic>.from(room)).toList(),
       description: _description.text.trim(), phone: _phone.text.trim(),
       website: _website.text.trim(), ownerId: old.ownerId, ownerName: old.ownerName,
       status: publish ? 'pending' : old.status, isVerified: publish ? false : old.isVerified,
@@ -141,7 +145,7 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
             _field(_security, 'Security deposit (Rs.)', keyboard: TextInputType.number, hint: '18000'),
             _field(_availability, 'Available beds', hint: 'e.g. 4 beds available'),
             SwitchListTile(contentPadding: EdgeInsets.zero, activeColor: AppColors.primaryGreen, title: const Text('Air conditioning available'), value: _ac, onChanged: (v) => setState(() => _ac = v)),
-            const Text('Room inventory cards, individual room numbers and duplicate-room actions will be enabled when room records are connected to the data model.', style: TextStyle(color: AppColors.mutedText, fontSize: 12, height: 1.35)),
+            _roomInventory(),
           ]),
           _section('Photos', Icons.photo_library_outlined, [
             _field(_photos, 'Photo links (one per line)', maxLines: 3, hint: 'Paste image links here'),
@@ -191,7 +195,7 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
       const SizedBox(height: 14),
       Row(children: [
         Expanded(child: _metric('Completion', '$_completed%')),
-        Expanded(child: _metric('Rooms', _room.text.isEmpty ? '—' : _room.text)),
+        Expanded(child: _metric('Rooms', _rooms.length.toString())),
         Expanded(child: _metric('Managers', '—')),
       ]),
       const SizedBox(height: 10),
@@ -207,6 +211,111 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
     _action('Managers', Icons.people_outline, () => context.push('/hostel/${h.id}/managers', extra: h)),
     _action('View Hostel', Icons.visibility_outlined, () => context.push('/hostel/${h.id}', extra: h)),
   ]);
+
+  Widget _roomInventory() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(children: [
+        const Expanded(child: Text('Room inventory', style: TextStyle(color: AppColors.darkGreen, fontWeight: FontWeight.w700))),
+        TextButton.icon(onPressed: () => _editRoom(), icon: const Icon(Icons.add, size: 18), label: const Text('Add room')),
+      ]),
+      if (_rooms.isEmpty)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: AppColors.cream, borderRadius: BorderRadius.circular(12)),
+          child: const Text('Abhi room add nahi kiya. Add Room dabayein aur room number, beds aur rent enter karein.', style: TextStyle(color: AppColors.mutedText, fontSize: 12, height: 1.4)),
+        ),
+      ..._rooms.asMap().entries.map((entry) {
+        final index = entry.key;
+        final room = entry.value;
+        final roomName = 'Room ' + ((room['number'] ?? '').toString().trim().isEmpty ? (index + 101).toString() : room['number'].toString());
+        return Container(
+          margin: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: AppColors.cream, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              const Icon(Icons.bed_outlined, color: AppColors.primaryGreen),
+              const SizedBox(width: 8),
+              Expanded(child: Text(roomName, style: const TextStyle(color: AppColors.darkGreen, fontWeight: FontWeight.w800))),
+              PopupMenuButton<String>(
+                onSelected: (action) {
+                  if (action == 'edit') _editRoom(room: room, index: index);
+                  if (action == 'duplicate') _duplicateRoom(room);
+                  if (action == 'delete') setState(() { _rooms.removeAt(index); _saved = false; });
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'edit', child: Text('Edit room')),
+                  PopupMenuItem(value: 'duplicate', child: Text('Duplicate room')),
+                  PopupMenuItem(value: 'delete', child: Text('Remove room')),
+                ],
+              ),
+            ]),
+            Text((room['beds'] ?? 1).toString() + ' beds · Rs. ' + (room['price'] ?? '0').toString() + '/month · ' + (room['available'] ?? room['beds'] ?? 1).toString() + ' available', style: const TextStyle(color: AppColors.mutedText, fontSize: 12)),
+            if (room['ac'] == true)
+              const Padding(padding: EdgeInsets.only(top: 4), child: Text('Air conditioning', style: TextStyle(color: AppColors.primaryGreen, fontSize: 12))),
+          ]),
+        );
+      }),
+      const SizedBox(height: 4),
+      const Text('Room details are saved with this hostel listing. Duplicate is useful when several rooms have the same setup.', style: TextStyle(color: AppColors.mutedText, fontSize: 12, height: 1.35)),
+    ],
+  );
+
+  Future<void> _editRoom({Map<String, dynamic>? room, int? index}) async {
+    final number = TextEditingController(text: room?['number']?.toString() ?? 'Room ' + (101 + _rooms.length).toString());
+    final beds = TextEditingController(text: room?['beds']?.toString() ?? '2');
+    final price = TextEditingController(text: room?['price']?.toString() ?? _price.text.trim());
+    final available = TextEditingController(text: room?['available']?.toString() ?? '2');
+    var hasAc = room?['ac'] == true;
+    final formKey = GlobalKey<FormState>();
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(room == null ? 'Add room' : 'Edit room'),
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextFormField(controller: number, decoration: const InputDecoration(labelText: 'Room number / name'), validator: (v) => v == null || v.trim().isEmpty ? 'Room name is required' : null),
+              TextFormField(controller: beds, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total beds'), validator: (v) => int.tryParse(v ?? '') == null || int.parse(v!) < 1 ? 'Enter at least 1 bed' : null),
+              TextFormField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Monthly rent (Rs.)'), validator: (v) => double.tryParse(v ?? '') == null || double.parse(v!) < 0 ? 'Enter a valid rent' : null),
+              TextFormField(controller: available, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Available beds'), validator: (v) => int.tryParse(v ?? '') == null || int.parse(v!) < 0 || int.parse(v!) > (int.tryParse(beds.text) ?? 0) ? 'Available beds must be between 0 and total beds' : null),
+              SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Air conditioning'), value: hasAc, onChanged: (v) => setDialogState(() => hasAc = v)),
+            ])),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () { if (formKey.currentState?.validate() == true) Navigator.pop(dialogContext, true); }, child: const Text('Save room')),
+          ],
+        ),
+      ),
+    );
+    if (accepted == true && mounted) {
+      final value = <String, dynamic>{
+        'number': number.text.trim(),
+        'beds': int.parse(beds.text.trim()),
+        'price': price.text.trim(),
+        'available': int.parse(available.text.trim()),
+        'ac': hasAc,
+      };
+      setState(() {
+        if (index == null) { _rooms.add(value); } else { _rooms[index] = value; }
+        _saved = false;
+      });
+    }
+    number.dispose(); beds.dispose(); price.dispose(); available.dispose();
+  }
+
+  void _duplicateRoom(Map<String, dynamic> room) {
+    final copy = Map<String, dynamic>.from(room);
+    final current = (room['number'] ?? '').toString();
+    final numeric = int.tryParse(current);
+    copy['number'] = numeric == null ? current + ' copy' : (numeric + 1).toString();
+    setState(() { _rooms.add(copy); _saved = false; });
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Room duplicated. Update its number and details if needed, then Save Draft.')));
+  }
 
   void _scrollToSection() {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Edit the relevant section below.')));
