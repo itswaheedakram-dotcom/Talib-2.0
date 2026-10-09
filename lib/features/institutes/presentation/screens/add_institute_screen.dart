@@ -250,12 +250,17 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
     );
     final districts = <String>{..._districtsForProvince(_province.text), ...remoteDistricts}.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    final remoteCities = _locations.options(
-      type: 'city',
-      parentName: _district.text.trim().isNotEmpty ? _district.text : _province.text,
-      country: _country.text,
+    final remoteDistrictCities = _locations.options(
+      type: 'city', parentName: _district.text, country: _country.text,
     );
-    final cities = <String>{..._citiesForProvince(_province.text), ...remoteCities}.toList()
+    final remoteProvinceCities = _locations.options(
+      type: 'city', parentName: _province.text, country: _country.text,
+    );
+    final cities = <String>{
+      ..._citiesForProvince(_province.text),
+      ...remoteDistrictCities,
+      ...remoteProvinceCities,
+    }.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final areas = _locations.options(type: 'area', parentName: _city.text, country: _country.text);
     if (_type.isNotEmpty && !types.any((type) => type.id == _type) && types.isNotEmpty) {
@@ -363,7 +368,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
               Expanded(
                 child: _locationAutocomplete(
                   controller: _city,
-                  label: 'City / Town',
+                  label: 'City / Town / Tehsil',
                   options: cities,
                   required: true,
                 ),
@@ -576,7 +581,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
     'Country' => 'country',
     'Province / State / Region' => 'region-${_country.text}',
     'District / County (optional)' => 'district-${_province.text}',
-    'City' || 'City / Town' => 'city-${_province.text}-${_district.text}',
+    'City' || 'City / Town' || 'City / Town / Tehsil' => 'city-${_province.text}-${_district.text}',
     'Area / Locality (optional)' => 'area-${_city.text}',
     _ => label,
   };
