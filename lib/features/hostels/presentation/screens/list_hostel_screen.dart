@@ -35,11 +35,31 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
   }
 
   Future<void> _submit() async {
-    final user = FirebaseAuth.instance.currentUser;
+    // FirebaseAuth.instance throws when Firebase has not been initialized.
+    // Read auth only when Firebase is ready so demo submissions still work.
     final activeProfile = ActiveProfileController.instance.active;
+    User? user;
+    if (FirebaseService.initialized) {
+      try {
+        user = FirebaseAuth.instance.currentUser;
+      } catch (_) {
+        user = null;
+      }
+    }
     final demoMode = activeProfile != null || !FirebaseService.initialized;
-    if (user == null && activeProfile == null && !demoMode) { if (mounted) context.push('/signin'); return; }
-    if (!_formKey.currentState!.validate()) return;
+    if (user == null && activeProfile == null && !demoMode) {
+      if (mounted) context.push('/signin');
+      return;
+    }
+    if (!_formKey.currentState!.validate()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please complete the required fields: hostel name, city, area, address and phone.')),
+        );
+      }
+      return;
+    }
+    if (_saving) return;
     setState(() => _saving = true);
     try {
       final rooms = _rooms.map((r) => r.toModel()).where((r) => r.type.trim().isNotEmpty).toList();
@@ -56,10 +76,10 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
       );
       await HostelRepository.submitHostelSafe(hostel, demo: demoMode);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(demoMode ? 'Demo hostel added successfully.' : 'Hostel submitted for admin approval.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(demoMode ? 'Hostel request submitted for admin approval (Demo).' : 'Hostel submitted for admin approval.')));
       context.pop();
-    } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hostel could not be submitted. Please try again.')));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Hostel request failed: $error')));
     } finally { if (mounted) setState(() => _saving = false); }
   }
 
