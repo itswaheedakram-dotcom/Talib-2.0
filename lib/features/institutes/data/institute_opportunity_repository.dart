@@ -4,7 +4,10 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/services/active_profile_controller.dart';
 import '../../../core/services/firebase_service.dart';
+import '../../../core/services/demo_data_service.dart';
+import '../../models/institute.dart';
 import '../../models/institute_opportunity.dart';
+import 'institute_repository.dart';
 
 /// Keeps demo offerings completely separate from the real Firestore records.
 class InstituteOpportunityRepository extends ChangeNotifier {
@@ -57,6 +60,7 @@ class InstituteOpportunityRepository extends ChangeNotifier {
           item.toMap(),
         );
         (_demoItems[item.instituteId] ??= []).insert(0, created);
+        await _notifyBookmarkedUsers(created);
         notifyListeners();
         return created;
       }
@@ -73,12 +77,56 @@ class InstituteOpportunityRepository extends ChangeNotifier {
           .add(data);
       final created = InstituteOpportunity.fromMap(ref.id, data);
       (_realItems[item.instituteId] ??= []).insert(0, created);
+      await _notifyBookmarkedUsers(created);
       notifyListeners();
       return created;
     } catch (e) {
       error = e.toString();
       notifyListeners();
       return null;
+    }
+  }
+
+  Future<void> _notifyBookmarkedUsers(InstituteOpportunity item) async {
+    final instituteName = InstituteRepository.instance.byId(item.instituteId)?.name ?? 'An institute you saved';
+    final kindLabel = switch (item.kind) {
+      'scholarship' => 'scholarship',
+      'course' => 'program / course',
+      _ => 'admission update',
+    };
+    final text = 'New $kindLabel: ${item.title} at $instituteName';
+    try {
+      if (isDemoMode) {
+        for (final uid in DemoDataService.instance.usersWhoBookmarkedInstitute(item.instituteId)) {
+          DemoDataService.instance.addNotification(uid, {
+            'type': 'institute_update',
+            'text': text,
+            'instituteId': item.instituteId,
+            'opportunityId': item.id,
+            'createdAt': DateTime.now(),
+            'read': false,
+          });
+        }
+        return;
+      }
+      final bookmarks = await FirebaseFirestore.instance
+          .collectionGroup('instituteBookmarks')
+          .where('instituteId', isEqualTo: item.instituteId)
+          .get();
+      for (final bookmark in bookmarks.docs) {
+        final userRef = bookmark.reference.parent.parent;
+        if (userRef == null) continue;
+        await userRef.collection('notifications').add({
+          'type': 'institute_update',
+          'text': text,
+          'instituteId': item.instituteId,
+          'opportunityId': item.id,
+          'createdAt': FieldValue.serverTimestamp(),
+          'read': false,
+        });
+      }
+    } catch (_) {
+      // Listing publication must not fail if notification delivery has a problem.
     }
   }
 
