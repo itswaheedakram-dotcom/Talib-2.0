@@ -6,10 +6,10 @@ import '../../../core/services/active_profile_controller.dart';
 import '../../models/institute.dart';
 
 class InstituteRepository extends ChangeNotifier {
-  InstituteRepository._();
+  InstituteRepository._() : _demoItems = List<Institute>.of(_seedItems);
   static final instance = InstituteRepository._();
 
-  final List<Institute> _demoItems = [
+  static const List<Institute> _seedItems = [
     const Institute(id:'school-1',name:'The Educators',type:'schools',city:'Lahore',province:'Punjab',sector:'Private',address:'Lahore, Punjab',description:'A school offering foundational and secondary education.',programs:['Primary','Middle','Matric']),
     const Institute(id:'school-2',name:'Beaconhouse School System',type:'schools',city:'Lahore',province:'Punjab',sector:'Private',address:'Lahore, Punjab',description:'A private school network providing education from early years through secondary levels.',programs:['Early Years','Primary','Secondary']),
     const Institute(id:'college-1',name:'Government College Lahore',type:'colleges',city:'Lahore',province:'Punjab',sector:'Government',address:'Lahore, Punjab',description:'A historic public college offering intermediate and degree programs.',programs:['FA','FSc','ICS','BS']),
@@ -53,6 +53,7 @@ class InstituteRepository extends ChangeNotifier {
     const Institute(id:'university-37',name:'University of Education, DG Khan Campus',type:'universities',city:'Dera Ghazi Khan',province:'Punjab',sector:'Government',address:'Dera Ghazi Khan, Punjab',description:'Public university campus.',programs:['Education','Undergraduate','Graduate']),
   ];
 
+  final List<Institute> _demoItems;
   final List<Institute> _realItems = [];
   bool loading = false;
   String? error;
@@ -62,10 +63,16 @@ class InstituteRepository extends ChangeNotifier {
   bool get isDemoMode =>
       ActiveProfileController.instance.isDemo || !FirebaseService.initialized;
 
-  List<Institute> get items => List.unmodifiable(
-    (isDemoMode ? _demoItems : _realItems)
-        .where((item) => item.status.toLowerCase() == 'approved'),
-  );
+  List<Institute> get items {
+    final records = <String, Institute>{
+      if (!isDemoMode)
+        for (final item in _seedItems)
+          if (item.status.toLowerCase() == 'approved') item.id: item,
+      for (final item in (isDemoMode ? _demoItems : _realItems))
+        if (item.status.toLowerCase() == 'approved') item.id: item,
+    };
+    return List.unmodifiable(records.values);
+  }
 
   /// All records for the selected mode, including pending submissions.
   List<Institute> get moderationItems =>
@@ -75,6 +82,11 @@ class InstituteRepository extends ChangeNotifier {
     final source = isDemoMode ? _demoItems : _realItems;
     for (final item in source) {
       if (item.id == id) return item;
+    }
+    if (!isDemoMode) {
+      for (final item in _seedItems) {
+        if (item.id == id) return item;
+      }
     }
     return null;
   }
