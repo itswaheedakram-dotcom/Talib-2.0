@@ -24,6 +24,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
   final _address = TextEditingController();
   final _description = TextEditingController();
   final _website = TextEditingController();
+  final _applicationUrl = TextEditingController();
   final _contact = TextEditingController();
   final _eligibility = TextEditingController();
   final _minScore = TextEditingController();
@@ -67,7 +68,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
     _catalog.removeListener(_onCatalogChanged);
     for (final controller in [
       _name, _campus, _province, _city, _town, _address, _description,
-      _website, _contact, _eligibility, _minScore, _nextProgram, _programs,
+      _website, _applicationUrl, _contact, _eligibility, _minScore, _nextProgram, _programs,
       _deadline, _fee, _facilities, _imageUrl, _customSubcategory,
     ]) {
       controller.dispose();
@@ -95,7 +96,6 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
       return;
     }
     setState(() => _saving = true);
-    final subcategories = _catalog.subcategoriesFor(_type);
     final subcategory = _subcategory == '__other__'
         ? _customSubcategory.text.trim()
         : _subcategory;
@@ -114,6 +114,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
           : _address.text.trim(),
       description: _description.text.trim(),
       website: _website.text.trim(),
+      applicationUrl: _applicationUrl.text.trim(),
       contact: _contact.text.trim(),
       submissionMode: _submission,
       eligibility: _eligibility.text.trim(),
@@ -267,6 +268,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
             const SizedBox(height: 10),
             _field(_contact, 'Contact phone / email', Icons.phone_outlined),
             _field(_website, 'Official website URL', Icons.language_outlined, keyboard: TextInputType.url),
+            _field(_applicationUrl, 'Direct admission / application URL', Icons.open_in_new_outlined, keyboard: TextInputType.url),
             _field(_imageUrl, 'Cover image URL (optional)', Icons.image_outlined, keyboard: TextInputType.url),
             _field(_facilities, 'Facilities (comma separated)', Icons.checklist_outlined, maxLines: 2),
             const SizedBox(height: 12),
