@@ -290,11 +290,27 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
             const SizedBox(height: 12),
             _field(_name, 'Institute name', Icons.account_balance_outlined, required: true),
             Row(children: [
-              Expanded(child: _field(_province, 'Province / Region', Icons.map_outlined, required: true,
-                  textCapitalization: TextCapitalization.words)),
+              Expanded(
+                child: _locationAutocomplete(
+                  controller: _province,
+                  label: 'Province / Region',
+                  options: const ['Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan', 'Islamabad Capital Territory', 'Azad Jammu & Kashmir', 'Gilgit-Baltistan'],
+                  required: true,
+                  onSelected: (_) {
+                    _city.clear();
+                    setState(() {});
+                  },
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _field(_city, 'City', Icons.location_on_outlined, required: true,
-                  textCapitalization: TextCapitalization.words)),
+              Expanded(
+                child: _locationAutocomplete(
+                  controller: _city,
+                  label: 'City',
+                  options: _citiesForProvince(_province.text),
+                  required: true,
+                ),
+              ),
             ]),
             _choiceSection(
               label: 'Ownership / sector',
@@ -429,6 +445,72 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
       ),
     );
   }
+
+  List<String> _citiesForProvince(String province) {
+    final key = province.trim().toLowerCase();
+    if (key == 'punjab') {
+      return const ['Lahore', 'Faisalabad', 'Rawalpindi', 'Multan', 'Gujranwala', 'Bahawalpur', 'Sargodha', 'Sialkot', 'Rahim Yar Khan', 'Dera Ghazi Khan', 'Layyah', 'Taxila', 'Gujrat', 'Jhelum', 'Kasur', 'Okara', 'Sahiwal', 'Mianwali', 'Attock', 'Chakwal'];
+    }
+    if (key == 'sindh') {
+      return const ['Karachi', 'Hyderabad', 'Sukkur', 'Larkana', 'Mirpur Khas', 'Nawabshah', 'Jacobabad', 'Thatta'];
+    }
+    if (key == 'khyber pakhtunkhwa' || key == 'kpk') {
+      return const ['Peshawar', 'Mardan', 'Abbottabad', 'Swat', 'Kohat', 'Bannu', 'Dera Ismail Khan', 'Charsadda', 'Mansehra'];
+    }
+    if (key == 'balochistan') {
+      return const ['Quetta', 'Gwadar', 'Turbat', 'Khuzdar', 'Chaman', 'Sibi', 'Zhob'];
+    }
+    if (key == 'islamabad capital territory' || key == 'islamabad') {
+      return const ['Islamabad'];
+    }
+    if (key == 'azad jammu & kashmir' || key == 'ajk') {
+      return const ['Muzaffarabad', 'Mirpur', 'Kotli', 'Rawalakot', 'Bhimber'];
+    }
+    if (key == 'gilgit-baltistan') {
+      return const ['Gilgit', 'Skardu', 'Hunza', 'Ghanche', 'Ghizer'];
+    }
+    return const ['Lahore', 'Karachi', 'Islamabad', 'Peshawar', 'Quetta', 'Multan', 'Faisalabad', 'Hyderabad'];
+  }
+
+  Widget _locationAutocomplete({
+    required TextEditingController controller,
+    required String label,
+    required List<String> options,
+    required bool required,
+    ValueChanged<String>? onSelected,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Autocomplete<String>(
+      optionsBuilder: (value) {
+        final query = value.text.trim().toLowerCase();
+        if (query.isEmpty) return options;
+        return options.where((option) => option.toLowerCase().contains(query));
+      },
+      onSelected: (value) {
+        controller.text = value;
+        onSelected?.call(value);
+      },
+      fieldViewBuilder: (context, fieldController, focusNode, onFieldSubmitted) {
+        if (fieldController.text.isEmpty && controller.text.isNotEmpty) {
+          fieldController.text = controller.text;
+        }
+        return TextFormField(
+          controller: fieldController,
+          focusNode: focusNode,
+          textCapitalization: TextCapitalization.words,
+          onChanged: (value) => controller.text = value,
+          validator: required
+              ? (value) => value == null || value.trim().isEmpty ? 'This field is required' : null
+              : null,
+          decoration: InputDecoration(
+            labelText: label,
+            prefixIcon: Icon(label == 'City' ? Icons.location_on_outlined : Icons.map_outlined),
+          ),
+          onFieldSubmitted: (_) => onFieldSubmitted(),
+        );
+      },
+    ),
+  );
 
   Widget _choiceSection({
     required String label,
