@@ -195,7 +195,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
 
   Future<void> _finishThinking(ParsedGlobalQuery q) async {
     // Let the word-by-word narration finish before showing any result cards.
-    final wordCount=q.summary.split(RegExp(r'\\s+')).where((word)=>word.isNotEmpty).length;
+    final wordCount=q.summary.split(RegExp(r'\s+')).where((word)=>word.isNotEmpty).length;
     final narration=Duration(milliseconds:wordCount*420);
     final minimum=const Duration(milliseconds:6500);
     await Future<void>.delayed(narration>minimum?narration:minimum);
