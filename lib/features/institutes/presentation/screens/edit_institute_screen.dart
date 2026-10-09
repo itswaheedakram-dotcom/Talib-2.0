@@ -14,8 +14,8 @@ class EditInstituteScreen extends StatefulWidget {
 
 class _EditInstituteScreenState extends State<EditInstituteScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _name=TextEditingController(), _campus=TextEditingController(), _subcategory=TextEditingController(), _province=TextEditingController(),
-      _city=TextEditingController(), _town=TextEditingController(), _address=TextEditingController(), _description=TextEditingController(),
+  final _name=TextEditingController(), _campus=TextEditingController(), _subcategory=TextEditingController(), _country=TextEditingController(), _province=TextEditingController(),
+      _district=TextEditingController(), _city=TextEditingController(), _area=TextEditingController(), _board=TextEditingController(), _town=TextEditingController(), _address=TextEditingController(), _description=TextEditingController(),
       _website=TextEditingController(), _applicationUrl=TextEditingController(), _eligibility=TextEditingController(), _minScore=TextEditingController(),
       _nextProgram=TextEditingController(), _deadline=TextEditingController(), _fee=TextEditingController(),
       _contact=TextEditingController(), _programs=TextEditingController(), _facilities=TextEditingController(),
@@ -27,7 +27,7 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
     super.initState();
     final i=InstituteRepository.instance.byId(widget.id);
     if(i==null) return;
-    _name.text=i.name; _campus.text=i.campus; _subcategory.text=i.subcategory; _province.text=i.province; _city.text=i.city; _town.text=i.town;
+    _name.text=i.name; _campus.text=i.campus; _subcategory.text=i.subcategory; _country.text=i.country; _province.text=i.province; _district.text=i.district; _city.text=i.city; _area.text=i.area; _board.text=i.board; _town.text=i.town;
     _address.text=i.address; _description.text=i.description; _website.text=i.website; _applicationUrl.text=i.applicationUrl;
     _eligibility.text=i.eligibility; _minScore.text=i.minScore == 0 ? '' : i.minScore.toString();
     _nextProgram.text=i.nextProgram; _deadline.text=i.admissionDeadline; _fee.text=i.feeRange;
@@ -37,7 +37,7 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
   }
 
   @override void dispose() {
-    for(final c in [_name,_campus,_subcategory,_province,_city,_town,_address,_description,_website,_applicationUrl,_eligibility,_minScore,
+    for(final c in [_name,_campus,_subcategory,_country,_province,_district,_city,_area,_board,_town,_address,_description,_website,_applicationUrl,_eligibility,_minScore,
       _nextProgram,_deadline,_fee,_contact,_programs,_facilities,_imageUrl]) c.dispose();
     super.dispose();
   }
@@ -49,7 +49,7 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
     setState(()=>_saving=true);
     final updated=Institute(
       id: old.id, name:_name.text.trim(), type:old.type, subcategory:_subcategory.text.trim(), ownerId:old.ownerId, representativeId:old.representativeId, createdBy:old.createdBy, campus:_campus.text.trim(),
-      province:_province.text.trim(), city:_city.text.trim(), town:_town.text.trim(), sector:_sector,
+      country:_country.text.trim().isEmpty ? 'Pakistan' : _country.text.trim(), province:_province.text.trim(), district:_district.text.trim(), city:_city.text.trim(), area:_area.text.trim(), board:_board.text.trim(), town:_town.text.trim(), sector:_sector,
       address:_address.text.trim(), description:_description.text.trim(), website:_website.text.trim(), applicationUrl:_applicationUrl.text.trim(),
       submissionMode:_submission, eligibility:_eligibility.text.trim(),
       programs:_split(_programs.text), contact:_contact.text.trim(), status:old.status,
@@ -82,8 +82,11 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
         _field(_name,'Institute Name',Icons.account_balance_outlined,required:true),
         _field(_campus,'Campus',Icons.location_city_outlined),
         _field(_subcategory,'Subcategory',Icons.category_outlined),
-        Row(children:[Expanded(child:_field(_province,'Province',Icons.map_outlined,required:true)),const SizedBox(width:10),Expanded(child:_field(_city,'City',Icons.location_on_outlined,required:true))]),
-        _field(_town,'Town / Area',Icons.place_outlined),
+        _field(_country,'Country',Icons.public_outlined,required:true),
+        Row(children:[Expanded(child:_field(_province,'Province / State / Region',Icons.map_outlined,required:true)),const SizedBox(width:10),Expanded(child:_field(_district,'District / County',Icons.map_outlined))]),
+        Row(children:[Expanded(child:_field(_city,'City / Town',Icons.location_on_outlined,required:true)),const SizedBox(width:10),Expanded(child:_field(_area,'Area / Locality',Icons.place_outlined))]),
+        if(i.type == 'schools' || i.type == 'colleges') _field(_board,'Education Board / Examining Authority',Icons.account_balance_outlined),
+        _field(_town,'Town / Area (legacy)',Icons.place_outlined),
         _field(_address,'Full Address',Icons.place_outlined),
         _dropdown('Sector',_sector,InstituteCatalog.sectors,(v)=>setState(()=>_sector=v)),
         _field(_contact,'Contact',Icons.phone_outlined),
