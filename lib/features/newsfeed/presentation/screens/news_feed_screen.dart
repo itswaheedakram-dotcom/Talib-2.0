@@ -256,22 +256,23 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
   }
 
   bool _isOpen(InstituteOpportunity item) {
-    final status = item.status.trim().toLowerCase();
-    if (status != 'open') return false;
-    final deadline = DateTime.tryParse(item.deadline);
-    if (deadline == null) return true;
+    if (item.status.trim().toLowerCase() != 'open') return false;
     final today = DateTime.now();
-    return !deadline.isBefore(DateTime(today.year, today.month, today.day));
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final opening = DateTime.tryParse(item.openingDate);
+    if (opening != null && opening.isAfter(todayDate)) return false;
+    final deadline = DateTime.tryParse(item.deadline);
+    return deadline == null || !deadline.isBefore(todayDate);
   }
 
   bool _isUpcoming(InstituteOpportunity item) {
     final status = item.status.trim().toLowerCase();
     if (status == 'closed' || status == 'cancelled' || status == 'awarded') return false;
-    final opening = DateTime.tryParse(item.openingDate);
     final today = DateTime.now();
-    final hasFutureOpening = opening != null &&
-        opening.isAfter(DateTime(today.year, today.month, today.day));
-    return status == 'upcoming' || hasFutureOpening;
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final opening = DateTime.tryParse(item.openingDate);
+    if (opening != null) return opening.isAfter(todayDate);
+    return status == 'upcoming' || status == 'not announced';
   }
 
   int _sortByDeadline(InstituteOpportunity a, InstituteOpportunity b) {
