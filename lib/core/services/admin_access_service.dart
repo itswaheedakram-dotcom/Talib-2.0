@@ -33,6 +33,12 @@ class AdminAccessService extends ChangeNotifier {
   void start() {
     ActiveProfileController.instance.removeListener(_onActiveProfileChanged);
     ActiveProfileController.instance.addListener(_onActiveProfileChanged);
+    if (ActiveProfileController.instance.active?.id == 'demo-user-6') {
+      _setRole(TalibAdminRole.demoSuperAdmin, const {}, 'demo-user-6');
+      _loading = false;
+      notifyListeners();
+      return;
+    }
     if (!FirebaseService.initialized) {
       _setRole(TalibAdminRole.none, const {}, null);
       return;
