@@ -102,6 +102,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Expanded(child: Text(p.name, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: darkGreen))),
                         const Icon(Icons.verified, color: green),
                       ]),
+                      if (p.username.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text('@${p.username}', style: const TextStyle(color: green, fontWeight: FontWeight.w600)),
+                      ],
                       const SizedBox(height: 4),
                       Text(p.city, style: const TextStyle(color: Colors.black54)),
                       const SizedBox(height: 7),
