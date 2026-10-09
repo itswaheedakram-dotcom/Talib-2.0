@@ -88,9 +88,56 @@ service cloud.firestore {
         allow update: if false;
       }
       match /notifications/{notificationId} {
-        allow read, update, delete: if signedIn() && request.auth.uid == userId;
+        allow read, delete: if signedIn() && request.auth.uid == userId;
+        // Recipients can only mark their own notification as read.
+        allow update: if signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+          && request.resource.data.read == true;
         allow create: if signedIn()
           && (request.resource.data.fromId == request.auth.uid || admin());
+      }
+
+      match /reviews/{reviewerId} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && reviewerId == request.auth.uid
+          && reviewerId != userId
+          && request.resource.data.reviewerId == request.auth.uid
+          && request.resource.data.reviewerName is string
+          && request.resource.data.reviewerName.size() <= 100
+          && request.resource.data.rating is int
+          && request.resource.data.rating >= 1
+          && request.resource.data.rating <= 5
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1000
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.keys().hasOnly([
+            'reviewerId', 'reviewerName', 'rating', 'text', 'createdAt'
+          ]);
+        // A reviewer may edit/replace only their own review; the profile owner
+        // cannot rewrite the reviewer's identity or rating on their behalf.
+        allow update: if signedIn()
+          && reviewerId == request.auth.uid
+          && reviewerId != userId
+          && resource.data.reviewerId == request.auth.uid
+          && request.resource.data.reviewerId == resource.data.reviewerId
+          && request.resource.data.reviewerName is string
+          && request.resource.data.reviewerName.size() <= 100
+          && request.resource.data.rating is int
+          && request.resource.data.rating >= 1
+          && request.resource.data.rating <= 5
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1000
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.keys().hasOnly([
+            'reviewerId', 'reviewerName', 'rating', 'text', 'createdAt'
+          ]);
+        allow delete: if signedIn()
+          && reviewerId == request.auth.uid
+          && reviewerId != userId;
       }
     }
     match /posts/{postId} {
@@ -136,10 +183,15 @@ service cloud.firestore {
             || request.resource.data.commentsCount == resource.data.commentsCount - 1))
         // Poll transactions can update vote maps but cannot change post content.
         || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pollVotes','pollVoters'])
+          && resource.data.pollVoters is map
           && request.resource.data.pollVoters is map
+          // A voter can change only their own vote record, never another user's vote.
+          && request.resource.data.pollVoters.diff(resource.data.pollVoters).affectedKeys().hasOnly([request.auth.uid])
           && request.resource.data.pollVoters[request.auth.uid] is int
           && request.resource.data.pollVoters[request.auth.uid] >= 0
-          && request.resource.data.pollVoters[request.auth.uid] < resource.data.pollOptions.size())
+          && request.resource.data.pollVoters[request.auth.uid] < resource.data.pollOptions.size()
+          && request.resource.data.pollVotes is map
+          && resource.data.pollVotes is map)
       );
       allow delete: if signedIn()
         && (resource.data.authorId == request.auth.uid || admin());
