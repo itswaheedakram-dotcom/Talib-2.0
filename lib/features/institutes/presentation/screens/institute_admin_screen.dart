@@ -20,10 +20,10 @@ class _InstituteAdminScreenState extends State<InstituteAdminScreen> {
     final ref=FirebaseFirestore.instance.collection('institutes').doc(id);
     if(!save){
       final doc=await ref.get(); final x=doc.data()??{};
-      _name.text=(x['name']??data['instituteName']??'').toString(); _address.text=(x['address']??'').toString(); _phone.text=(x['phone']??'').toString(); _description.text=(x['description']??'').toString();
+      _name.text=(x['name']??data['instituteName']??'').toString(); _address.text=(x['address']??'').toString(); _phone.text=(x['contact']??x['phone']??'').toString(); _description.text=(x['description']??'').toString();
       if(mounted)setState(()=>_busy=false); return;
     }
-    await ref.set({'name':_name.text.trim(),'address':_address.text.trim(),'phone':_phone.text.trim(),'description':_description.text.trim(),'status':'verified','updatedBy':me.uid,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    await ref.update({'name':_name.text.trim(),'address':_address.text.trim(),'contact':_phone.text.trim(),'description':_description.text.trim(),'updatedAt':FieldValue.serverTimestamp()});
     if(mounted){setState(()=>_busy=false);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Institute profile updated.')));}
   }
   @override void initState(){super.initState(); _loadAndSave();}
