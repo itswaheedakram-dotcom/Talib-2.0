@@ -5,8 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import 'firebase_service.dart';
+import 'active_profile_controller.dart';
 
-enum TalibAdminRole { none, managerAdmin, superAdmin }
+enum TalibAdminRole { none, managerAdmin, superAdmin, demoSuperAdmin }
 
 class AdminAccessService extends ChangeNotifier {
   AdminAccessService._();
@@ -20,6 +21,7 @@ class AdminAccessService extends ChangeNotifier {
 
   TalibAdminRole get role => _role;
   bool get isSuperAdmin => _role == TalibAdminRole.superAdmin;
+  bool get isDemoSuperAdmin => _role == TalibAdminRole.demoSuperAdmin;
   bool get isManagerAdmin => _role == TalibAdminRole.managerAdmin;
   bool get canOpenPanel => _role != TalibAdminRole.none;
   bool get isLoading => _loading;
@@ -29,6 +31,8 @@ class AdminAccessService extends ChangeNotifier {
       isSuperAdmin || (_role == TalibAdminRole.managerAdmin && _permissions[permission] == true);
 
   void start() {
+    ActiveProfileController.instance.removeListener(_onActiveProfileChanged);
+    ActiveProfileController.instance.addListener(_onActiveProfileChanged);
     if (!FirebaseService.initialized) {
       _setRole(TalibAdminRole.none, const {}, null);
       return;
@@ -39,7 +43,16 @@ class AdminAccessService extends ChangeNotifier {
     refresh();
   }
 
+  void _onActiveProfileChanged() => refresh();
+
   Future<void> refresh({User? user}) async {
+    final activeProfile = ActiveProfileController.instance.active;
+    if (activeProfile?.id == 'demo-user-6') {
+      _setRole(TalibAdminRole.demoSuperAdmin, const {}, activeProfile!.id);
+      _loading = false;
+      notifyListeners();
+      return;
+    }
     if (!FirebaseService.initialized) {
       _setRole(TalibAdminRole.none, const {}, null);
       return;
@@ -132,6 +145,7 @@ class AdminAccessService extends ChangeNotifier {
 
   @override
   void dispose() {
+    ActiveProfileController.instance.removeListener(_onActiveProfileChanged);
     _authSubscription?.cancel();
     super.dispose();
   }
