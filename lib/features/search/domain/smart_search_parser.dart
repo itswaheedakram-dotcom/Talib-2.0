@@ -69,7 +69,7 @@ abstract final class SmartSearchParser {
       'under': 'under', 'less than': 'under', 'kam': 'under',
       'fees': 'fee', 'rupees': 'rs', 'pkr': 'rs',
     };
-    replacements.forEach((from, to) => value = value.replaceAll(RegExp(r'\\b' + RegExp.escape(from) + r'\\b'), to));
+    replacements.forEach((from, to) => value = value.replaceAll(RegExp(r'\b' + RegExp.escape(from) + r'\b'), to));
     value = value.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
     return value.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
@@ -126,7 +126,7 @@ abstract final class SmartSearchParser {
 
     String? program;
     for (final p in ['computer science', 'cs', 'software engineering', 'engineering', 'business administration', 'fsc', 'ics', 'bs', 'undergraduate', 'ms', 'phd']) {
-      if (RegExp('\\b${RegExp.escape(p)}\\b').hasMatch(normalized)) {
+      if (RegExp('\b${RegExp.escape(p)}\b').hasMatch(normalized)) {
         program = p == 'cs' ? 'Computer Science' : p.toUpperCase() == 'BS' ? 'BS' : _titleCase(p);
         understood.add('Program/level: $program');
         break;
