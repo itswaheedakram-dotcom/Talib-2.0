@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/services/firebase_service.dart';
 import '../../../core/services/active_profile_controller.dart';
 import '../../models/institute.dart';
@@ -154,13 +155,20 @@ class InstituteRepository extends ChangeNotifier {
         return pending;
       }
 
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        error = 'Sign in is required to submit a real institute listing.';
+        notifyListeners();
+        return null;
+      }
       final ref = await FirebaseFirestore.instance
           .collection('institutes')
-          .add({...institute.toMap(), 'status': 'pending'});
+          .add({...institute.toMap(), 'createdBy': user.uid, 'status': 'pending'});
       final saved = Institute.fromMap(
         ref.id,
-        {...institute.toMap(), 'status': 'pending'},
+        {...institute.toMap(), 'createdBy': user.uid, 'status': 'pending'},
       );
+      // Pending submissions are intentionally excluded from public browse lists.
       _realItems.add(saved);
       notifyListeners();
       return saved;
