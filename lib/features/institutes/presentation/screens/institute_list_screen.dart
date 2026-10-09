@@ -61,6 +61,7 @@ class _InstituteListScreenState extends State<InstituteListScreen> {
         item.name,
         item.city,
         item.province,
+        item.subcategory,
         item.town,
         item.campus,
         item.address,
@@ -163,25 +164,45 @@ class _InstituteListScreenState extends State<InstituteListScreen> {
                         final institute = items[index];
                         return Card(
                           margin: EdgeInsets.zero,
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            leading: CircleAvatar(
-                              backgroundColor: AppColors.softGreen,
-                              child: Icon(type?.icon ?? _catalog.iconFor(institute.type),
-                                  color: AppColors.darkGreen),
-                            ),
-                            title: Text(institute.name,
-                                style: const TextStyle(fontWeight: FontWeight.w700)),
-                            subtitle: Text([
-                              _catalog.labelFor(institute.type),
-                              if (institute.city.isNotEmpty) institute.city,
-                              if (institute.sector.isNotEmpty) institute.sector,
-                            ].join(' • ')),
-                            trailing: const Icon(Icons.chevron_right_rounded),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
                             onTap: () => context.push('/institute/${institute.id}'),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: AppColors.softGreen,
+                                  child: Icon(type?.icon ?? _catalog.iconFor(institute.type),
+                                      color: AppColors.darkGreen),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text(institute.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 4),
+                                  Text([
+                                    _catalog.labelFor(institute.type),
+                                    if (institute.subcategory.isNotEmpty) institute.subcategory,
+                                    if (institute.city.isNotEmpty) institute.city,
+                                    if (institute.sector.isNotEmpty) institute.sector,
+                                  ].join(' • '), style: const TextStyle(color: AppColors.mutedText, fontSize: 12)),
+                                  if (institute.programs.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(institute.programs.take(3).join(' • '),
+                                        maxLines: 2, overflow: TextOverflow.ellipsis),
+                                  ],
+                                  const SizedBox(height: 7),
+                                  Wrap(spacing: 6, runSpacing: 6, children: [
+                                    Text('Admissions: ${institute.admissionStatus}',
+                                        style: const TextStyle(color: AppColors.darkGreen, fontSize: 11, fontWeight: FontWeight.w700)),
+                                    if (institute.admissionDeadline.isNotEmpty)
+                                      Text('Deadline: ${institute.admissionDeadline}',
+                                          style: const TextStyle(color: AppColors.mutedText, fontSize: 11)),
+                                  ]),
+                                ])),
+                                const Icon(Icons.chevron_right_rounded, color: AppColors.darkGreen),
+                              ]),
+                            ),
                           ),
                         );
                       },

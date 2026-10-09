@@ -413,14 +413,61 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                   final i = results[index];
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
-                    child: Card(child: ListTile(
-                      contentPadding: const EdgeInsets.all(12),
-                      leading: CircleAvatar(child: Icon(_icon(i.type))),
-                      title: Text(i.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-                      subtitle: Text('${_label(i.type)} • ${i.city}${i.sector.isEmpty ? '' : ' • ${i.sector}'}'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/institute/${i.id}'),
-                    )),
+                    child: Card(
+                      margin: EdgeInsets.zero,
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => context.push('/institute/${i.id}'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(13),
+                          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            CircleAvatar(
+                              radius: 25,
+                              backgroundColor: AppColors.softGreen,
+                              child: Icon(_icon(i.type), color: AppColors.darkGreen),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(i.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                                const SizedBox(height: 4),
+                                Text([
+                                  _label(i.type),
+                                  if (i.subcategory.isNotEmpty) i.subcategory,
+                                  if (i.city.isNotEmpty) i.city,
+                                  if (i.sector.isNotEmpty) i.sector,
+                                ].join(' • '), style: const TextStyle(color: AppColors.mutedText, fontSize: 12)),
+                                if (i.programs.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text('Programs: ${i.programs.take(3).join(', ')}',
+                                      maxLines: 2, overflow: TextOverflow.ellipsis),
+                                ],
+                                const SizedBox(height: 8),
+                                Wrap(spacing: 6, runSpacing: 6, children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: i.admissionStatus.toLowerCase() == 'open'
+                                          ? AppColors.softGreen
+                                          : AppColors.cream,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(i.admissionStatus,
+                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.darkGreen)),
+                                  ),
+                                  if (i.admissionDeadline.trim().isNotEmpty)
+                                    Text('Deadline: ${i.admissionDeadline}',
+                                        style: const TextStyle(fontSize: 11, color: AppColors.mutedText)),
+                                ]),
+                              ],
+                            )),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.chevron_right_rounded, color: AppColors.darkGreen),
+                          ]),
+                        ),
+                      ),
+                    ),
                   );
                 },
               ),
@@ -476,7 +523,7 @@ class _AdmissionSummary extends StatelessWidget {
       if (institute.eligibility.trim().isNotEmpty) 'Eligibility': institute.eligibility,
     };
     return Card(
-      color: const Color(0xFFEAF8F2),
+      color: AppColors.softGreen,
       margin: const EdgeInsets.only(bottom: 14),
       child: Padding(
         padding: const EdgeInsets.all(14),

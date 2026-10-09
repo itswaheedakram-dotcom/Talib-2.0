@@ -53,6 +53,7 @@ class InstituteDashboardScreen extends StatelessWidget {
           .where('representativeId', isEqualTo: user.uid).where('status', isEqualTo: 'approved').snapshots(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (snap.hasError) return const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('Could not load your institutes. Please retry.')));
           final docs = snap.data?.docs ?? const [];
           if (docs.isEmpty) return ListView(padding: const EdgeInsets.all(20), children: [
             const Icon(Icons.business_outlined, size: 64),
