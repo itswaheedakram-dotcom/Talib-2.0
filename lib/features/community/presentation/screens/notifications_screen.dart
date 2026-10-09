@@ -85,7 +85,7 @@ class NotificationsScreen extends StatelessWidget {
         return _notificationTile(
           context,
           item,
-          onTap: () => _openNotification(context, item, db, uid, doc.id, demo: false),
+          onTap: () => _openNotification(context, item, db, uid, doc.id),
         );
       },
     );
