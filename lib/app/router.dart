@@ -50,6 +50,9 @@ import '../features/admin/presentation/screens/admin_panel_screen.dart';
 import '../features/admin/presentation/screens/admin_hostel_claims_screen.dart';
 import '../features/admin/presentation/screens/admin_hostel_submissions_screen.dart';
 import '../features/admin/presentation/screens/admin_placeholder_screen.dart';
+import '../features/support/presentation/screens/report_issue_screen.dart';
+import '../features/support/presentation/screens/help_faqs_screen.dart';
+import '../features/support/presentation/screens/admin_issue_reports_screen.dart';
 
 final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/',builder:(_,__)=>const MainScreen()),
@@ -71,7 +74,13 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/admin/institute-types',builder:(_,__)=>const AdminInstituteTypesScreen()),
   GoRoute(path:'/admin/hostel-claims',builder:(_,__)=>const AdminHostelClaimsScreen()),
   GoRoute(path:'/admin/hostel-submissions',builder:(_,__)=>const AdminHostelSubmissionsScreen()),
-  GoRoute(path:'/admin/reports',builder:(_,__)=>const AdminPlaceholderScreen(title:'Reports',description:'Report triage and moderation actions will be added in the next admin phase.')),
+  GoRoute(path:'/admin/reports',builder:(_,__)=>const AdminIssueReportsScreen()),
+  GoRoute(path:'/admin/reports/:id',builder:(_,s)=>IssueTicketDetailScreen(ticketId:s.pathParameters['id']!,adminMode:true)),
+  GoRoute(path:'/admin/faqs',builder:(_,__)=>const AdminFaqManagementScreen()),
+  GoRoute(path:'/report-issue',builder:(_,__)=>const ReportIssueScreen()),
+  GoRoute(path:'/my-reports',builder:(_,__)=>const MyReportsScreen()),
+  GoRoute(path:'/my-reports/:id',builder:(_,s)=>IssueTicketDetailScreen(ticketId:s.pathParameters['id']!)),
+  GoRoute(path:'/help-faqs',builder:(_,__)=>const HelpFaqsScreen()),
   GoRoute(path:'/admin/audit-logs',builder:(_,__)=>const AdminPlaceholderScreen(title:'Audit Log',description:'A secure, append-only history of administrative actions will be added in the next admin phase.')),
   GoRoute(path:'/search',builder:(_,__)=>const SearchScreen()),
   GoRoute(path:'/community',builder:(_,s)=>CommunityScreen(instituteId:s.uri.queryParameters['instituteId'],instituteName:s.uri.queryParameters['instituteName'])),

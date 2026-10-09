@@ -483,5 +483,20 @@ service cloud.firestore {
         allow delete: if false;
       }
     }
+
+    match /issueTickets/{ticketId} {
+      function canManageIssueTickets() { return admin() || managerAdminPermission('manage_reports'); }
+      allow create: if signedIn() && request.resource.data.reporterId == request.auth.uid && request.resource.data.ticketNumber is string && request.resource.data.ticketNumber.size() > 0 && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 120 && request.resource.data.description is string && request.resource.data.description.size() > 0 && request.resource.data.description.size() <= 5000 && request.resource.data.category is string && request.resource.data.priority in ['Low','Medium','High'] && request.resource.data.status == 'open' && request.resource.data.keys().hasOnly(['ticketNumber','reporterId','reporterName','category','title','description','priority','status','screenshotUrl','latestReply','latestReplyBy','createdAt','updatedAt','lastActorUid']);
+      allow read: if canManageIssueTickets() || (signedIn() && resource.data.reporterId == request.auth.uid);
+      allow update: if canManageIssueTickets() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','latestReply','latestReplyBy','updatedAt','lastActorUid']) && request.resource.data.status in ['open','in_progress','resolved','closed'] && request.resource.data.latestReply is string && request.resource.data.latestReply.size() <= 2000 && request.resource.data.latestReplyBy is string && request.resource.data.lastActorUid == request.auth.uid;
+      allow delete: if false;
+      match /history/{eventId} {
+        allow read: if canManageIssueTickets() || (signedIn() && get(/databases/$(database)/documents/issueTickets/$(ticketId)).data.reporterId == request.auth.uid);
+        allow create: if signedIn() && request.resource.data.actorUid == request.auth.uid && request.resource.data.message is string && request.resource.data.message.size() <= 2000 && request.resource.data.eventType in ['created','status_changed','reply'] && ((getAfter(/databases/$(database)/documents/issueTickets/$(ticketId)).data.reporterId == request.auth.uid && request.resource.data.eventType == 'created' && request.resource.data.status == 'open') || canManageIssueTickets());
+        allow update, delete: if false;
+      }
+    }
+    match /helpFaqs/{faqId} { allow read: if true; allow create, update, delete: if admin() || managerAdminPermission('manage_faqs'); }
+    match /pushTokens/{uid} { allow read: if admin() || managerAdminPermission('manage_reports') || (signedIn() && request.auth.uid == uid); allow create, update: if signedIn() && request.auth.uid == uid && request.resource.data.uid == uid && request.resource.data.tokens is list && request.resource.data.adminRecipient is bool && request.resource.data.keys().hasOnly(['uid','tokens','adminRecipient','updatedAt']) && (request.resource.data.adminRecipient == false || admin() || managerAdminPermission('manage_reports')); allow delete: if (signedIn() && request.auth.uid == uid) || admin(); }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/services/admin_access_service.dart';
+import '../../../../core/services/push_token_registration_service.dart';
 import '../../../admin/presentation/screens/admin_panel_screen.dart';
 import '../../../search/presentation/screens/search_screen.dart';
 import '../../../community/presentation/screens/community_screen.dart';
@@ -23,6 +24,7 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     access.start();
+    PushTokenRegistrationService.instance.start();
   }
 
   @override

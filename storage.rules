@@ -21,5 +21,12 @@ service firebase.storage {
       allow write: if signedIn() && (request.auth.uid == userId || admin());
       allow delete: if signedIn() && (request.auth.uid == userId || admin());
     }
+
+    match /issueAttachments/{userId}/{ticketId}/{fileName} {
+      function canManageIssueReports() { return signedIn() && (admin() || (firestore.get(/databases/(default)/documents/adminRoles/$(request.auth.uid)).data.status == 'active' && firestore.get(/databases/(default)/documents/adminRoles/$(request.auth.uid)).data.role == 'manager_admin' && firestore.get(/databases/(default)/documents/adminRoles/$(request.auth.uid)).data.permissions.manage_reports == true)); }
+      allow read: if signedIn() && (request.auth.uid == userId || canManageIssueReports());
+      allow create, update: if signedIn() && request.auth.uid == userId && request.resource.size < 8 * 1024 * 1024 && request.resource.contentType.matches('image/.*');
+      allow delete: if (signedIn() && request.auth.uid == userId) || admin();
+    }
   }
 }
