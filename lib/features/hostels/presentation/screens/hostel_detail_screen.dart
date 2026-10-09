@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -454,8 +456,26 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                     if (mounted) setState(() => _galleryIndex = index);
                   },
                   itemBuilder: (_, index) {
+                    final value = values[index];
+                    final isLocalFile = value.startsWith('/') || value.startsWith('file://');
+                    if (isLocalFile) {
+                      final localPath = value.startsWith('file://')
+                          ? Uri.parse(value).toFilePath()
+                          : value;
+                      return Image.file(
+                        File(localPath),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: AppColors.primaryGreen,
+                            size: 48,
+                          ),
+                        ),
+                      );
+                    }
                     return Image.network(
-                      values[index],
+                      value,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => const Center(
                         child: Icon(
