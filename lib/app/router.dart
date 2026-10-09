@@ -10,6 +10,8 @@ import '../features/institutes/presentation/screens/claim_institute_screen.dart'
 import '../features/institutes/presentation/screens/institute_dashboard_screen.dart';
 import '../features/institutes/presentation/screens/institute_admin_screen.dart';
 import '../features/institutes/presentation/screens/admin_institute_claims_screen.dart';
+import '../features/institutes/presentation/screens/admin_institute_submissions_screen.dart';
+import '../features/institutes/presentation/screens/admin_institute_types_screen.dart';
 import '../features/institutes/presentation/screens/add_institute_screen.dart';
 import '../features/institutes/presentation/screens/edit_institute_screen.dart';
 import '../features/institutes/presentation/screens/discipline_info_screen.dart';
@@ -65,6 +67,8 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/institute-admin/:claimId',builder:(_,s)=>InstituteAdminScreen(claimId:s.pathParameters['claimId']!)),
   GoRoute(path:'/admin',builder:(_,__)=>const AdminPanelScreen()),
   GoRoute(path:'/admin/institute-claims',builder:(_,__)=>const AdminInstituteClaimsScreen()),
+  GoRoute(path:'/admin/institute-submissions',builder:(_,__)=>const AdminInstituteSubmissionsScreen()),
+  GoRoute(path:'/admin/institute-types',builder:(_,__)=>const AdminInstituteTypesScreen()),
   GoRoute(path:'/admin/hostel-claims',builder:(_,__)=>const AdminHostelClaimsScreen()),
   GoRoute(path:'/admin/hostel-submissions',builder:(_,__)=>const AdminHostelSubmissionsScreen()),
   GoRoute(path:'/admin/reports',builder:(_,__)=>const AdminPlaceholderScreen(title:'Reports',description:'Report triage and moderation actions will be added in the next admin phase.')),
