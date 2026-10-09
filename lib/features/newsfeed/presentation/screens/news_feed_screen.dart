@@ -242,7 +242,9 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
     final date = _isOpen(item) ? item.deadline : item.openingDate;
 
     return InkWell(
-      onTap: () => context.push('/institute/${item.instituteId}/opportunities'),
+      onTap: () => context.push(item.id.startsWith('profile-')
+          ? '/institute/${item.instituteId}'
+          : '/institute/${item.instituteId}/opportunities'),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
