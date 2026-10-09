@@ -69,7 +69,7 @@ abstract final class SmartSearchParser {
       'under': 'under', 'less than': 'under', 'kam': 'under',
       'fees': 'fee', 'rupees': 'rs', 'pkr': 'rs',
     };
-    replacements.forEach((from, to) => value = value.replaceAll(RegExp('\\\\b${RegExp.escape(from)}\\\\b'), to));
+    replacements.forEach((from, to) => value = value.replaceAll(RegExp(r'\\b' + RegExp.escape(from) + r'\\b'), to));
     value = value.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
     return value.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
