@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/institute_repository.dart';
+import '../../data/institute_catalog.dart';
+import '../../../../app/theme.dart';
 import '../../../models/institute.dart';
 
 class FindInstituteScreen extends StatefulWidget {
@@ -12,6 +14,7 @@ class FindInstituteScreen extends StatefulWidget {
 class _FindInstituteScreenState extends State<FindInstituteScreen> {
   final _searchController = TextEditingController();
   final _scoreController = TextEditingController();
+  final _catalog = InstituteCatalog.instance;
 
   String _education = 'All';
   String _province = 'All provinces';
@@ -26,6 +29,8 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
   void initState() {
     super.initState();
     InstituteRepository.instance.addListener(_onChanged);
+    _catalog.addListener(_onChanged);
+    _catalog.load();
     InstituteRepository.instance.load();
   }
 
@@ -34,6 +39,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
   @override
   void dispose() {
     InstituteRepository.instance.removeListener(_onChanged);
+    _catalog.removeListener(_onChanged);
     _searchController.dispose();
     _scoreController.dispose();
     super.dispose();
@@ -41,7 +47,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
 
   Iterable<Institute> get _typeItems => _education == 'All'
       ? InstituteRepository.instance.items
-      : InstituteRepository.instance.items.where((i) => _label(i.type) == _education);
+      : InstituteRepository.instance.items.where((i) => i.type == _education);
 
   Iterable<Institute> get _provinceItems => _province == 'All provinces'
       ? _typeItems
@@ -60,35 +66,10 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
     return [all, ...values];
   }
 
-  static const List<String> _punjabCities = [
-    'Attock', 'Bahawalnagar', 'Bahawalpur', 'Bhakkar', 'Chakwal',
-    'Chiniot', 'Dera Ghazi Khan', 'Faisalabad', 'Gujranwala', 'Gujrat',
-    'Hafizabad', 'Jhang', 'Jhelum', 'Kasur', 'Khanewal', 'Khushab',
-    'Lahore', 'Layyah', 'Lodhran', 'Mandi Bahauddin', 'Mianwali',
-    'Multan', 'Muzaffargarh', 'Nankana Sahib', 'Narowal', 'Okara',
-    'Pakpattan', 'Rahim Yar Khan', 'Rajanpur', 'Rawalpindi', 'Sahiwal',
-    'Sargodha', 'Sheikhupura', 'Sialkot', 'Toba Tek Singh', 'Vehari',
-    'Ahmedpur East', 'Alipur', 'Arifwala', 'Bhalwal', 'Burewala',
-    'Chishtian', 'Daska', 'Depalpur', 'Dera Din Panah', 'Dunyapur',
-    'Gojra', 'Gujar Khan', 'Hasilpur', 'Haroonabad', 'Jalalpur Jattan',
-    'Jaranwala', 'Jatoi', 'Kamalia', 'Kamoke', 'Kahror Pacca',
-    'Kharian', 'Kot Addu', 'Kot Momin', 'Liaquatpur', 'Mailsi',
-    'Malakwal', 'Muridke', 'Narowal', 'Pattoki', 'Pindi Bhattian',
-    'Pindi Gheb', 'Rajanpur', 'Sadiqabad', 'Sambrial', 'Sammundri',
-    'Shakargarh', 'Shorkot', 'Shujaabad', 'Taxila', 'Wazirabad',
-    'Yazman', 'Zafarwal',
-  ];
-
   List<String> get _provinces => _values(_typeItems, (i) => i.province, 'All provinces');
-  List<String> get _cities {
-    final dataCities = _values(_provinceItems, (i) => i.city, 'All cities');
-    if (_province == 'Punjab') {
-      final merged = <String>{...dataCities.skip(1), ..._punjabCities};
-      final sorted = merged.toList()..sort();
-      return ['All cities', ...sorted];
-    }
-    return dataCities;
-  }
+  List<String> get _cities =>
+      _values(_provinceItems, (i) => i.city, 'All cities');
+
   List<String> get _institutes => ['All institutes', ..._sectorItems.map((i) => '${i.name}||${i.id}').toSet().map((v) => v.split('||').last).map((id) => InstituteRepository.instance.byId(id)?.name ?? id)];
 
   Institute? get _selectedInstitute => _instituteId == 'All institutes' ? null : InstituteRepository.instance.byId(_instituteId);
@@ -121,7 +102,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
           i.programs.any((p) => p.toLowerCase() == _program.toLowerCase());
 
       return (q.isEmpty || searchable.contains(q)) &&
-          (_education == 'All' || _label(i.type) == _education) &&
+          (_education == 'All' || i.type == _education) &&
           (_province == 'All provinces' || i.province == _province) &&
           (_city == 'All cities' || i.city == _city) &&
           (_sector == 'All sectors' || i.sector == _sector) &&
@@ -133,15 +114,10 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
     }).toList();
   }
 
-  String _label(String type) => switch (type) {
-    'schools' => 'School',
-    'colleges' => 'College',
-    'universities' => 'University',
-    _ => type,
-  };
+  String _label(String type) => _catalog.labelFor(type);
 
   List<String> get _activeFilters => [
-    if (_education != 'All') _education,
+    if (_education != 'All') _catalog.labelFor(_education),
     if (_province != 'All provinces') _province,
     if (_city != 'All cities') _city,
     if (_sector != 'All sectors') _sector,
@@ -185,7 +161,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
         builder: (context, sheetSet) {
           Iterable<Institute> typeItems() => education == 'All'
               ? InstituteRepository.instance.items
-              : InstituteRepository.instance.items.where((i) => _label(i.type) == education);
+              : InstituteRepository.instance.items.where((i) => i.type == education);
           Iterable<Institute> provinceItems() => province == 'All provinces'
               ? typeItems()
               : typeItems().where((i) => i.province == province);
@@ -228,10 +204,19 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                   }, child: const Text('Clear all')),
                 ]),
                 const SizedBox(height: 8),
-                _Group('Institute Type', const ['All','School','College','University'], education, (v) => sheetSet(() {
-                  education = v; province = 'All provinces'; city = 'All cities';
-                  sector = 'All sectors'; instituteId = 'All institutes'; program = 'All programs'; campus = 'All campuses';
-                })),
+                _Group(
+                  'Institute Type',
+                  ['All', ..._catalog.types.map((type) => type.label)],
+                  education == 'All' ? 'All' : _catalog.labelFor(education),
+                  (label) => sheetSet(() {
+                    education = label == 'All'
+                        ? 'All'
+                        : _catalog.types.firstWhere((type) => type.label == label).id;
+                    province = 'All provinces'; city = 'All cities';
+                    sector = 'All sectors'; instituteId = 'All institutes';
+                    program = 'All programs'; campus = 'All campuses';
+                  }),
+                ),
                 _Group('Province', provinces, province, (v) => sheetSet(() {
                   province = v; city = 'All cities'; sector = 'All sectors'; instituteId = 'All institutes';
                   program = 'All programs'; campus = 'All campuses';
@@ -250,7 +235,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                   })),
                 _Group('Program / Degree', programSet.isEmpty ? ['All programs'] : programOptions, program, (v) => sheetSet(() => program = v)),
                 if (instituteId != 'All institutes') _AdmissionSummary(instituteItems().firstWhere((i) => i.id == instituteId, orElse: () => InstituteRepository.instance.byId(instituteId)!)),
-                _Group('Application / Submission', const ['All modes','Online','Offline'], mode, (v) => sheetSet(() => mode = v)),
+                _Group('Application / Submission', ['All modes', ...InstituteCatalog.submissionModes], mode, (v) => sheetSet(() => mode = v)),
                 _Group('Campus', campuses, campus, (v) => sheetSet(() => campus = v)),
                 const Text('Your Percentage / CGPA', style: TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 7),
@@ -326,7 +311,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                   children: _activeFilters.map((f) => Chip(label: Text(f))).toList(),
                 )
               else
-                const Text('No filters applied', style: TextStyle(color: Colors.black54, fontSize: 13)),
+                const Text('No filters applied', style: TextStyle(color: AppColors.mutedText, fontSize: 13)),
               Row(children: [
                 Text('${results.length} institutes found', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                 const Spacer(),
@@ -375,11 +360,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
     );
   }
 
-  IconData _icon(String type) => switch (type) {
-    'schools' => Icons.school_outlined,
-    'colleges' => Icons.account_balance_outlined,
-    _ => Icons.account_balance,
-  };
+  IconData _icon(String type) => _catalog.iconFor(type);
 }
 
 class _Group extends StatelessWidget {
