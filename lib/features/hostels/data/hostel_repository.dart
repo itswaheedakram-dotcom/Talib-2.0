@@ -265,6 +265,7 @@ class HostelRepository {
   }
 
   Future<bool> canManageHostel(String hostelId, String userId) async {
+    if (userId.startsWith('demo-user-') && !_demoHostels.any((item) => item.id == hostelId)) return false;
     final hostel = await getHostel(hostelId);
     if (hostel == null || userId.trim().isEmpty) return false;
     if (hostel.ownerId == userId) return true;
@@ -339,6 +340,7 @@ class HostelRepository {
 
   Future<HostelManager?> getManager(String hostelId, String userId) async {
     final demoHostel = _demoHostels.any((item) => item.id == hostelId);
+    if (userId.startsWith('demo-user-') && !demoHostel) return null;
     if (demoHostel || !FirebaseService.initialized) {
       for (final manager in _demoManagers[hostelId] ?? const <HostelManager>[]) {
         if (manager.userId == userId && manager.status == 'active') return manager;
@@ -424,7 +426,7 @@ class HostelRepository {
   }
 
   Stream<List<HostelClaim>> watchOwnerClaims(String userId) {
-    if (!FirebaseService.initialized) {
+    if (!FirebaseService.initialized || userId.startsWith('demo-user-')) {
       return Stream.value(
         _demoClaims.values.where((claim) => claim.userId == userId).toList(),
       );
@@ -436,7 +438,7 @@ class HostelRepository {
 
   Future<HostelClaim?> getMyClaim(String hostelId, String userId) async {
     final claimId = '${hostelId}_${userId}';
-    if (!FirebaseService.initialized) {
+    if (!FirebaseService.initialized || userId.startsWith('demo-user-')) {
       return _demoClaims['demo-claim-$hostelId-$userId'];
     }
     final doc = await _db.collection('hostelClaims').doc(claimId).get();
@@ -452,6 +454,10 @@ class HostelRepository {
   }) async {
     if (changes.isEmpty) return;
     if (userId.trim().isEmpty) throw StateError('User identity is required.');
+    final isLocalDemoHostel = _demoHostels.any((item) => item.id == hostel.id);
+    if (userId.startsWith('demo-user-') && !isLocalDemoHostel) {
+      throw StateError('Demo profiles can only manage demo hostels.');
+    }
 
     final allowedByPermission = <String, Set<String>>{
       HostelManagerPermissions.basicInfo: {'name', 'type', 'gender', 'description'},
@@ -569,7 +575,7 @@ class HostelRepository {
   }
 
   Future<void> submitReview({required String hostelId, required String userId, required String userName, required double rating, required String comment}) async {
-    if (!FirebaseService.initialized) {
+    if (!FirebaseService.initialized || userId.startsWith('demo-user-')) {
       await submitDemoReview(hostelId: hostelId, userId: userId, userName: userName, rating: rating, comment: comment);
       return;
     }
