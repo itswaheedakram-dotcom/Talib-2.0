@@ -7,8 +7,12 @@ class Institute {
   final String representativeId;
   final String createdBy;
   final String campus;
+  final String country;
   final String province;
+  final String district;
   final String city;
+  final String area;
+  final String board;
   final String town;
   final String sector;
   final String address;
@@ -38,8 +42,12 @@ class Institute {
     this.representativeId = '',
     this.createdBy = '',
     this.campus = '',
+    this.country = 'Pakistan',
     this.province = '',
+    this.district = '',
     required this.city,
+    this.area = '',
+    this.board = '',
     this.town = '',
     this.sector = 'Private',
     this.address = '',
@@ -62,8 +70,8 @@ class Institute {
   });
 
   Map<String, dynamic> toMap() => {
-    'name': name, 'type': type, 'subcategory': subcategory, 'ownerId': ownerId, 'representativeId': representativeId, 'createdBy': createdBy, 'campus': campus, 'province': province,
-    'city': city, 'town': town, 'sector': sector, 'address': address, 'description': description,
+    'name': name, 'type': type, 'subcategory': subcategory, 'ownerId': ownerId, 'representativeId': representativeId, 'createdBy': createdBy, 'campus': campus, 'country': country, 'province': province,
+    'district': district, 'city': city, 'area': area, 'board': board, 'town': town, 'sector': sector, 'address': address, 'description': description,
     'website': website, 'applicationUrl': applicationUrl, 'submissionMode': submissionMode, 'eligibility': eligibility,
     'programs': programs, 'contact': contact, 'status': status, 'minScore': minScore, 'nextProgram': nextProgram,
     'admissionStatus': admissionStatus, 'admissionDeadline': admissionDeadline, 'feeRange': feeRange, 'entryTestRequired': entryTestRequired,
@@ -79,8 +87,12 @@ class Institute {
     representativeId: (map['representativeId'] ?? '').toString(),
     createdBy: (map['createdBy'] ?? '').toString(),
     campus: (map['campus'] ?? '').toString(),
-    province: (map['province'] ?? '').toString(),
+    country: (map['country'] ?? 'Pakistan').toString(),
+    province: (map['province'] ?? map['region'] ?? '').toString(),
+    district: (map['district'] ?? '').toString(),
     city: (map['city'] ?? '').toString(),
+    area: (map['area'] ?? map['locality'] ?? '').toString(),
+    board: (map['board'] ?? map['educationBoard'] ?? '').toString(),
     town: (map['town'] ?? '').toString(),
     sector: (map['sector'] ?? 'Private').toString(),
     address: (map['address'] ?? '').toString(),
