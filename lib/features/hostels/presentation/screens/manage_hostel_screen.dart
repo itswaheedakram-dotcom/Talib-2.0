@@ -153,7 +153,7 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
           _section('Photos', Icons.photo_library_outlined, [
             SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: _saving ? null : _pickAndUploadPhotos, icon: const Icon(Icons.add_photo_alternate_outlined), label: const Text('Choose photos from gallery'))),
             _field(_photos, 'Photo links (one per line)', maxLines: 3, hint: 'Paste image links here'),
-            const Text('This version accepts image links. Direct gallery upload needs Firebase Storage integration.', style: TextStyle(color: AppColors.mutedText, fontSize: 12)),
+            const Text('Gallery photos upload to Firebase Storage. Tap Save Draft after upload to save the photo links to this listing.', style: TextStyle(color: AppColors.mutedText, fontSize: 12, height: 1.35)),
           ]),
           _section('Facilities', Icons.wifi_outlined, [
             Wrap(spacing: 8, runSpacing: 8, children: _facilityOptions.map((item) => FilterChip(
