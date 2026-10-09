@@ -122,8 +122,59 @@ class HostelRepository {
 
   static final List<Hostel> _demoHostels = List<Hostel>.from(exampleHostels);
   static final Map<String, HostelClaim> _demoClaims = {};
+  static final StreamController<List<HostelClaim>> _demoClaimController =
+      StreamController<List<HostelClaim>>.broadcast();
 
   static List<Hostel> get demoHostels => List<Hostel>.unmodifiable(_demoHostels);
+
+  static Stream<List<HostelClaim>> watchDemoClaims() => Stream.multi((multi) {
+        multi.add(List<HostelClaim>.from(_demoClaims.values));
+        final subscription = _demoClaimController.stream.listen(multi.add);
+        multi.onCancel = subscription.cancel;
+      });
+
+  static void _emitDemoClaims() {
+    if (!_demoClaimController.isClosed) {
+      _demoClaimController.add(List<HostelClaim>.from(_demoClaims.values));
+    }
+  }
+
+  static Future<void> setDemoClaimStatus(String claimId, String status) async {
+    if (!{'approved', 'rejected'}.contains(status)) {
+      throw ArgumentError('Invalid hostel claim status.');
+    }
+    final claim = _demoClaims[claimId];
+    if (claim == null) throw StateError('Demo hostel claim not found.');
+    _demoClaims[claimId] = HostelClaim(
+      id: claim.id,
+      hostelId: claim.hostelId,
+      hostelName: claim.hostelName,
+      userId: claim.userId,
+      userName: claim.userName,
+      contact: claim.contact,
+      note: claim.note,
+      status: status,
+      createdAt: claim.createdAt,
+    );
+    if (status == 'approved') {
+      final index = _demoHostels.indexWhere((hostel) => hostel.id == claim.hostelId);
+      if (index >= 0) {
+        final old = _demoHostels[index];
+        _demoHostels[index] = Hostel(
+          id: old.id, name: old.name, city: old.city, area: old.area,
+          type: old.type, gender: old.gender, distance: old.distance, price: old.price,
+          securityFee: old.securityFee, roomType: old.roomType, availability: old.availability,
+          meals: old.meals, ac: old.ac, facilities: old.facilities, imageUrls: old.imageUrls,
+          description: old.description, phone: old.phone, website: old.website,
+          imageUrl: old.imageUrl, address: old.address, ownerId: claim.userId,
+          ownerName: claim.userName, status: old.status, isVerified: old.isVerified,
+          isDemo: true, rating: old.rating, reviewCount: old.reviewCount,
+          ratingTotal: old.ratingTotal, rooms: old.rooms, rules: old.rules,
+        );
+      }
+    }
+    _emitDemoClaims();
+  }
   static final Map<String, List<HostelReview>> _demoReviews = {
     'example_student_residency_lahore': [
       const HostelReview(id: 'demo-review-1', userId: 'demo-student-1', userName: 'Demo Student', rating: 5, comment: 'Clean rooms and good study environment.'),
@@ -229,6 +280,7 @@ class HostelRepository {
         status: 'pending',
         createdAt: DateTime.now(),
       );
+      _emitDemoClaims();
       return id;
     }
     final db = FirebaseFirestore.instance;
