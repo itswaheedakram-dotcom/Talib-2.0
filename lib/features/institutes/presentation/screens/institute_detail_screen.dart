@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme.dart';
 import '../../data/institute_catalog.dart';
+import '../widgets/institute_image_preview.dart';
 import '../../../models/institute.dart';
 import '../../data/institute_repository.dart';
 import '../../../../core/services/firebase_service.dart';
@@ -38,24 +39,11 @@ class InstituteDetailScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 28),
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: SizedBox(
-              height: 185,
-              child: image.isEmpty
-                  ? Container(
-                      color: lightGreen,
-                      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(InstituteCatalog.instance.iconFor(institute.type), size: 62, color: green),
-                        const SizedBox(height: 8),
-                        Text(typeLabel, style: const TextStyle(color: darkGreen, fontWeight: FontWeight.w600)),
-                      ]),
-                    )
-                  : Image.network(image, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(
-                      color: lightGreen,
-                      child: Icon(InstituteCatalog.instance.iconFor(institute.type), size: 70, color: green),
-                    )),
-            ),
+          InstituteImagePreview(
+            source: image,
+            fallbackIcon: InstituteCatalog.instance.iconFor(institute.type),
+            label: typeLabel,
+            height: 185,
           ),
           const SizedBox(height: 12),
           Row(children: [
