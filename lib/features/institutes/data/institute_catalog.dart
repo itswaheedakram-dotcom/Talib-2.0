@@ -13,6 +13,8 @@ class InstituteTypeOption {
   final List<String> subcategories;
   final String programLabel;
   final String eligibilityLabel;
+  final String featuredProgramLabel;
+  final bool showMinimumScore;
   final bool enabled;
   final int sortOrder;
 
@@ -23,6 +25,8 @@ class InstituteTypeOption {
     this.subcategories = const [],
     this.programLabel = 'Programs / courses',
     this.eligibilityLabel = 'Eligibility criteria',
+    this.featuredProgramLabel = 'Featured / next program',
+    this.showMinimumScore = true,
     this.enabled = true,
     this.sortOrder = 100,
   });
@@ -47,7 +51,9 @@ class InstituteTypeOption {
         (data['subcategories'] as List? ?? const []).map((value) => value.toString()),
       ),
       programLabel: (data['programLabel'] ?? _defaultProgramLabel(id)).toString(),
-      eligibilityLabel: (data['eligibilityLabel'] ?? 'Eligibility criteria').toString(),
+      eligibilityLabel: (data['eligibilityLabel'] ?? _defaultEligibilityLabel(id)).toString(),
+      featuredProgramLabel: (data['featuredProgramLabel'] ?? _defaultFeaturedProgramLabel(id)).toString(),
+      showMinimumScore: data['showMinimumScore'] is bool ? data['showMinimumScore'] as bool : _defaultShowMinimumScore(id),
       enabled: data['enabled'] != false,
       sortOrder: int.tryParse((data['sortOrder'] ?? 100).toString()) ?? 100,
     );
@@ -69,6 +75,8 @@ class InstituteCatalog extends ChangeNotifier {
       subcategories: ['Montessori / Early Years', 'Primary', 'Middle', 'High School (Matric)', 'Higher Secondary', 'O-Level', 'A-Level', 'Special Education'],
       programLabel: 'Classes / levels',
       eligibilityLabel: 'Age / admission requirements',
+      featuredProgramLabel: 'Featured class / level',
+      showMinimumScore: false,
     ),
     InstituteTypeOption(
       id: 'colleges',
@@ -78,6 +86,12 @@ class InstituteCatalog extends ChangeNotifier {
       subcategories: ['Intermediate College', 'Degree College', 'Commerce College', 'Science College', 'Medical College', 'Engineering College', 'Law College', 'Arts & Humanities College', 'Women’s College'],
       programLabel: 'Degrees / programs',
       eligibilityLabel: 'Admission eligibility / merit',
+      featuredProgramLabel: 'Featured health program',
+      showMinimumScore: true,
+      featuredProgramLabel: 'Featured degree / department',
+      showMinimumScore: true,
+      featuredProgramLabel: 'Featured program',
+      showMinimumScore: true,
     ),
     InstituteTypeOption(
       id: 'universities',
@@ -96,6 +110,12 @@ class InstituteCatalog extends ChangeNotifier {
       subcategories: ['Entry Test', 'MDCAT', 'ECAT', 'CSS / PMS', 'Tuition', 'Subject Coaching', 'Language Academy', 'Competitive Exams'],
       programLabel: 'Courses / preparation tracks',
       eligibilityLabel: 'Entry requirements',
+      featuredProgramLabel: 'Featured course / certification',
+      showMinimumScore: false,
+      featuredProgramLabel: 'Featured diploma / skill',
+      showMinimumScore: false,
+      featuredProgramLabel: 'Featured course / preparation track',
+      showMinimumScore: false,
     ),
     InstituteTypeOption(
       id: 'technical_vocational',
@@ -132,6 +152,8 @@ class InstituteCatalog extends ChangeNotifier {
       subcategories: ['Special Education School', 'Learning Support Center', 'Speech & Language Support', 'Inclusive Education'],
       programLabel: 'Learning programs / support services',
       eligibilityLabel: 'Assessment / admission requirements',
+      featuredProgramLabel: 'Support service / learning program',
+      showMinimumScore: false,
     ),
     InstituteTypeOption(
       id: 'research_institutes',
@@ -141,6 +163,8 @@ class InstituteCatalog extends ChangeNotifier {
       subcategories: ['Research Center', 'Educational Research', 'Science & Technology', 'Policy & Social Research'],
       programLabel: 'Research areas / programs',
       eligibilityLabel: 'Eligibility / participation requirements',
+      featuredProgramLabel: 'Featured research area',
+      showMinimumScore: false,
     ),
     InstituteTypeOption(
       id: 'madaris',
@@ -150,6 +174,8 @@ class InstituteCatalog extends ChangeNotifier {
       subcategories: ['Hifz-ul-Quran', 'Nazra Quran', 'Tajweed & Qiraat', 'Dars-e-Nizami', 'Islamic Studies', 'Jamia / Dar-ul-Uloom', 'Girls’ Madrasa'],
       programLabel: 'Deeni courses / levels',
       eligibilityLabel: 'Admission requirements',
+      featuredProgramLabel: 'Featured deeni course / level',
+      showMinimumScore: false,
     ),
   ];
 
@@ -238,6 +264,8 @@ class InstituteCatalog extends ChangeNotifier {
       'subcategories': type.subcategories,
       'programLabel': type.programLabel,
       'eligibilityLabel': type.eligibilityLabel,
+      'featuredProgramLabel': type.featuredProgramLabel,
+      'showMinimumScore': type.showMinimumScore,
       'enabled': type.enabled,
       'sortOrder': type.sortOrder,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -260,6 +288,33 @@ class InstituteCatalog extends ChangeNotifier {
       default: return 'Programs / courses';
     }
   }
+
+  static String _defaultEligibilityLabel(String id) => switch (id) {
+    'schools' => 'Age / admission requirements',
+    'colleges' || 'universities' || 'medical_allied_health' => 'Admission eligibility / merit',
+    'madaris' => 'Admission requirements',
+    'special_education' => 'Assessment / admission requirements',
+    'research_institutes' => 'Eligibility / participation requirements',
+    _ => 'Entry requirements',
+  };
+
+  static String _defaultFeaturedProgramLabel(String id) => switch (id) {
+    'schools' => 'Featured class / level',
+    'colleges' => 'Featured program',
+    'universities' => 'Featured degree / department',
+    'academies' => 'Featured course / preparation track',
+    'technical_vocational' => 'Featured diploma / skill',
+    'professional_training' => 'Featured course / certification',
+    'medical_allied_health' => 'Featured health program',
+    'madaris' => 'Featured deeni course / level',
+    'special_education' => 'Support service / learning program',
+    'research_institutes' => 'Featured research area',
+    _ => 'Featured / next program',
+  };
+
+  static bool _defaultShowMinimumScore(String id) => const {
+    'colleges', 'universities', 'medical_allied_health',
+  }.contains(id);
 
   static String _fallbackLabel(String value) => value
       .replaceAll('_', ' ')
