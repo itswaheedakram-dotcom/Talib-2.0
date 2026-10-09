@@ -34,6 +34,12 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
     final name = TextEditingController(text: existing?.label ?? '');
     final id = TextEditingController(text: existing?.id ?? '');
     final subcategories = TextEditingController(text: existing?.subcategories.join(', ') ?? '');
+    final programSuggestions = TextEditingController(
+      text: existing == null ? '' : _catalog.programSuggestionsFor(existing.id).join(', '),
+    );
+    final facilitySuggestions = TextEditingController(
+      text: existing == null ? '' : _catalog.facilitySuggestionsFor(existing.id).join(', '),
+    );
     final programLabel = TextEditingController(text: existing?.programLabel ?? 'Programs / courses');
     final eligibilityLabel = TextEditingController(text: existing?.eligibilityLabel ?? 'Eligibility criteria');
     final featuredProgramLabel = TextEditingController(text: existing?.featuredProgramLabel ?? 'Featured / next program');
@@ -95,6 +101,24 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
                 ),
                 const SizedBox(height: 10),
                 TextField(
+                  controller: programSuggestions,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Suggested programs / courses',
+                    hintText: 'Primary, Matric, BS Computer Science',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: facilitySuggestions,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Suggested facilities',
+                    hintText: 'Library, Transport, Hostel',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
                   controller: programLabel,
                   decoration: const InputDecoration(
                     labelText: 'Programs field label',
@@ -150,6 +174,8 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
       name.dispose();
       id.dispose();
       subcategories.dispose();
+      programSuggestions.dispose();
+      facilitySuggestions.dispose();
       programLabel.dispose();
       eligibilityLabel.dispose();
       featuredProgramLabel.dispose();
@@ -174,6 +200,18 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
           label: label,
           iconKey: iconKey,
           subcategories: subcategories.text
+              .split(',')
+              .map((value) => value.trim())
+              .where((value) => value.isNotEmpty)
+              .toSet()
+              .toList(),
+          programSuggestions: programSuggestions.text
+              .split(',')
+              .map((value) => value.trim())
+              .where((value) => value.isNotEmpty)
+              .toSet()
+              .toList(),
+          facilitySuggestions: facilitySuggestions.text
               .split(',')
               .map((value) => value.trim())
               .where((value) => value.isNotEmpty)
@@ -208,6 +246,8 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
     name.dispose();
     id.dispose();
     subcategories.dispose();
+    programSuggestions.dispose();
+    facilitySuggestions.dispose();
     programLabel.dispose();
     eligibilityLabel.dispose();
     featuredProgramLabel.dispose();
