@@ -222,7 +222,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
             DropdownButtonFormField<String>(
               value: _sector,
               decoration: const InputDecoration(labelText: 'Sector'),
-              items: const ['Private', 'Government', 'Semi-government', 'Non-profit']
+              items: InstituteCatalog.sectors
                   .map((value) => DropdownMenuItem(value: value, child: Text(value)))
                   .toList(),
               onChanged: (value) => setState(() => _sector = value ?? _sector),
@@ -241,7 +241,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
             DropdownButtonFormField<String>(
               value: _admissionStatus,
               decoration: const InputDecoration(labelText: 'Admission status'),
-              items: const ['Open', 'Upcoming', 'Closed', 'Not announced']
+              items: InstituteCatalog.admissionStatuses
                   .map((value) => DropdownMenuItem(value: value, child: Text(value)))
                   .toList(),
               onChanged: (value) => setState(() => _admissionStatus = value ?? _admissionStatus),
@@ -252,7 +252,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
             DropdownButtonFormField<String>(
               value: _submission,
               decoration: const InputDecoration(labelText: 'Application submission mode'),
-              items: const ['Online', 'Physical', 'Online / Physical', 'Not applicable']
+              items: InstituteCatalog.submissionModes
                   .map((value) => DropdownMenuItem(value: value, child: Text(value)))
                   .toList(),
               onChanged: (value) => setState(() => _submission = value ?? _submission),
