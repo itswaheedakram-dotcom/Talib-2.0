@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -423,10 +424,125 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
     child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[const Icon(Icons.psychology_alt_outlined,color:AppColors.darkGreen),const SizedBox(width:6),Text(q.isRomanUrdu?'Maine ye samjha':'What I understood',style:const TextStyle(fontWeight:FontWeight.w800,color:AppColors.darkGreen))]),
       const SizedBox(height:7),
-      Text(q.summary,style:const TextStyle(color:AppColors.darkGreen,height:1.35)),
-      if(_loading) Padding(padding:const EdgeInsets.only(top:5),child:Text(q.isRomanUrdu?'Ab relevant results dhoond raha hoon…':'Finding matching results…',style:const TextStyle(color:AppColors.mutedText,fontSize:12))),
+      _WordByWordText(key:ValueKey(q.summary),text:q.summary,style:const TextStyle(color:AppColors.darkGreen,height:1.45)),
+      if(_loading) Padding(
+        padding:const EdgeInsets.only(top:9),
+        child:_SearchThinkingStatus(isRomanUrdu:q.isRomanUrdu),
+      ),
       Align(alignment:Alignment.centerRight,child:TextButton.icon(onPressed:_editFilters,icon:const Icon(Icons.tune,size:17),label:Text(q.isRomanUrdu?'Filters badlein':'Edit filters'))),
     ]),
+  );
+}
+
+
+class _WordByWordText extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+  const _WordByWordText({super.key,required this.text,required this.style});
+  @override State<_WordByWordText> createState()=>_WordByWordTextState();
+}
+
+class _WordByWordTextState extends State<_WordByWordText> {
+  Timer? _timer;
+  int _visibleWords=0;
+  List<String> get _words=>widget.text.split(RegExp(r'\\s+')).where((word)=>word.isNotEmpty).toList();
+
+  @override void initState(){super.initState();_startTyping();}
+  @override void didUpdateWidget(covariant _WordByWordText oldWidget){
+    super.didUpdateWidget(oldWidget);
+    if(oldWidget.text!=widget.text)_startTyping();
+  }
+  void _startTyping(){
+    _timer?.cancel();
+    _visibleWords=0;
+    final count=_words.length;
+    if(count==0)return;
+    _timer=Timer.periodic(const Duration(milliseconds:115),(timer){
+      if(!mounted)return;
+      setState(()=>_visibleWords=(_visibleWords+1).clamp(0,count));
+      if(_visibleWords>=count)timer.cancel();
+    });
+  }
+  @override void dispose(){_timer?.cancel();super.dispose();}
+  @override Widget build(BuildContext context){
+    final words=_words;
+    final shown=words.take(_visibleWords).join(' ');
+    return AnimatedSwitcher(
+      duration:const Duration(milliseconds:100),
+      child:Text(
+        shown.isEmpty?'▍':'$shown${_visibleWords<words.length?' ▍':''}',
+        key:ValueKey(_visibleWords),
+        style:widget.style,
+      ),
+    );
+  }
+}
+
+class _SearchThinkingStatus extends StatefulWidget {
+  final bool isRomanUrdu;
+  const _SearchThinkingStatus({required this.isRomanUrdu});
+  @override State<_SearchThinkingStatus> createState()=>_SearchThinkingStatusState();
+}
+
+class _SearchThinkingStatusState extends State<_SearchThinkingStatus> {
+  Timer? _timer;
+  int _step=0;
+  static const _roman=[
+    'Aap ki query ko samajh raha hoon',
+    'Relevant categories aur filters match kar raha hoon',
+    'Available listings ko compare kar raha hoon',
+    'Sab se relevant results arrange kar raha hoon',
+  ];
+  static const _english=[
+    'Understanding your search',
+    'Matching relevant categories and filters',
+    'Comparing available listings',
+    'Ranking the most relevant results',
+  ];
+  @override void initState(){
+    super.initState();
+    _timer=Timer.periodic(const Duration(milliseconds:1750),(_){
+      if(mounted)setState(()=>_step=(_step+1)%4);
+    });
+  }
+  @override void dispose(){_timer?.cancel();super.dispose();}
+  @override Widget build(BuildContext context){
+    final messages=widget.isRomanUrdu?_roman:_english;
+    return Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+      SizedBox(
+        width:16,height:16,
+        child:CircularProgressIndicator(
+          strokeWidth:2,
+          valueColor:AlwaysStoppedAnimation<Color>(AppColors.primaryGreen),
+        ),
+      ),
+      const SizedBox(width:8),
+      Expanded(child:AnimatedSwitcher(
+        duration:const Duration(milliseconds:260),
+        child:Text(messages[_step],key:ValueKey(_step),style:const TextStyle(color:AppColors.mutedText,fontSize:12,fontStyle:FontStyle.italic)),
+      )),
+      const SizedBox(width:4),
+      _ThinkingDots(),
+    ]);
+  }
+}
+
+class _ThinkingDots extends StatefulWidget {
+  @override State<_ThinkingDots> createState()=>_ThinkingDotsState();
+}
+class _ThinkingDotsState extends State<_ThinkingDots> {
+  Timer? _timer;
+  int _dots=1;
+  @override void initState(){
+    super.initState();
+    _timer=Timer.periodic(const Duration(milliseconds:380),(_){
+      if(mounted)setState(()=>_dots=_dots%3+1);
+    });
+  }
+  @override void dispose(){_timer?.cancel();super.dispose();}
+  @override Widget build(BuildContext context)=>Text(
+    List.filled(_dots,'•').join(' '),
+    style:const TextStyle(color:AppColors.primaryGreen,fontWeight:FontWeight.w800),
   );
 }
 
