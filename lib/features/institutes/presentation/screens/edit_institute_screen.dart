@@ -4,6 +4,8 @@ import '../../data/institute_repository.dart';
 import '../../../models/institute.dart';
 import '../../../../app/theme.dart';
 import '../../data/institute_catalog.dart';
+import '../../data/institute_image_service.dart';
+import '../widgets/institute_image_preview.dart';
 
 class EditInstituteScreen extends StatefulWidget {
   final String id;
@@ -20,7 +22,7 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
       _contact=TextEditingController(), _programs=TextEditingController(), _facilities=TextEditingController(),
       _imageUrl=TextEditingController();
   String _sector='Private', _submission='Online', _admissionStatus='Open';
-  bool _entryTest=false, _saving=false;
+  bool _entryTest=false, _saving=false, _uploadingImage=false;
 
   @override void initState() {
     super.initState();
@@ -39,6 +41,22 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
     for(final c in [_name,_campus,_subcategory,_province,_city,_town,_address,_description,_website,_applicationUrl,_eligibility,_minScore,
       _nextProgram,_deadline,_fee,_contact,_programs,_facilities,_imageUrl]) c.dispose();
     super.dispose();
+  }
+
+  Future<void> _chooseImage() async {
+    setState(() => _uploadingImage = true);
+    try {
+      final source = await InstituteImageService.instance.pickAndUpload();
+      if (source != null && mounted) setState(() => _imageUrl.text = source);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not select/upload image: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
+    }
   }
 
   Future<void> _save() async {
@@ -88,7 +106,16 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
         _field(_contact,'Contact',Icons.phone_outlined),
         _field(_website,'Website',Icons.language_outlined,keyboard:TextInputType.url),
         _field(_applicationUrl,'Direct Admission / Application URL',Icons.open_in_new_outlined,keyboard:TextInputType.url),
-        _field(_imageUrl,'Image URL',Icons.image_outlined,keyboard:TextInputType.url),
+        Text('Cover image',style:Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height:8),
+        InstituteImagePreview(source:_imageUrl.text,fallbackIcon:InstituteCatalog.instance.iconFor(i.type),label:InstituteCatalog.instance.labelFor(i.type),height:150),
+        const SizedBox(height:8),
+        OutlinedButton.icon(
+          onPressed:_uploadingImage||_saving?null:_chooseImage,
+          icon:_uploadingImage?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.photo_library_outlined),
+          label:Text(_uploadingImage?'Uploading image...':'Choose image from gallery'),
+        ),
+        _field(_imageUrl,'Or paste an image URL',Icons.image_outlined,keyboard:TextInputType.url),
         _field(_description,'Description',Icons.description_outlined,maxLines:4),
         const SizedBox(height:8),
         Text('Academic Information',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w700,color:dark)),
@@ -116,6 +143,6 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
   }
 
   Widget _field(TextEditingController c,String label,IconData icon,{bool required=false,int maxLines=1,TextInputType? keyboard}) =>
-      Padding(padding:const EdgeInsets.only(bottom:12),child:TextFormField(controller:c,maxLines:maxLines,keyboardType:keyboard,validator:required?(v)=>v==null||v.trim().isEmpty?'Required':null:null,decoration:InputDecoration(labelText:label,prefixIcon:Icon(icon),border:const OutlineInputBorder())));
+      Padding(padding:const EdgeInsets.only(bottom:12),child:TextFormField(controller:c,onChanged:c==_imageUrl?(_)=>setState((){}):null,maxLines:maxLines,keyboardType:keyboard,validator:required?(v)=>v==null||v.trim().isEmpty?'Required':null:null,decoration:InputDecoration(labelText:label,prefixIcon:Icon(icon),border:const OutlineInputBorder())));
   Widget _dropdown(String label,String value,List<String> items,void Function(String) onChanged)=>Padding(padding:const EdgeInsets.only(bottom:12),child:DropdownButtonFormField<String>(initialValue:items.contains(value)?value:items.first,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder()),items:items.map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(),onChanged:(v){if(v!=null)onChanged(v);}));
 }
