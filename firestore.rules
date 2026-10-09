@@ -43,7 +43,13 @@ service cloud.firestore {
       // Authenticated users may view profiles, but may only change their own profile.
       // Admin tools may update only the representative fields needed after a verified claim.
       allow read: if signedIn();
-      allow create, delete: if signedIn() && request.auth.uid == userId;
+      allow create: if (signedIn() && request.auth.uid == userId)
+        || admin()
+        || (managerAdminPermission('ownership_claim_review')
+          && request.resource.data.keys().hasOnly([
+            'role', 'instituteAdmin', 'instituteId', 'instituteName', 'designation'
+          ]));
+      allow delete: if signedIn() && request.auth.uid == userId || admin();
       allow update: if (signedIn() && request.auth.uid == userId)
         || admin()
         || (managerAdminPermission('ownership_claim_review')
