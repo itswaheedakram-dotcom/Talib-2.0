@@ -274,11 +274,23 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             () => context.push('/admin/hostel-submissions'),
           ),
           _section(
+            'New Institute Submissions',
+            'Approve or reject demo institute suggestions',
+            Icons.fact_check_outlined,
+            () => context.push('/admin/institute-submissions'),
+          ),
+          _section(
+            'Institute Categories',
+            'Add or update institute types and subcategories',
+            Icons.category_outlined,
+            () => context.push('/admin/institute-types'),
+          ),
+          _section(
             'Institute Claims',
             'Demo-safe ownership review',
             Icons.school_outlined,
             () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Demo institute-claim workflow is not connected yet. No Firebase data was changed.')),
+              const SnackBar(content: Text('Demo institute-claim review will be connected next. No Firebase data was changed.')),
             ),
           ),
           _section(
@@ -368,6 +380,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   _section('Manager Admins', 'Create, suspend or revoke manager access', Icons.admin_panel_settings_outlined, _showCreateManagerDialog),
                   _managerSection(),
                 ],
+                if (_access.isSuperAdmin || canManageInstitutes)
+                  _section('New Institute Submissions', 'Approve or reject new institute listings', Icons.fact_check_outlined, () => context.push('/admin/institute-submissions')),
+                if (_access.isSuperAdmin || canManageInstitutes)
+                  _section('Institute Categories', 'Manage categories and subcategories centrally', Icons.category_outlined, () => context.push('/admin/institute-types')),
                 if (canReviewClaims || _access.isSuperAdmin)
                   _section('Institute Claims', 'Review institute ownership requests', Icons.school_outlined, () => context.push('/admin/institute-claims')),
                 if (canReviewClaims || _access.isSuperAdmin)
