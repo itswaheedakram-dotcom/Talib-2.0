@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/services/active_profile_controller.dart';
 import '../../../core/services/firebase_service.dart';
@@ -15,6 +16,7 @@ class LocationCatalog extends ChangeNotifier {
   static final instance = LocationCatalog._();
 
   List<Map<String, String>> _entries = [];
+  final List<Map<String, String>> _demoEntries = [];
   bool loading = false;
   String? error;
   bool _loaded = false;
@@ -25,16 +27,21 @@ class LocationCatalog extends ChangeNotifier {
     'Australia', 'Malaysia', 'Turkey',
   ];
 
+  bool get isDemoMode => ActiveProfileController.instance.isDemo || !FirebaseService.initialized;
+
+  List<Map<String, String>> get entries => List.unmodifiable(
+    (isDemoMode ? _demoEntries : _entries).map((entry) => Map<String, String>.unmodifiable(entry)),
+  );
+
   Future<void> load({bool force = false}) async {
-    if (_loaded && !force) return;
-    if (ActiveProfileController.instance.isDemo || !FirebaseService.initialized) {
-      _entries = [];
-      _loaded = true;
+    if (isDemoMode) {
+      _loaded = false;
       loading = false;
       error = null;
       notifyListeners();
       return;
     }
+    if (_loaded && !force) return;
 
     loading = true;
     error = null;
@@ -71,7 +78,8 @@ class LocationCatalog extends ChangeNotifier {
   }) {
     final normalizedParent = parentName.trim().toLowerCase();
     final normalizedCountry = country.trim().toLowerCase();
-    final values = _entries.where((entry) {
+    final source = isDemoMode ? _demoEntries : _entries;
+    final values = source.where((entry) {
       if (entry['type'] != type.toLowerCase()) return false;
       if (normalizedParent.isNotEmpty &&
           entry['parentName']!.toLowerCase() != normalizedParent) return false;
@@ -84,4 +92,73 @@ class LocationCatalog extends ChangeNotifier {
   }
 
   bool get hasRemoteEntries => _entries.isNotEmpty;
+
+  Future<bool> addEntry({
+    required String name,
+    required String type,
+    required String parentName,
+    required String country,
+  }) async {
+    final cleanName = name.trim();
+    if (cleanName.isEmpty) {
+      error = 'Location name is required.';
+      return false;
+    }
+    final normalizedType = type.trim().toLowerCase();
+    if (!const {'country', 'region', 'district', 'city', 'area'}.contains(normalizedType)) {
+      error = 'Unsupported location level.';
+      return false;
+    }
+    final entry = <String, String>{
+      'name': cleanName,
+      'type': normalizedType,
+      'parentName': parentName.trim(),
+      'country': normalizedType == 'country' ? cleanName : country.trim(),
+    };
+    try {
+      if (isDemoMode) {
+        entry['id'] = 'demo-location-${DateTime.now().microsecondsSinceEpoch}';
+        _demoEntries.add(entry);
+      } else {
+        if (FirebaseAuth.instance.currentUser == null) {
+          error = 'Sign in is required to manage locations.';
+          return false;
+        }
+        final ref = await FirebaseFirestore.instance.collection('locationCatalog').add({
+          ...entry,
+          'enabled': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        entry['id'] = ref.id;
+        _entries.add(entry);
+      }
+      error = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    }
+  }
+
+  Future<bool> deleteEntry(String id) async {
+    try {
+      if (isDemoMode) {
+        _demoEntries.removeWhere((entry) => entry['id'] == id);
+      } else {
+        if (FirebaseAuth.instance.currentUser == null) {
+          error = 'Sign in is required to manage locations.';
+          return false;
+        }
+        await FirebaseFirestore.instance.collection('locationCatalog').doc(id).delete();
+        _entries.removeWhere((entry) => entry['id'] == id);
+      }
+      error = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    }
+  }
 }
