@@ -37,7 +37,7 @@ class DemoDataService extends ChangeNotifier {
 
   void _seedData(){
     final now=DateTime.now();
-    final names={'demo-user-1':'Ayesha Khan','demo-user-2':'Ali Raza','demo-user-3':'Hira Ahmed','demo-user-4':'Usman Malik'};
+    final names={'demo-user-1':'Ayesha Khan','demo-user-2':'Ali Raza','demo-user-3':'Hira Ahmed','demo-user-4':'Usman Malik','demo-user-5':'Ahtasham Malik','demo-user-6':'Waheed Akram'};
     for(final id in names.keys){
       _following[id]={...names.keys.where((x)=>x!=id)};
       _notifications[id]=[];
@@ -163,7 +163,7 @@ class DemoDataService extends ChangeNotifier {
 
   String _conversation(String a,String b){final x=[a,b]..sort();return '${x[0]}|${x[1]}';}
   String conversationId(String a,String b)=>_conversation(a,b);
-  String _name(String id)=>{'demo-user-1':'Ayesha Khan','demo-user-2':'Ali Raza','demo-user-3':'Hira Ahmed','demo-user-4':'Usman Malik'}[id]??'Student';
+  String _name(String id)=>{'demo-user-1':'Ayesha Khan','demo-user-2':'Ali Raza','demo-user-3':'Hira Ahmed','demo-user-4':'Usman Malik','demo-user-5':'Ahtasham Malik','demo-user-6':'Waheed Akram'}[id]??'Student';
   List<Map<String,dynamic>> conversations(String uid){final result=<Map<String,dynamic>>[];for(final e in _messages.entries){final parts=e.key.split('|');if(parts.contains(uid)){final other=parts.firstWhere((x)=>x!=uid,orElse:()=>uid);final list=e.value;final last=list.isEmpty?null:list.last;result.add({'id':e.key,'otherUid':other,'otherName':_name(other),'lastMessage':last?['text']??'','updatedAt':last?['createdAt']??DateTime.now()});}}return result..sort((a,b)=>(b['updatedAt'] as DateTime).compareTo(a['updatedAt'] as DateTime));}
   List<Map<String,dynamic>> messages(String a,String b)=>List.unmodifiable(_messages[_conversation(a,b)]??const []);
   void sendMessage(String from,String to,String text){if(!isMutual(from,to))return;final key=_conversation(from,to);(_messages[key]??=[]).add({'id':'demo-message-${++_seq}','senderId':from,'receiverId':to,'text':text,'createdAt':DateTime.now(),'read':false});_addNotification(to,{'type':'message','text':'sent you a message','fromId':from,'createdAt':DateTime.now(),'read':false});_emit();}
