@@ -367,7 +367,8 @@ class HostelRepository {
       permissions: Map<String, bool>.from(permissions),
       createdAt: DateTime.now(),
     );
-    if (!FirebaseService.initialized) {
+    final isDemoHostel = _demoHostels.any((item) => item.id == hostelId);
+    if (isDemoHostel || !FirebaseService.initialized) {
       final list = _demoManagers.putIfAbsent(hostelId, () => <HostelManager>[]);
       final index = list.indexWhere((item) => item.userId == manager.userId);
       if (index >= 0) {
@@ -389,7 +390,8 @@ class HostelRepository {
     required String userId,
     required Map<String, bool> permissions,
   }) async {
-    if (!FirebaseService.initialized) {
+    final isDemoHostel = _demoHostels.any((item) => item.id == hostelId);
+    if (isDemoHostel || !FirebaseService.initialized) {
       final list = _demoManagers[hostelId] ?? <HostelManager>[];
       final index = list.indexWhere((item) => item.userId == userId);
       if (index >= 0) {
@@ -409,7 +411,8 @@ class HostelRepository {
   }
 
   Future<void> removeManager(String hostelId, String userId) async {
-    if (!FirebaseService.initialized) {
+    final isDemoHostel = _demoHostels.any((item) => item.id == hostelId);
+    if (isDemoHostel || !FirebaseService.initialized) {
       final list = _demoManagers[hostelId];
       list?.removeWhere((item) => item.userId == userId);
       return;
