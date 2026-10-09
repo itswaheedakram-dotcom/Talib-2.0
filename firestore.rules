@@ -3,6 +3,13 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function admin() { return signedIn() && request.auth.token.admin == true; }
+    function managerAdminPermission(permission) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/adminRoles/$(request.auth.uid))
+        && get(/databases/$(database)/documents/adminRoles/$(request.auth.uid)).data.role == 'manager_admin'
+        && get(/databases/$(database)/documents/adminRoles/$(request.auth.uid)).data.status == 'active'
+        && get(/databases/$(database)/documents/adminRoles/$(request.auth.uid)).data.permissions[permission] == true;
+    }
     function hostelOwner() { return signedIn() && resource.data.ownerId == request.auth.uid; }
     function mutualFollow(uid, otherUid) {
       return uid != otherUid
@@ -17,6 +24,19 @@ service cloud.firestore {
     }
     function isParticipant(participants) {
       return signedIn() && participants.size() == 2 && participants.hasAny([request.auth.uid]);
+    }
+
+    match /adminRoles/{adminUid} {
+      allow read: if admin() || (signedIn() && request.auth.uid == adminUid);
+      allow create, update, delete: if admin();
+    }
+
+    match /adminAuditLogs/{logId} {
+      allow read: if admin() || managerAdminPermission('view_audit_logs');
+      allow create: if signedIn()
+        && request.resource.data.actorUid == request.auth.uid
+        && (admin() || managerAdminPermission('view_audit_logs'));
+      allow update, delete: if false;
     }
 
     match /users/{userId} {
@@ -123,6 +143,22 @@ service cloud.firestore {
           && resource.data.userId == request.auth.uid;
       }
     }
+    match /instituteClaims/{claimId} {
+      allow create: if signedIn()
+        && request.resource.data.representativeId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow read: if admin()
+        || managerAdminPermission('ownership_claim_review')
+        || (signedIn() && resource.data.representativeId == request.auth.uid);
+      allow update: if admin()
+        || (managerAdminPermission('ownership_claim_review')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','reviewedAt'])
+          && request.resource.data.status in ['approved','rejected']
+          && request.resource.data.representativeId == resource.data.representativeId
+          && request.resource.data.instituteId == resource.data.instituteId);
+      allow delete: if admin();
+    }
+
     match /hostelClaims/{claimId} {
       allow create: if signedIn()
         && request.resource.data.userId == request.auth.uid
@@ -137,8 +173,13 @@ service cloud.firestore {
         && request.resource.data.contact.size() <= 100
         && request.resource.data.note is string
         && request.resource.data.note.size() <= 2000;
-      allow read: if admin() || (signedIn() && resource.data.userId == request.auth.uid);
-      allow update: if admin();
+      allow read: if admin() || managerAdminPermission('ownership_claim_review') || (signedIn() && resource.data.userId == request.auth.uid);
+      allow update: if admin()
+        || (managerAdminPermission('ownership_claim_review')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','reviewedAt','reviewedBy'])
+          && request.resource.data.status in ['approved','rejected']
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.hostelId == resource.data.hostelId);
       allow delete: if admin();
     }
 
