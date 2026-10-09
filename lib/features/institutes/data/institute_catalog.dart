@@ -123,9 +123,14 @@ class InstituteCatalog extends ChangeNotifier {
     'Open', 'Upcoming', 'Closed', 'Not announced',
   ];
 
+  final Map<String, InstituteTypeOption> _demoOverrides = {};
   List<InstituteTypeOption> _types = List.unmodifiable(_defaults);
   bool loading = false;
   String? error;
+
+  List<InstituteTypeOption> get allTypes => List.unmodifiable(
+    _types.toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
+  );
 
   List<InstituteTypeOption> get types => List.unmodifiable(
     _types.where((type) => type.enabled).toList()
@@ -146,7 +151,10 @@ class InstituteCatalog extends ChangeNotifier {
   Future<void> load() async {
     // Demo mode must never read or mutate the real catalogue.
     if (ActiveProfileController.instance.isDemo || !FirebaseService.initialized) {
-      _types = List.unmodifiable(_defaults);
+      _types = List.unmodifiable({
+        for (final type in _defaults) type.id: type,
+        ..._demoOverrides,
+      }.values);
       notifyListeners();
       return;
     }
@@ -169,6 +177,30 @@ class InstituteCatalog extends ChangeNotifier {
       loading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> saveType(InstituteTypeOption type) async {
+    if (type.id.trim().isEmpty || type.label.trim().isEmpty) {
+      throw ArgumentError('Category ID and display name are required.');
+    }
+    if (ActiveProfileController.instance.isDemo || !FirebaseService.initialized) {
+      _demoOverrides[type.id] = type;
+      _types = List.unmodifiable({
+        for (final item in _defaults) item.id: item,
+        ..._demoOverrides,
+      }.values);
+      notifyListeners();
+      return;
+    }
+    await FirebaseFirestore.instance.collection('instituteTypes').doc(type.id).set({
+      'label': type.label.trim(),
+      'iconKey': type.iconKey,
+      'subcategories': type.subcategories,
+      'enabled': type.enabled,
+      'sortOrder': type.sortOrder,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    await load();
   }
 
   static String _fallbackLabel(String value) => value
