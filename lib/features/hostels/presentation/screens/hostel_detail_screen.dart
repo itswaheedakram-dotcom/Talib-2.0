@@ -138,7 +138,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
   Stream<List<HostelReview>> _reviewStream() {
     if (hostel.id.isEmpty) return const Stream<List<HostelReview>>.empty();
     try {
-      return hostel.isDemo
+      return (_demoIdentity || hostel.isDemo || !FirebaseService.initialized)
           ? HostelRepository.demoReviewStream(hostel.id)
           : HostelRepository().watchReviews(hostel.id);
     } catch (_) {
