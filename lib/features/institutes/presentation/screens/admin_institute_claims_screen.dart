@@ -11,8 +11,8 @@ class AdminInstituteClaimsScreen extends StatelessWidget {
     String status,
   ) async {
     final db = FirebaseFirestore.instance;
-    final batch = db.batch();
     final claimRef = db.collection('instituteClaims').doc(claimId);
+    final batch = db.batch();
     batch.update(claimRef, {
       'status': status,
       'reviewedAt': FieldValue.serverTimestamp(),
@@ -24,12 +24,32 @@ class AdminInstituteClaimsScreen extends StatelessWidget {
       if (instituteId.isEmpty || representativeId.isEmpty) {
         throw StateError('Claim is missing its institute or representative ID.');
       }
-      batch.update(db.collection('institutes').doc(instituteId), {
+      final instituteRef = db.collection('institutes').doc(instituteId);
+      final existingInstitute = await instituteRef.get();
+      final ownership = {
         'ownerId': representativeId,
         'representativeId': representativeId,
         'ownershipVerified': true,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+      if (existingInstitute.exists) {
+        // Existing records receive only ownership metadata, avoiding stale seed overwrites.
+        batch.update(instituteRef, ownership);
+      } else {
+        final rawSnapshot = data['instituteSnapshot'];
+        if (rawSnapshot is! Map) {
+          throw StateError('This institute is not in Firebase and has no seed snapshot.');
+        }
+        final snapshot = Map<String, dynamic>.from(rawSnapshot);
+        batch.set(instituteRef, {
+          ...snapshot,
+          ...ownership,
+          'status': 'approved',
+          'createdBy': (snapshot['createdBy'] ?? '').toString().isEmpty
+              ? 'system_seed'
+              : snapshot['createdBy'],
+        });
+      }
       batch.set(db.collection('users').doc(representativeId), {
         'role': 'instituteRepresentative',
         'instituteAdmin': true,
