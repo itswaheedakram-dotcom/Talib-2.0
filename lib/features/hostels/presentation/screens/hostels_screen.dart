@@ -21,6 +21,8 @@ class _HostelsScreenState extends State<HostelsScreen> {
   final TextEditingController _searchController = TextEditingController();
   HostelRepository? _repository;
   StreamSubscription<List<Hostel>>? _hostelSubscription;
+  StreamSubscription<List<Hostel>>? _demoHostelSubscription;
+  List<Hostel> _firestoreHostels = [];
 
   List<Hostel> _hostels = HostelRepository.demoHostels.toList();
   String _city = 'All';
@@ -34,7 +36,18 @@ class _HostelsScreenState extends State<HostelsScreen> {
   @override
   void initState() {
     super.initState();
+    _demoHostelSubscription = HostelRepository.watchDemoHostels().listen((_) {
+      if (mounted) setState(_mergeHostels);
+    });
     _connectToFirestore();
+  }
+
+  void _mergeHostels() {
+    final combined = <String, Hostel>{
+      for (final hostel in _firestoreHostels) hostel.id: hostel,
+      for (final hostel in HostelRepository.demoHostels) hostel.id: hostel,
+    };
+    _hostels = combined.values.toList();
   }
 
   Future<void> _connectToFirestore() async {
@@ -46,11 +59,8 @@ class _HostelsScreenState extends State<HostelsScreen> {
         (hostels) {
           if (!mounted) return;
           setState(() {
-            final combined = <String, Hostel>{
-              for (final hostel in hostels) hostel.id: hostel,
-              for (final hostel in HostelRepository.demoHostels) hostel.id: hostel,
-            };
-            _hostels = combined.values.toList();
+            _firestoreHostels = hostels;
+            _mergeHostels();
           });
         },
         onError: (_) {},
@@ -63,6 +73,7 @@ class _HostelsScreenState extends State<HostelsScreen> {
   @override
   void dispose() {
     _hostelSubscription?.cancel();
+    _demoHostelSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }
