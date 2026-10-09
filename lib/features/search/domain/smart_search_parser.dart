@@ -94,7 +94,7 @@ abstract final class SmartSearchParser {
       'last date': 'deadline', 'akhri tareekh': 'deadline', 'aakhri tareekh': 'deadline', 'kab tak': 'deadline', 'closing date': 'deadline',
       'open hain': 'open', 'open hai': 'open', 'khulay': 'open', 'khula hai': 'open', 'apply ho raha': 'open', 'apply ho rahi': 'open', 'applications open': 'open',
       'under': 'under', 'below': 'under', 'less than': 'under', 'kam': 'under', 'se kam': 'under', 'tak': 'under', 'maximum': 'max', 'max budget': 'budget',
-      'fees': 'fee', 'fee': 'fee', 'kiraya': 'rent', 'rent': 'rent', 'mahina': 'monthly', 'monthly': 'monthly', 'rupay': 'rs', 'rupees': 'rs', 'pkr': 'rs', 'lakh': '100000', 'hazaar': '000',
+      'fees': 'fee', 'fee': 'fee', 'kiraya': 'rent', 'rent': 'rent', 'mahina': 'monthly', 'monthly': 'monthly', 'rupay': 'rs', 'rupees': 'rs', 'pkr': 'rs',
       'mess wala': 'mess', 'khana': 'meals', 'wifi': 'wi fi', 'internet': 'wi fi', 'air conditioning': 'ac', 'air conditioned': 'ac', 'kamra': 'room', 'kamray': 'room', 'rooms': 'room',
       'bachelors': 'bs', 'bachelor': 'bs', 'undergraduate': 'bs', 'masters': 'ms', 'master': 'ms', 'computer science': 'computer science', 'software eng': 'software engineering', 'cs degree': 'computer science', 'notes': 'notes', 'past papers': 'past paper', 'study material': 'study material',
       'hn': 'hain', 'han': 'hain', 'hain na': 'hain', 'he': 'hai', 'hai na': 'hai', 'btao': 'show', 'batao': 'show', 'bata dein': 'show', 'dikhao': 'show', 'dhoondo': 'find', 'talash': 'find', 'chahiye': 'need', 'chaheye': 'need', 'mujhe': 'me', 'mujhy': 'me', 'mere liye': 'for me', 'koi achi': 'good', 'koi acha': 'good', 'available hain': 'available', 'mil sakti': 'available', 'mil sakta': 'available',
@@ -140,8 +140,14 @@ abstract final class SmartSearchParser {
     if (location != null) understood.add('Location: $location');
     if (area != null) understood.add('Area: $area');
 
+    final thousandMatch = RegExp(r'\b(\d{1,3})\s*(?:hazaar|hazar|thousand)\b', caseSensitive: false).firstMatch(input);
+    final lakhMatch = RegExp(r'\b(\d{1,2})\s*(?:lakh|lac)\b', caseSensitive: false).firstMatch(input);
     final budgetMatch = RegExp(r'\b(?:under|below|less than|max|maximum|budget|rs)?\s*(\d{1,3}(?:,\d{3})+|\d{4,6})\b').firstMatch(normalized);
-    final budget = budgetMatch == null ? null : int.tryParse(budgetMatch.group(1)!.replaceAll(',', ''));
+    final budget = thousandMatch != null
+        ? (int.tryParse(thousandMatch.group(1)!) ?? 0) * 1000
+        : lakhMatch != null
+            ? (int.tryParse(lakhMatch.group(1)!) ?? 0) * 100000
+            : budgetMatch == null ? null : int.tryParse(budgetMatch.group(1)!.replaceAll(',', ''));
     if (budget != null) understood.add('Budget: up to PKR ${budget.toString()}');
 
     String? gender;
