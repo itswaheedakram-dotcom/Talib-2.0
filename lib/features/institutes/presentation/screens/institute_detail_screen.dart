@@ -221,6 +221,15 @@ class InstituteDetailScreen extends StatelessWidget {
               label: const Text('Institute Community'),
             )),
           ])),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => context.push('/institute/${institute.id}/opportunities'),
+              icon: const Icon(Icons.event_available_outlined),
+              label: const Text('Programs, Admissions & Scholarships'),
+            ),
+          ),
           const SizedBox(height: 10),
           _section('Facilities', institute.facilities.isEmpty
               ? const Text('No facilities added yet.')
