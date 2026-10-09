@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../data/institute_repository.dart';
 
 class ClaimInstituteScreen extends StatefulWidget {
   final String instituteId;
@@ -37,9 +38,11 @@ class _ClaimInstituteScreenState extends State<ClaimInstituteScreen> {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You already have a claim for this institute.')));
         return;
       }
+      final institute = InstituteRepository.instance.byId(widget.instituteId);
       await db.collection('instituteClaims').add({
         'instituteId': widget.instituteId,
         'instituteName': widget.instituteName,
+        if (institute != null) 'instituteSnapshot': institute.toMap(),
         'representativeId': user.uid,
         'representativeName': user.displayName?.trim().isNotEmpty == true ? user.displayName!.trim() : 'Representative',
         'representativeEmail': user.email ?? '',
