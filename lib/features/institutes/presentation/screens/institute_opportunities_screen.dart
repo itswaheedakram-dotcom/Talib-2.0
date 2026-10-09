@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/services/active_profile_controller.dart';
@@ -111,7 +112,7 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
               padding: const EdgeInsets.all(12),
               child: Text(
                 'Could not load listings: ${_repository.error}',
-                style: const TextStyle(color: AppColors.error),
+                style: const TextStyle(color: AppColors.darkGreen),
               ),
             ),
           Expanded(
@@ -192,7 +193,7 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
     final statusColor = item.status.toLowerCase() == 'open'
         ? AppColors.primaryGreen
         : item.status.toLowerCase() == 'closed' || item.status.toLowerCase() == 'cancelled'
-            ? AppColors.textSecondary
+            ? AppColors.mutedText
             : AppColors.darkGreen;
     return Card(
       child: Padding(
@@ -259,9 +260,9 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
               Align(
                 alignment: Alignment.centerLeft,
                 child: OutlinedButton.icon(
-                  onPressed: () => context.push('/institute/${institute.id}/opportunities'),
+                  onPressed: () => _openExternal(context, item.applicationUrl),
                   icon: const Icon(Icons.open_in_new),
-                  label: const Text('View listing'),
+                  label: const Text('Apply / View details'),
                 ),
               ),
             ],
@@ -284,6 +285,19 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
     ),
     child: Text('$label: $value', style: const TextStyle(fontSize: 12)),
   );
+
+  Future<void> _openExternal(BuildContext context, String rawUrl) async {
+    if (rawUrl.trim().isEmpty) return;
+    var uri = Uri.tryParse(rawUrl.trim());
+    if (uri != null && !uri.hasScheme) uri = Uri.tryParse('https://${rawUrl.trim()}');
+    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open this link on your device.')),
+        );
+      }
+    }
+  }
 
   Future<void> _confirmDelete(BuildContext context, InstituteOpportunity item) async {
     final confirmed = await showDialog<bool>(
