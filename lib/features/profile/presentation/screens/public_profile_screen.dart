@@ -352,10 +352,12 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                                 label:const Text('Message'),
                               ),
                             ],
-                            const SizedBox(width:8),
-                            OutlinedButton.icon(onPressed:()=>_reportUser(name),icon:const Icon(Icons.flag_outlined),label:const Text('Report')),
-                            const SizedBox(width:8),
-                            OutlinedButton.icon(onPressed:()=>_blockUser(name),icon:const Icon(Icons.block_outlined),label:const Text('Block')),
+                            if (!ActiveProfileController.instance.isDemo) ...[
+                              const SizedBox(width:8),
+                              OutlinedButton.icon(onPressed:()=>_reportUser(name),icon:const Icon(Icons.flag_outlined),label:const Text('Report')),
+                              const SizedBox(width:8),
+                              OutlinedButton.icon(onPressed:()=>_blockUser(name),icon:const Icon(Icons.block_outlined),label:const Text('Block')),
+                            ],
                           ]);
                         },
                       );
@@ -428,11 +430,19 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   }
 
   Future<void> _reportUser(String name) async {
+    if (ActiveProfileController.instance.isDemo) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reporting from a demo profile is disabled. Switch to your real account first.')));
+      return;
+    }
     final u=me;if(u==null)return;
     final reason=await showDialog<String>(context:context,builder:(_)=>SimpleDialog(title:Text('Report '+name),children:['Spam','Harassment','Fake information','Inappropriate','Scam','Other'].map((x)=>SimpleDialogOption(onPressed:()=>Navigator.pop(context,x),child:Text(x))).toList()));
     if(reason!=null){await DatabaseService().report(reporterId:u.uid,targetId:widget.id,targetType:'user',reason:reason);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Report submitted.')));}
   }
   Future<void> _blockUser(String name) async {
+    if (ActiveProfileController.instance.isDemo) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Blocking from a demo profile is disabled. Switch to your real account first.')));
+      return;
+    }
     final u=me;if(u==null)return;
     final yes=await showDialog<bool>(context:context,builder:(_)=>AlertDialog(title:Text('Block '+name+'?'),content:const Text('You will no longer see this user in your community feed.'),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Block'))]));
     if(yes==true){await DatabaseService().blockUser(u.uid,widget.id);if(mounted){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('User blocked.')));context.pop();}}
