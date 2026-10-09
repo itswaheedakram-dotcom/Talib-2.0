@@ -1,14 +1,52 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class AdminInstituteClaimsScreen extends StatelessWidget {
   const AdminInstituteClaimsScreen({super.key});
-  Future<void> _setStatus(BuildContext context, String claimId, Map<String,dynamic> data, String status) async {
-    final db=FirebaseFirestore.instance;
-    await db.collection('instituteClaims').doc(claimId).update({'status':status,'reviewedAt':FieldValue.serverTimestamp()});
-    if(status=='approved'){ await db.collection('users').doc(data['representativeId'].toString()).set({'role':'instituteRepresentative','instituteAdmin':true,'instituteId':data['instituteId'],'instituteName':data['instituteName'],'designation':data['designation']},SetOptions(merge:true)); }
-    if(context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(status=='approved'?'Claim approved.':'Claim rejected.')));
+  Future<void> _setStatus(
+    BuildContext context,
+    String claimId,
+    Map<String, dynamic> data,
+    String status,
+  ) async {
+    final db = FirebaseFirestore.instance;
+    final batch = db.batch();
+    final claimRef = db.collection('instituteClaims').doc(claimId);
+    batch.update(claimRef, {
+      'status': status,
+      'reviewedAt': FieldValue.serverTimestamp(),
+    });
+
+    if (status == 'approved') {
+      final instituteId = (data['instituteId'] ?? '').toString();
+      final representativeId = (data['representativeId'] ?? '').toString();
+      if (instituteId.isEmpty || representativeId.isEmpty) {
+        throw StateError('Claim is missing its institute or representative ID.');
+      }
+      batch.update(db.collection('institutes').doc(instituteId), {
+        'ownerId': representativeId,
+        'representativeId': representativeId,
+        'ownershipVerified': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      batch.set(db.collection('users').doc(representativeId), {
+        'role': 'instituteRepresentative',
+        'instituteAdmin': true,
+        'instituteId': instituteId,
+        'instituteName': data['instituteName'],
+        'designation': data['designation'],
+      }, SetOptions(merge: true));
+    }
+
+    await batch.commit();
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(status == 'approved' ? 'Claim approved and ownership linked.' : 'Claim rejected.')),
+      );
+    }
   }
+
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const Text('Institute Claims')),
     body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
