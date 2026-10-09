@@ -11,6 +11,8 @@ class InstituteTypeOption {
   final String label;
   final String iconKey;
   final List<String> subcategories;
+  final List<String> programSuggestions;
+  final List<String> facilitySuggestions;
   final String programLabel;
   final String eligibilityLabel;
   final String featuredProgramLabel;
@@ -23,6 +25,8 @@ class InstituteTypeOption {
     required this.label,
     this.iconKey = 'school',
     this.subcategories = const [],
+    this.programSuggestions = const [],
+    this.facilitySuggestions = const [],
     this.programLabel = 'Programs / courses',
     this.eligibilityLabel = 'Eligibility criteria',
     this.featuredProgramLabel = 'Featured / next program',
@@ -49,6 +53,12 @@ class InstituteTypeOption {
       iconKey: (data['iconKey'] ?? 'school').toString(),
       subcategories: List<String>.from(
         (data['subcategories'] as List? ?? const []).map((value) => value.toString()),
+      ),
+      programSuggestions: List<String>.from(
+        (data['programSuggestions'] as List? ?? const []).map((value) => value.toString()),
+      ),
+      facilitySuggestions: List<String>.from(
+        (data['facilitySuggestions'] as List? ?? const []).map((value) => value.toString()),
       ),
       programLabel: (data['programLabel'] ?? InstituteCatalog._defaultProgramLabel(id)).toString(),
       eligibilityLabel: (data['eligibilityLabel'] ?? InstituteCatalog._defaultEligibilityLabel(id)).toString(),
@@ -214,6 +224,16 @@ class InstituteCatalog extends ChangeNotifier {
   IconData iconFor(String id) => byId(id)?.icon ?? Icons.account_balance_outlined;
   List<String> subcategoriesFor(String id) => byId(id)?.subcategories ?? const [];
 
+  List<String> programSuggestionsFor(String id) {
+    final configured = byId(id)?.programSuggestions ?? const <String>[];
+    return configured.isNotEmpty ? configured : _defaultProgramSuggestions(id);
+  }
+
+  List<String> facilitySuggestionsFor(String id) {
+    final configured = byId(id)?.facilitySuggestions ?? const <String>[];
+    return configured.isNotEmpty ? configured : _defaultFacilitySuggestions(id);
+  }
+
   Future<void> load() async {
     // Demo mode must never read or mutate the real catalogue.
     if (ActiveProfileController.instance.isDemo || !FirebaseService.initialized) {
@@ -262,6 +282,8 @@ class InstituteCatalog extends ChangeNotifier {
       'label': type.label.trim(),
       'iconKey': type.iconKey,
       'subcategories': type.subcategories,
+      'programSuggestions': type.programSuggestions,
+      'facilitySuggestions': type.facilitySuggestions,
       'programLabel': type.programLabel,
       'eligibilityLabel': type.eligibilityLabel,
       'featuredProgramLabel': type.featuredProgramLabel,
@@ -272,6 +294,33 @@ class InstituteCatalog extends ChangeNotifier {
     }, SetOptions(merge: true));
     await load();
   }
+
+  static List<String> _defaultProgramSuggestions(String id) => switch (id) {
+    'schools' => ['Montessori', 'Primary', 'Middle', 'Matric', 'O-Level', 'A-Level'],
+    'colleges' => ['FA', 'FSc Pre-Medical', 'FSc Pre-Engineering', 'ICS', 'ICom', 'ADP', 'BS'],
+    'universities' => ['Undergraduate', 'Graduate', 'PhD', 'Computer Science', 'Business', 'Engineering'],
+    'academies' => ['Entry Test', 'MDCAT', 'ECAT', 'CSS / PMS', 'Tuition', 'Languages'],
+    'technical_vocational' => ['IT & Programming', 'Electrical', 'Plumbing', 'Welding', 'Auto Mechanics'],
+    'professional_training' => ['Freelancing', 'Digital Marketing', 'Graphic Design', 'Certification'],
+    'medical_allied_health' => ['Nursing', 'Pharmacy', 'Medical Lab', 'Radiology', 'Physiotherapy'],
+    'madaris' => ['Hifz-ul-Quran', 'Nazra Quran', 'Tajweed', 'Dars-e-Nizami', 'Islamic Studies'],
+    'special_education' => ['Learning Support', 'Speech & Language', 'Inclusive Education'],
+    'research_institutes' => ['Science & Technology', 'Educational Research', 'Policy Research'],
+    _ => ['General Studies', 'Professional Course'],
+  };
+
+  static List<String> _defaultFacilitySuggestions(String id) => [
+    'Library',
+    'Computer Lab',
+    'Science Lab',
+    'Transport',
+    'Hostel',
+    'Sports',
+    'Cafeteria',
+    if (id == 'schools' || id == 'colleges') 'Playground',
+    if (id == 'universities' || id == 'medical_allied_health') 'Research Lab',
+    if (id == 'madaris') 'Residential Facility',
+  ];
 
   static String _defaultProgramLabel(String id) {
     switch (id) {
