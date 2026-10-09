@@ -9,8 +9,12 @@ import 'hostel_room.dart';
 import '../../../core/services/firebase_service.dart';
 
 class HostelRepository {
-  HostelRepository({FirebaseFirestore? firestore}) : _db = firestore ?? FirebaseFirestore.instance;
-  final FirebaseFirestore _db;
+  HostelRepository({FirebaseFirestore? firestore}) : _providedFirestore = firestore;
+  final FirebaseFirestore? _providedFirestore;
+
+  // Keep Firestore lazy: demo-only screens must work even before Firebase.initializeApp.
+  // Accessing FirebaseFirestore.instance in the constructor crashes demo flows immediately.
+  FirebaseFirestore get _db => _providedFirestore ?? FirebaseFirestore.instance;
   CollectionReference<Map<String, dynamic>> get _collection => _db.collection('hostels');
 
   Stream<List<Hostel>> watchHostels() => _collection.snapshots().map(
