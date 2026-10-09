@@ -11,7 +11,70 @@ import 'institute_repository.dart';
 
 /// Keeps demo offerings completely separate from the real Firestore records.
 class InstituteOpportunityRepository extends ChangeNotifier {
-  InstituteOpportunityRepository._();
+  InstituteOpportunityRepository._() {
+    _seedDemoAdmissions();
+  }
+
+  String _dateOffset(int days) {
+    final date = DateTime.now().add(Duration(days: days));
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
+  }
+
+  /// Clearly marked demo fixtures make the News Feed testable without
+  /// writing fake admissions into Firebase. Replace these with verified
+  /// institute announcements before using the app with real applicants.
+  void _seedDemoAdmissions() {
+    final opened = _dateOffset(-14);
+    final deadline = _dateOffset(30);
+    final upcomingOpening = _dateOffset(45);
+    final upcomingDeadline = _dateOffset(75);
+    _demoItems.addAll({
+      'university-31': [
+        InstituteOpportunity(
+          id: 'demo-admission-arid-open',
+          instituteId: 'university-31',
+          kind: 'admission',
+          title: 'Undergraduate Admissions (Demo)',
+          academicYear: DateTime.now().year.toString(),
+          intake: 'Fall intake',
+          status: 'Open',
+          openingDate: opened,
+          deadline: deadline,
+          description: 'Demo testing record only. Confirm dates with the institute before applying.',
+        ),
+      ],
+      'university-2': [
+        InstituteOpportunity(
+          id: 'demo-admission-iub-open',
+          instituteId: 'university-2',
+          kind: 'admission',
+          title: 'Undergraduate Admissions (Demo)',
+          academicYear: DateTime.now().year.toString(),
+          intake: 'Current intake',
+          status: 'Open',
+          openingDate: opened,
+          deadline: deadline,
+          description: 'Demo testing record only. Confirm dates with the institute before applying.',
+        ),
+      ],
+      'university-3': [
+        InstituteOpportunity(
+          id: 'demo-admission-uet-upcoming',
+          instituteId: 'university-3',
+          kind: 'admission',
+          title: 'Engineering Admissions (Demo)',
+          academicYear: (DateTime.now().year + 1).toString(),
+          intake: 'Next intake',
+          status: 'Upcoming',
+          openingDate: upcomingOpening,
+          deadline: upcomingDeadline,
+          description: 'Demo testing record only. Dates are placeholders, not an official announcement.',
+        ),
+      ],
+    });
+  }
   static final instance = InstituteOpportunityRepository._();
 
   final Map<String, List<InstituteOpportunity>> _demoItems = {};
