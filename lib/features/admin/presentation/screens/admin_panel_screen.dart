@@ -288,9 +288,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   _section('Manager Admins', 'Create, suspend or revoke manager access', Icons.admin_panel_settings_outlined, _showCreateManagerDialog),
                   _managerSection(),
                 ],
-                if (canManageInstitutes || _access.isSuperAdmin)
+                if (canReviewClaims || _access.isSuperAdmin)
                   _section('Institute Claims', 'Review institute ownership requests', Icons.school_outlined, () => context.push('/admin/institute-claims')),
-                if (canManageHostels || _access.isSuperAdmin || canReviewClaims)
+                if (canReviewClaims || _access.isSuperAdmin)
                   _section('Hostel Ownership Claims', 'Review hostel ownership requests', Icons.hotel_outlined, () => context.push('/admin/hostel-claims')),
                 if (_access.isSuperAdmin || _access.can('moderate_posts'))
                   _section('Community Moderation', 'Review reported community content', Icons.forum_outlined, () => context.push('/admin/reports')),
