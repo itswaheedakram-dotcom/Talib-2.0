@@ -121,6 +121,38 @@ class HostelRepository {
 
 
   static final List<Hostel> _demoHostels = List<Hostel>.from(exampleHostels);
+  static final StreamController<List<Hostel>> _demoHostelController =
+      StreamController<List<Hostel>>.broadcast();
+  static Stream<List<Hostel>> watchDemoHostels() => Stream.multi((multi) {
+        multi.add(List<Hostel>.from(_demoHostels));
+        final subscription = _demoHostelController.stream.listen(multi.add);
+        multi.onCancel = subscription.cancel;
+      });
+  static void _emitDemoHostels() {
+    if (!_demoHostelController.isClosed) {
+      _demoHostelController.add(List<Hostel>.from(_demoHostels));
+    }
+  }
+  static Future<void> setDemoHostelStatus(String hostelId, String status) async {
+    if (!{'approved', 'rejected'}.contains(status)) {
+      throw ArgumentError('Invalid hostel status.');
+    }
+    final index = _demoHostels.indexWhere((item) => item.id == hostelId);
+    if (index < 0) throw StateError('Demo hostel not found.');
+    final old = _demoHostels[index];
+    _demoHostels[index] = Hostel(
+      id: old.id, name: old.name, city: old.city, area: old.area, type: old.type,
+      gender: old.gender, distance: old.distance, price: old.price,
+      securityFee: old.securityFee, roomType: old.roomType, availability: old.availability,
+      meals: old.meals, ac: old.ac, facilities: old.facilities, imageUrls: old.imageUrls,
+      description: old.description, phone: old.phone, website: old.website,
+      imageUrl: old.imageUrl, address: old.address, ownerId: old.ownerId,
+      ownerName: old.ownerName, status: status, isVerified: status == 'approved',
+      isDemo: true, rating: old.rating, reviewCount: old.reviewCount,
+      ratingTotal: old.ratingTotal, rooms: old.rooms, rules: old.rules,
+    );
+    _emitDemoHostels();
+  }
   static final Map<String, HostelClaim> _demoClaims = {};
   static final StreamController<List<HostelClaim>> _demoClaimController =
       StreamController<List<HostelClaim>>.broadcast();
@@ -353,7 +385,7 @@ class HostelRepository {
         address: hostel.address,
         ownerId: hostel.ownerId.isEmpty ? 'demo-user' : hostel.ownerId,
         ownerName: hostel.ownerName.isEmpty ? 'Demo Hostel Owner' : hostel.ownerName,
-        status: 'approved',
+        status: 'pending',
         isVerified: false,
         isDemo: true,
         rating: 0,
@@ -363,6 +395,7 @@ class HostelRepository {
         rules: hostel.rules,
       );
       _demoHostels.add(copy);
+      _emitDemoHostels();
       return id;
     }
     return HostelRepository().submitHostel(hostel);
