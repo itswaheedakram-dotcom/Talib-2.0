@@ -20,62 +20,70 @@ class AdminInstituteClaimsScreen extends StatelessWidget {
     Map<String, dynamic> data,
     String status,
   ) async {
-    final db = FirebaseFirestore.instance;
-    final claimRef = db.collection('instituteClaims').doc(claimId);
-    final batch = db.batch();
-    batch.update(claimRef, {
-      'status': status,
-      'reviewedAt': FieldValue.serverTimestamp(),
-    });
+    try {
+      final db = FirebaseFirestore.instance;
+      final claimRef = db.collection('instituteClaims').doc(claimId);
+      final batch = db.batch();
+      batch.update(claimRef, {
+        'status': status,
+        'reviewedAt': FieldValue.serverTimestamp(),
+      });
 
-    if (status == 'approved') {
-      final instituteId = (data['instituteId'] ?? '').toString();
-      final representativeId = (data['representativeId'] ?? '').toString();
-      if (instituteId.isEmpty || representativeId.isEmpty) {
-        throw StateError('Claim is missing its institute or representative ID.');
-      }
-      final instituteRef = db.collection('institutes').doc(instituteId);
-      final existingInstitute = await instituteRef.get();
-      final ownership = {
-        'ownerId': representativeId,
-        'representativeId': representativeId,
-        'ownershipVerified': true,
-        'status': 'approved',
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-      if (existingInstitute.exists) {
-        batch.update(instituteRef, ownership);
-      } else {
-        final rawSnapshot = data['instituteSnapshot'];
-        if (rawSnapshot is! Map) {
-          throw StateError('This institute is not in Firebase and has no seed snapshot.');
+      if (status == 'approved') {
+        final instituteId = (data['instituteId'] ?? '').toString();
+        final representativeId = (data['representativeId'] ?? '').toString();
+        if (instituteId.isEmpty || representativeId.isEmpty) {
+          throw StateError('Claim is missing its institute or representative ID.');
         }
-        final snapshot = Map<String, dynamic>.from(rawSnapshot);
-        batch.set(instituteRef, {
-          ...snapshot,
-          ...ownership,
+        final instituteRef = db.collection('institutes').doc(instituteId);
+        final existingInstitute = await instituteRef.get();
+        final ownership = {
+          'ownerId': representativeId,
+          'representativeId': representativeId,
+          'ownershipVerified': true,
           'status': 'approved',
-          'createdBy': (snapshot['createdBy'] ?? '').toString().isEmpty
-              ? 'system_seed'
-              : snapshot['createdBy'],
-        });
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+        if (existingInstitute.exists) {
+          batch.update(instituteRef, ownership);
+        } else {
+          final rawSnapshot = data['instituteSnapshot'];
+          if (rawSnapshot is! Map) {
+            throw StateError('This institute is not in Firebase and has no seed snapshot.');
+          }
+          final snapshot = Map<String, dynamic>.from(rawSnapshot);
+          batch.set(instituteRef, {
+            ...snapshot,
+            ...ownership,
+            'status': 'approved',
+            'createdBy': (snapshot['createdBy'] ?? '').toString().isEmpty
+                ? 'system_seed'
+                : snapshot['createdBy'],
+          });
+        }
+        batch.set(db.collection('users').doc(representativeId), {
+          'role': 'instituteRepresentative',
+          'instituteAdmin': true,
+          'instituteId': instituteId,
+          'instituteName': data['instituteName'],
+          'designation': data['designation'],
+        }, SetOptions(merge: true));
       }
-      batch.set(db.collection('users').doc(representativeId), {
-        'role': 'instituteRepresentative',
-        'instituteAdmin': true,
-        'instituteId': instituteId,
-        'instituteName': data['instituteName'],
-        'designation': data['designation'],
-      }, SetOptions(merge: true));
-    }
 
-    await batch.commit();
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(status == 'approved'
-            ? 'Claim approved and ownership linked.'
-            : 'Claim rejected.')),
-      );
+      await batch.commit();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(status == 'approved'
+              ? 'Claim approved and ownership linked.'
+              : 'Claim rejected.')),
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Claim could not be $status: $error')),
+        );
+      }
     }
   }
 
