@@ -7,6 +7,14 @@ class HostelRepository {
   // Sample listings stay editable for the current app session without Firebase.
   static final Map<String, Hostel> _demoOverrides = <String, Hostel>{};
 
+  static Future<void> saveHostel(Hostel hostel) async {
+    if (hostel.isDemo || hostel.id.startsWith('example_')) {
+      _demoOverrides[hostel.id] = hostel;
+      return;
+    }
+    await HostelRepository().updateHostel(hostel);
+  }
+
   HostelRepository({FirebaseFirestore? firestore})
       : _db = firestore ?? FirebaseFirestore.instance;
 
