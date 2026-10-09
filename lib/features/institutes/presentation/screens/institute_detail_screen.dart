@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../app/theme.dart';
+import '../../data/institute_catalog.dart';
 import '../../../models/institute.dart';
 import '../../data/institute_repository.dart';
 import '../../../../core/services/firebase_service.dart';
@@ -12,14 +15,14 @@ class InstituteDetailScreen extends StatelessWidget {
   final String id;
   const InstituteDetailScreen({super.key, required this.id});
 
-  static const green = Color(0xFF00A66A);
-  static const darkGreen = Color(0xFF00543D);
-  static const lightGreen = Color(0xFFEAF8F2);
+  static const green = AppColors.primaryGreen;
+  static const darkGreen = AppColors.darkGreen;
+  static const lightGreen = AppColors.softGreen;
 
   @override Widget build(BuildContext context) {
     final institute = InstituteRepository.instance.byId(id);
     if (institute == null) return const Scaffold(body: Center(child: Text('Institute not found')));
-    final typeLabel = institute.type == 'schools' ? 'School' : institute.type == 'colleges' ? 'College' : 'University';
+    final typeLabel = InstituteCatalog.instance.labelFor(institute.type);
     final image = institute.imageUrl.isNotEmpty ? institute.imageUrl : institute.type == 'schools'
         ? 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1200&q=80'
         : institute.type == 'colleges'
@@ -30,7 +33,11 @@ class InstituteDetailScreen extends StatelessWidget {
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), onPressed: () => context.pop()),
         title: Text(typeLabel),
-        actions: [IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () => context.push('/institute/${institute.id}/edit')), const SizedBox(width: 8)],
+        actions: [
+          if (ActiveProfileController.instance.isDemo || (FirebaseAuth.instance.currentUser?.uid == institute.ownerId && institute.ownerId.isNotEmpty))
+            IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () => context.push('/institute/${institute.id}/edit')),
+          const SizedBox(width: 8),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 28),
@@ -56,10 +63,64 @@ class InstituteDetailScreen extends StatelessWidget {
                 Expanded(child: Text(institute.address, style: const TextStyle(color: Colors.black54))),
               ]),
             ])),
-            IconButton(onPressed: () {}, icon: const Icon(Icons.location_on_outlined, color: green)),
-            if (ActiveProfileController.instance.isDemo)
-              StreamBuilder<bool>(stream:DatabaseService().demoInstituteBookmarkStream(ActiveProfileController.instance.effectiveUid!,institute.id),builder:(context,s)=>IconButton(onPressed:()=>DatabaseService().toggleDemoInstituteBookmark(ActiveProfileController.instance.effectiveUid!,institute.id,s.data!=true),icon:Icon(s.data==true?Icons.bookmark:Icons.bookmark_border,color:green)))
-            else IconButton(onPressed: () {}, icon: const Icon(Icons.bookmark_border, color: green)),
+            IconButton(
+              tooltip: 'Open location in Maps',
+              onPressed: () => _openExternal(
+                context,
+                'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent([institute.address, institute.city, institute.province].where((part) => part.trim().isNotEmpty).join(', '))}',
+                missingMessage: 'Add an institute address before opening Maps.',
+              ),
+              icon: const Icon(Icons.location_on_outlined, color: green),
+            ),
+            if (ActiveProfileController.instance.isDemo &&
+                ActiveProfileController.instance.effectiveUid != null)
+              StreamBuilder<bool>(
+                stream: DatabaseService().instituteBookmarkStream(
+                  ActiveProfileController.instance.effectiveUid!,
+                  institute.id,
+                ),
+                builder: (context, snapshot) => IconButton(
+                  tooltip: snapshot.data == true ? 'Remove bookmark' : 'Save institute',
+                  onPressed: () => DatabaseService().toggleInstituteBookmark(
+                    ActiveProfileController.instance.effectiveUid!,
+                    institute.id,
+                    snapshot.data != true,
+                  ),
+                  icon: Icon(snapshot.data == true ? Icons.bookmark : Icons.bookmark_border, color: green),
+                ),
+              )
+            else if (FirebaseAuth.instance.currentUser != null)
+              StreamBuilder<bool>(
+                stream: DatabaseService().instituteBookmarkStream(
+                  FirebaseAuth.instance.currentUser!.uid,
+                  institute.id,
+                ),
+                builder: (context, snapshot) => IconButton(
+                  tooltip: snapshot.data == true ? 'Remove bookmark' : 'Save institute',
+                  onPressed: () async {
+                    try {
+                      await DatabaseService().toggleInstituteBookmark(
+                        FirebaseAuth.instance.currentUser!.uid,
+                        institute.id,
+                        snapshot.data != true,
+                      );
+                    } catch (error) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Bookmark could not be updated: $error')),
+                        );
+                      }
+                    }
+                  },
+                  icon: Icon(snapshot.data == true ? Icons.bookmark : Icons.bookmark_border, color: green),
+                ),
+              )
+            else
+              IconButton(
+                tooltip: 'Sign in to save',
+                onPressed: () => context.push('/signin'),
+                icon: const Icon(Icons.bookmark_border, color: green),
+              ),
           ]),
           const SizedBox(height: 10),
           Card(
@@ -115,9 +176,20 @@ class InstituteDetailScreen extends StatelessWidget {
               )),
               const SizedBox(width: 9),
               Expanded(child: FilledButton(
-                onPressed: () {},
+                onPressed: () {
+                  final target = institute.applicationUrl.trim().isNotEmpty
+                      ? institute.applicationUrl.trim()
+                      : institute.website.trim();
+                  if (target.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('No official application link is available yet. Please contact the institute.')),
+                    );
+                  } else {
+                    _openExternal(context, target);
+                  }
+                },
                 style: FilledButton.styleFrom(backgroundColor: green),
-                child: const Text('Apply / Details'),
+                child: Text(institute.applicationUrl.trim().isNotEmpty ? 'Apply Now' : 'Website / Details'),
               )),
             ]),
             const SizedBox(height: 9),
@@ -133,8 +205,8 @@ class InstituteDetailScreen extends StatelessWidget {
               : Column(children: institute.facilities.map((f) => _Facility(Icons.check_circle_outline, f)).toList())),
           const SizedBox(height: 10),
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: FirebaseService.initialized
-                ? FirebaseFirestore.instance.collection('instituteClaims').where('instituteId', isEqualTo: institute.id).where('status', isEqualTo: 'pending').limit(1).snapshots()
+            stream: FirebaseService.initialized && !ActiveProfileController.instance.isDemo && FirebaseAuth.instance.currentUser != null
+                ? FirebaseFirestore.instance.collection('instituteClaims').where('instituteId', isEqualTo: institute.id).where('representativeId', isEqualTo: FirebaseAuth.instance.currentUser!.uid).where('status', isEqualTo: 'pending').limit(1).snapshots()
                 : const Stream.empty(),
             builder: (context, snap) {
               final pending = snap.data?.docs.isNotEmpty == true;
@@ -156,6 +228,34 @@ class InstituteDetailScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _openExternal(
+    BuildContext context,
+    String rawUrl, {
+    String? missingMessage,
+  }) async {
+    if (rawUrl.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(missingMessage ?? 'No link is available for this institute yet.')),
+      );
+      return;
+    }
+    var uri = Uri.tryParse(rawUrl.trim());
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This link is not valid.')),
+      );
+      return;
+    }
+    if (!uri.hasScheme) uri = Uri.tryParse('https://${rawUrl.trim()}');
+    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open this link on your device.')),
+        );
+      }
+    }
   }
 
   static Widget _section(String title, Widget child) => Card(
