@@ -236,6 +236,17 @@ class DatabaseService {
   Stream<bool> demoInstituteBookmarkStream(String uid,String instituteId)=>_demoStream(DemoDataService.instance.instituteBookmarked(_uid(uid),instituteId),()=>DemoDataService.instance.instituteBookmarked(_uid(uid),instituteId));
   Future<void> toggleDemoInstituteBookmark(String uid,String instituteId,bool save){DemoDataService.instance.toggleInstituteBookmark(_uid(uid),instituteId,save);return Future.value();}
 
+  Stream<Set<String>> instituteBookmarkIdsStream(String uid) {
+    uid = _uid(uid);
+    if (_demo(uid)) {
+      final current = () => DemoDataService.instance.instituteBookmarkIds(uid);
+      return _demoStream(current(), current);
+    }
+    return _db.collection('users').doc(uid)
+        .collection('instituteBookmarks').snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => doc.id).toSet());
+  }
+
   Stream<bool> instituteBookmarkStream(String uid, String instituteId) {
     uid = _uid(uid);
     if (_demo(uid)) return demoInstituteBookmarkStream(uid, instituteId);

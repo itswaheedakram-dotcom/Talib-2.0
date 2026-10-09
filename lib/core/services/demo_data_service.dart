@@ -231,6 +231,7 @@ class DemoDataService extends ChangeNotifier {
   void addReview(String target,String reviewer,String reviewerName,int rating,String text){final reviews=_reviews[target]??= <Map<String,dynamic>>[];final index=reviews.indexWhere((r)=>r['reviewerId']==reviewer);final item={'id':reviewer,'reviewerId':reviewer,'reviewerName':reviewerName,'rating':rating,'text':text,'createdAt':DateTime.now()};if(index>=0){reviews[index]=item;}else{reviews.insert(0,item);}_emit();}
 
   bool instituteBookmarked(String uid,String id)=>_instituteBookmarks.contains('$uid|$id');
+  Set<String> instituteBookmarkIds(String uid)=>Set.unmodifiable(_instituteBookmarks.where((key)=>key.startsWith('$uid|')).map((key)=>key.substring(uid.length+1)));
   void toggleInstituteBookmark(String uid,String id,bool save){final k='$uid|$id';if(save){_instituteBookmarks.add(k);}else{_instituteBookmarks.remove(k);}_emit();}
   bool claimed(String uid,String id)=>_instituteClaims.contains('$uid|$id');
 
