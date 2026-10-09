@@ -445,7 +445,7 @@ class _WordByWordText extends StatefulWidget {
 class _WordByWordTextState extends State<_WordByWordText> {
   Timer? _timer;
   int _visibleWords=0;
-  List<String> get _words=>widget.text.split(RegExp(r'\\s+')).where((word)=>word.isNotEmpty).toList();
+  List<String> get _words=>widget.text.split(RegExp(r'\s+')).where((word)=>word.isNotEmpty).toList();
 
   @override void initState(){super.initState();_startTyping();}
   @override void didUpdateWidget(covariant _WordByWordText oldWidget){
