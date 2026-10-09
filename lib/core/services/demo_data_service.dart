@@ -189,7 +189,7 @@ class DemoDataService extends ChangeNotifier {
     for (final post in authoredPosts) {
       likes += post.likesCount;
       commentCount += post.commentsCount;
-      if (post.bestAnswerId.isNotEmpty) bestAnswers++;
+      if ((post.bestAnswerId ?? '').isNotEmpty) bestAnswers++;
     }
     final followers = followerCount(uid);
     final userReviews = _reviews[uid] ?? const <Map<String, dynamic>>[];
