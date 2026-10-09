@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme.dart';
@@ -10,7 +9,6 @@ import '../../../models/post.dart';
 import '../../../institutes/data/institute_repository.dart';
 import '../../../institutes/data/institute_opportunity_repository.dart';
 import '../../../models/institute.dart';
-import '../../../models/institute_opportunity.dart';
 import '../../../models/hostel.dart';
 import '../../../hostels/data/hostel_repository.dart';
 import '../../domain/smart_search_parser.dart';
@@ -34,6 +32,9 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
   ParsedGlobalQuery? _parsed;
   bool _loading=false, _searched=false;
   String? _error;
+  String? _loadedMode;
+  bool _institutesLoaded=false, _opportunitiesLoaded=false;
+  List<Hostel>? _hostelCache;
   bool get _demo => ActiveProfileController.instance.isDemo || !FirebaseService.initialized;
 
   static const _scholarships=[
@@ -52,18 +53,21 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
     if(text.isEmpty)return;
     _controller.text=text;
     final q=SmartSearchParser.parse(text);
+    final mode=_demo?'demo':'real';
+    if(_loadedMode!=mode){_loadedMode=mode;_institutesLoaded=false;_opportunitiesLoaded=false;_hostelCache=null;}
     setState(() { _parsed=q; _loading=true; _searched=true; _error=null; });
     final hits=< _Hit>[];
     try {
       final ir=InstituteRepository.instance;
-      await ir.load();
+      if(!_institutesLoaded){await ir.load();_institutesLoaded=true;}
       for(final i in ir.items) {
         if(!_instituteAllowed(i,q))continue;
         final score=_score(q,i.name,[i.type,i.subcategory,i.city,i.province,i.district,i.town,i.area,i.address,i.description,i.board,i.sector,i.nextProgram,i.admissionStatus,i.programs.join(' ')]);
         if(score>0)hits.add(_Hit(i.name,_instituteType(i.type),i.description.isEmpty?' ${i.sector} • ${i.programs.take(3).join(', ')}':i.description,[i.area,i.city,i.province].where((e)=>e.isNotEmpty).join(', '),'/institute/${i.id}',Icons.school_outlined,score,i));
       }
 
-      final hostels=_demo?HostelRepository.demoHostels:await _realHostels();
+      if(_hostelCache==null){_hostelCache=_demo?HostelRepository.demoHostels:await _realHostels();}
+      final hostels=_hostelCache!;
       for(final h in hostels) {
         if(q.category!=GlobalSearchCategory.all&&q.category!=GlobalSearchCategory.hostels)continue;
         if(h.status.toLowerCase()!='approved')continue;
@@ -76,7 +80,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
       }
 
       final opportunities=InstituteOpportunityRepository.instance;
-      await opportunities.loadAll();
+      if(!_opportunitiesLoaded){await opportunities.loadAll();_opportunitiesLoaded=true;}
       for(final o in opportunities.allItems) {
         if(q.category!=GlobalSearchCategory.all&&q.category!=GlobalSearchCategory.admissions&&q.category!=GlobalSearchCategory.scholarships&&q.category!=GlobalSearchCategory.institutes)continue;
         if(q.category==GlobalSearchCategory.admissions&&o.kind!='admission')continue;
@@ -230,11 +234,16 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
   String _instituteType(String t){final v=t.toLowerCase();if(v.contains('school'))return 'School';if(v.contains('college'))return 'College';return 'Institute';}
   String _title(String v)=>v.isEmpty?v:'${v[0].toUpperCase()}${v.substring(1)}';
 
+  Future<void> _refresh() async {
+    _institutesLoaded=false;_opportunitiesLoaded=false;_hostelCache=null;
+    await search();
+  }
+
   void _open(_Hit h){if(h.extra is Hostel){context.push(h.route,extra:h.extra);}else{context.push(h.route);}}
 
   @override Widget build(BuildContext context) {
     return Scaffold(
-      appBar:AppBar(title:const Text('Smart Global Search'),actions:[if(_controller.text.isNotEmpty)IconButton(onPressed:(){_controller.clear();setState(() { _hits=[]; _parsed=null; _searched=false; _error=null; });},icon:const Icon(Icons.close))]),
+      appBar:AppBar(title:const Text('Smart Global Search'),actions:[IconButton(tooltip:'Refresh results',onPressed:_loading||_controller.text.trim().isEmpty?null:_refresh,icon:const Icon(Icons.refresh)),if(_controller.text.isNotEmpty)IconButton(onPressed:(){_controller.clear();setState(() { _hits=[]; _parsed=null; _searched=false; _error=null; });},icon:const Icon(Icons.close))]),
       body:SafeArea(child:Column(children:[
         Padding(padding:const EdgeInsets.fromLTRB(14,14,14,8),child:TextField(
           controller:_controller,textInputAction:TextInputAction.search,onSubmitted:search,onChanged:(_)=>setState((){}),
