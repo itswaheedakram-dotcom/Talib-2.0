@@ -268,6 +268,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             () => context.push('/admin/hostel-claims'),
           ),
           _section(
+            'New Hostel Submissions',
+            'Approve or reject newly submitted demo hostels',
+            Icons.fact_check_outlined,
+            () => context.push('/admin/hostel-submissions'),
+          ),
+          _section(
             'Institute Claims',
             'Demo-safe ownership review',
             Icons.school_outlined,
@@ -366,6 +372,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   _section('Institute Claims', 'Review institute ownership requests', Icons.school_outlined, () => context.push('/admin/institute-claims')),
                 if (canReviewClaims || _access.isSuperAdmin)
                   _section('Hostel Ownership Claims', 'Review hostel ownership requests', Icons.hotel_outlined, () => context.push('/admin/hostel-claims')),
+                if (_access.isSuperAdmin || canManageHostels)
+                  _section('New Hostel Submissions', 'Approve or reject new hostel listings', Icons.fact_check_outlined, () => context.push('/admin/hostel-submissions')),
                 if (_access.isSuperAdmin || _access.can('moderate_posts'))
                   _section('Community Moderation', 'Review reported community content', Icons.forum_outlined, () => context.push('/admin/reports')),
                 if (_access.isSuperAdmin || _access.can('manage_reports'))
