@@ -260,6 +260,62 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
     );
   }
 
+  Future<void> _editFilters() async {
+    final parsed=_parsed;
+    if(parsed==null)return;
+    final city=TextEditingController(text:parsed.location??'');
+    final area=TextEditingController(text:parsed.area??'');
+    final budget=TextEditingController(text:parsed.maxBudget?.toString()??'');
+    var gender=parsed.gender??'Any';
+    final apply=await showModalBottomSheet<bool>(
+      context:context,showDragHandle:true,isScrollControlled:true,
+      builder:(sheetContext)=>StatefulBuilder(builder:(context,setSheet)=>Padding(
+        padding:EdgeInsets.fromLTRB(18,10,18,MediaQuery.of(context).viewInsets.bottom+22),
+        child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text('Search filters',style:Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height:12),
+          TextField(controller:city,decoration:const InputDecoration(labelText:'City / location')),
+          const SizedBox(height:8),
+          TextField(controller:area,decoration:const InputDecoration(labelText:'Area / town')),
+          const SizedBox(height:8),
+          TextField(controller:budget,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Maximum budget (PKR)')),
+          const SizedBox(height:8),
+          DropdownButtonFormField<String>(
+            value:gender,
+            decoration:const InputDecoration(labelText:'Hostel type'),
+            items:const [
+              DropdownMenuItem(value:'Any',child:Text('Any')),
+              DropdownMenuItem(value:'Male',child:Text('Boys / Male')),
+              DropdownMenuItem(value:'Female',child:Text('Girls / Female')),
+            ],
+            onChanged:(v)=>setSheet(()=>gender=v??'Any'),
+          ),
+          const SizedBox(height:16),
+          SizedBox(width:double.infinity,child:FilledButton(
+            onPressed:(){
+              var base=parsed.original;
+              const aliases=['Lahore','Lahor','Islamabad','Islam Abad','Rawalpindi','Pindi','Multan','Bahawalpur','Bahawal Poor','Faisalabad','Faisal Abad','Karachi','Krachi','Peshawar','Peshawer','Quetta','Gujranwala','Sialkot','Sargodha','Johar Town','Gulberg','Bosan Road','Bosan','New Campus','Baghdad-ul-Jadeed'];
+              for(final alias in aliases){base=base.replaceAll(RegExp('\\\\b${RegExp.escape(alias)}\\\\b',caseSensitive:false), ' ');}
+              base=base.replaceAll(RegExp(r'\\b(?:under|below|less than|max|maximum|budget|rs|pkr)?\\s*\\d[\\d,]{3,}\\b',caseSensitive:false),' ');
+              base=base.replaceAll(RegExp(r'\\b(?:girls?|female|women|ladies|boys?|male|men)\\b',caseSensitive:false),' ');
+              final parts=<String>[base.trim()];
+              if(city.text.trim().isNotEmpty)parts.add('in ${city.text.trim()}');
+              if(area.text.trim().isNotEmpty)parts.add(area.text.trim());
+              if(budget.text.trim().isNotEmpty)parts.add('under ${budget.text.trim()}');
+              if(gender=='Female')parts.add('girls');
+              if(gender=='Male')parts.add('boys');
+              _controller.text=parts.where((v)=>v.isNotEmpty).join(' ');
+              Navigator.pop(sheetContext,true);
+            },
+            child:const Text('Apply filters'),
+          )),
+        ])),
+      )),
+    );
+    city.dispose();area.dispose();budget.dispose();
+    if(apply==true)await search();
+  }
+
   Widget _understood(ParsedGlobalQuery q)=>Container(
     margin:const EdgeInsets.fromLTRB(14,6,14,4),padding:const EdgeInsets.all(10),
     decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(14),border:Border.all(color:AppColors.divider)),
@@ -267,6 +323,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
       const Row(children:[Icon(Icons.psychology_alt_outlined,color:AppColors.darkGreen),SizedBox(width:6),Text('Maine ye samjha',style:TextStyle(fontWeight:FontWeight.w800,color:AppColors.darkGreen))]),
       const SizedBox(height:6),
       Wrap(spacing:5,runSpacing:3,children:q.understood.map((s)=>Chip(label:Text(s,style:const TextStyle(fontSize:11,color:AppColors.darkGreen)),backgroundColor:AppColors.white,side:BorderSide.none,visualDensity:VisualDensity.compact)).toList()),
+      Align(alignment:Alignment.centerRight,child:TextButton.icon(onPressed:_editFilters,icon:const Icon(Icons.tune,size:17),label:const Text('Filters edit karein'))),
     ]),
   );
 }
