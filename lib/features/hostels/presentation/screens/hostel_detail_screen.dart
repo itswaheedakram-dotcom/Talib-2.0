@@ -191,8 +191,8 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
             PopupMenuButton<String>(
               tooltip: 'Manage hostel',
               onSelected: (value) {
-                if (value == 'manage') context.push('/hostel/\u0024{hostel.id}/manage', extra: hostel);
-                if (value == 'managers') context.push('/hostel/\u0024{hostel.id}/managers', extra: hostel);
+                if (value == 'manage') context.push('/hostel/' + hostel.id + '/manage', extra: hostel);
+                if (value == 'managers') context.push('/hostel/' + hostel.id + '/managers', extra: hostel);
               },
               itemBuilder: (_) => const [
                 PopupMenuItem(value: 'manage', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Manage Hostel'), contentPadding: EdgeInsets.zero)),
