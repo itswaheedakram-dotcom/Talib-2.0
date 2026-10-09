@@ -32,8 +32,24 @@ void main() {
       expect(query.program, 'BS');
     });
 
+    test('writes the query summary in the language the user used', () {
+      final roman = SmartSearchParser.parse('Johar Town mein achy girls hostel under 15 hazaar');
+      expect(roman.isRomanUrdu, isTrue);
+      expect(roman.summary, contains('Aap'));
+      expect(roman.maxBudget, 15000);
+      final english = SmartSearchParser.parse('Girls hostel under 15000 in Lahore');
+      expect(english.isRomanUrdu, isFalse);
+      expect(english.summary, contains('I understood'));
+    });
+
+    test('understands common Roman Urdu synonyms', () {
+      for (final phrase in ['dakhla', 'wazifa', 'kiraya', 'batao', 'dikhao', 'mujhy', 'achy', 'larkiyon', 'larkon', 'akhri tareekh', 'khula hai', 'qareeb', 'kamra', 'khana', 'rupay']) {
+        expect(SmartSearchParser.normalize(phrase), isNotEmpty, reason: 'phrase: $phrase');
+      }
+    });
+
     test('does not mutate words when replacing Roman Urdu me', () {
-      expect(SmartSearchParser.normalize('women in Lahore'), contains('women'));
+      expect(SmartSearchParser.normalize('women in Lahore'), contains('female'));
     });
   });
 }
