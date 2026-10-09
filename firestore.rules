@@ -40,8 +40,49 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if signedIn();
-      match /{subcollection}/{documentId} { allow read, write: if signedIn(); }
+      // Authenticated users may view profiles, but may only change their own profile.
+      // Admin tools may update only the representative fields needed after a verified claim.
+      allow read: if signedIn();
+      allow create, delete: if signedIn() && request.auth.uid == userId;
+      allow update: if (signedIn() && request.auth.uid == userId)
+        || admin()
+        || (managerAdminPermission('ownership_claim_review')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'role', 'instituteAdmin', 'instituteId', 'instituteName', 'designation'
+          ]));
+
+      match /bookmarks/{postId} {
+        allow read, write: if signedIn() && request.auth.uid == userId;
+      }
+      match /instituteBookmarks/{instituteId} {
+        allow read, write: if signedIn() && request.auth.uid == userId;
+      }
+      match /timelineTopics/{topicId} {
+        allow read, write: if signedIn() && request.auth.uid == userId;
+      }
+      match /blockedUsers/{blockedUid} {
+        allow read, write: if signedIn() && request.auth.uid == userId;
+      }
+      match /following/{targetUid} {
+        allow read: if signedIn() && (request.auth.uid == userId || request.auth.uid == targetUid);
+        allow create: if signedIn() && request.auth.uid == userId
+          && targetUid != userId
+          && request.resource.data.userId == targetUid;
+        allow delete: if signedIn() && request.auth.uid == userId;
+        allow update: if false;
+      }
+      match /followers/{followerUid} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.auth.uid == followerUid
+          && request.resource.data.userId == request.auth.uid;
+        allow delete: if signedIn() && request.auth.uid == followerUid;
+        allow update: if false;
+      }
+      match /notifications/{notificationId} {
+        allow read, update, delete: if signedIn() && request.auth.uid == userId;
+        allow create: if signedIn()
+          && (request.resource.data.fromId == request.auth.uid || admin());
+      }
     }
     match /posts/{postId} {
       allow read, write: if signedIn();
@@ -72,7 +113,7 @@ service cloud.firestore {
         || managerAdminPermission('manage_institutes')
         || (managerAdminPermission('ownership_claim_review')
           && (request.resource.data.status == resource.data.status
-            || (resource.data.status == 'verified' && request.resource.data.status == 'approved'))
+            || (resource.data.status in ['pending', 'verified'] && request.resource.data.status == 'approved'))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'ownerId', 'representativeId', 'ownershipVerified', 'updatedAt', 'status'
           ]))
