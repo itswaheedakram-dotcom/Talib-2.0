@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/services/firebase_service.dart';
+import '../../../../core/services/active_profile_controller.dart';
 import '../../data/hostel_registry.dart';
 import '../../data/hostel_repository.dart';
 import '../../data/hostel_room.dart';
@@ -35,8 +36,9 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
 
   Future<void> _submit() async {
     final user = FirebaseAuth.instance.currentUser;
-    final demoMode = !FirebaseService.initialized;
-    if (user == null && !demoMode) { if (mounted) context.push('/signin'); return; }
+    final activeProfile = ActiveProfileController.instance.active;
+    final demoMode = activeProfile != null || !FirebaseService.initialized;
+    if (user == null && activeProfile == null && !demoMode) { if (mounted) context.push('/signin'); return; }
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
@@ -49,8 +51,8 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
         meals:_meals, ac:rooms.any((r) => r.ac), facilities:List<String>.from(_facilities), rooms:rooms,
         rules:List<String>.from(_rules), phone:_phone.text.trim(), website:_website.text.trim(),
         imageUrl:_imageUrl.text.trim(), imageUrls:_imageUrls.text.split(',').map((e)=>e.trim()).where((e)=>e.isNotEmpty).toSet().toList(),
-        description:_description.text.trim(), ownerId:user?.uid ?? 'demo-user',
-        ownerName:user?.displayName?.trim().isNotEmpty==true ? user!.displayName!.trim() : 'Hostel Owner', status:'pending',
+        description:_description.text.trim(), ownerId:activeProfile?.id ?? user?.uid ?? 'demo-user',
+        ownerName:activeProfile?.name ?? (user?.displayName?.trim().isNotEmpty==true ? user!.displayName!.trim() : 'Hostel Owner'), status:'pending',
       );
       await HostelRepository.submitHostelSafe(hostel, demo: demoMode);
       if (!mounted) return;
@@ -63,7 +65,7 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
 
 
   Future<void> _pickAndUploadImage() async {
-    if (!FirebaseService.initialized) {
+    if (ActiveProfileController.instance.isDemoActive || !FirebaseService.initialized) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Demo mode uses image URLs. Enable Firebase to upload hostel photos.')));
       return;
     }
