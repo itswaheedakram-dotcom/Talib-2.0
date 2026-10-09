@@ -46,7 +46,11 @@ class _HostelsScreenState extends State<HostelsScreen> {
         (hostels) {
           if (!mounted) return;
           setState(() {
-            _hostels = hostels.isEmpty ? HostelRepository.demoHostels.toList() : hostels;
+            final combined = <String, Hostel>{
+              for (final hostel in hostels) hostel.id: hostel,
+              for (final hostel in HostelRepository.demoHostels) hostel.id: hostel,
+            };
+            _hostels = combined.values.toList();
           });
         },
         onError: (_) {},
@@ -373,7 +377,17 @@ class _HostelsScreenState extends State<HostelsScreen> {
           ),
           IconButton(
             tooltip: 'List your hostel',
-            onPressed: () => context.push('/hostels/list'),
+            onPressed: () async {
+            await context.push('/hostels/list');
+            if (!mounted) return;
+            setState(() {
+              final combined = <String, Hostel>{
+                for (final hostel in _hostels) hostel.id: hostel,
+                for (final hostel in HostelRepository.demoHostels) hostel.id: hostel,
+              };
+              _hostels = combined.values.toList();
+            });
+          },
             icon: const Icon(Icons.add_business_outlined),
           ),
           Center(
