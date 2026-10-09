@@ -94,33 +94,6 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
       .toSet()
       .toList();
 
-  List<String> _programSuggestions(String type) => switch (type) {
-    'schools' => ['Montessori', 'Primary', 'Middle', 'Matric', 'O-Level', 'A-Level'],
-    'colleges' => ['FA', 'FSc Pre-Medical', 'FSc Pre-Engineering', 'ICS', 'ICom', 'ADP', 'BS'],
-    'universities' => ['Undergraduate', 'Graduate', 'PhD', 'Computer Science', 'Business', 'Engineering'],
-    'academies' => ['Entry Test', 'MDCAT', 'ECAT', 'CSS / PMS', 'Tuition', 'Languages'],
-    'technical_vocational' => ['IT & Programming', 'Electrical', 'Plumbing', 'Welding', 'Auto Mechanics'],
-    'professional_training' => ['Freelancing', 'Digital Marketing', 'Graphic Design', 'Certification'],
-    'medical_allied_health' => ['Nursing', 'Pharmacy', 'Medical Lab', 'Radiology', 'Physiotherapy'],
-    'madaris' => ['Hifz-ul-Quran', 'Nazra Quran', 'Tajweed', 'Dars-e-Nizami', 'Islamic Studies'],
-    'special_education' => ['Learning Support', 'Speech & Language', 'Inclusive Education'],
-    'research_institutes' => ['Science & Technology', 'Educational Research', 'Policy Research'],
-    _ => ['General Studies', 'Professional Course'],
-  };
-
-  List<String> _facilitySuggestions(String type) => [
-    'Library',
-    'Computer Lab',
-    'Science Lab',
-    'Transport',
-    'Hostel',
-    'Sports',
-    'Cafeteria',
-    if (type == 'schools' || type == 'colleges') 'Playground',
-    if (type == 'universities' || type == 'medical_allied_health') 'Research Lab',
-    if (type == 'madaris') 'Residential Facility',
-  ];
-
   void _toggleItem(Set<String> selected, TextEditingController controller, String item) {
     setState(() {
       if (selected.contains(item)) {
@@ -323,7 +296,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
             const SizedBox(height: 10),
             _selectableItemsSection(
               title: selectedType?.programLabel ?? 'Programs / courses',
-              suggestions: _programSuggestions(_type),
+              suggestions: _catalog.programSuggestionsFor(_type),
               selected: _selectedPrograms,
               output: _programs,
               custom: _customProgram,
@@ -393,7 +366,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
             ),
             _selectableItemsSection(
               title: 'Facilities (optional)',
-              suggestions: _facilitySuggestions(_type),
+              suggestions: _catalog.facilitySuggestionsFor(_type),
               selected: _selectedFacilities,
               output: _facilities,
               custom: _customFacility,
