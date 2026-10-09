@@ -102,10 +102,12 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
         final parent=ir.byId(o.instituteId);
         if(_filterAdmissionStatus!='All'&&parent!=null&&parent.admissionStatus!=_filterAdmissionStatus)continue;
         if(_filterInstituteType!='All'&&parent!=null&&parent.type!=_filterInstituteType)continue;
-        if(_filterProgram!='All'&&_filterProgram!='All'&&parent!=null&&!parent.programs.any((p)=>p.toLowerCase()==_filterProgram.toLowerCase())&&parent.nextProgram.toLowerCase()!=_filterProgram.toLowerCase())continue;
+        if(_filterProgram!='All'&&parent!=null&&!parent.programs.any((p)=>p.toLowerCase()==_filterProgram.toLowerCase())&&parent.nextProgram.toLowerCase()!=_filterProgram.toLowerCase())continue;
         if(_filterSector!='All'&&parent!=null&&parent.sector!=_filterSector)continue;
         if(_filterFeeRange!='All'&&parent!=null&&parent.feeRange!=_filterFeeRange)continue;
         if(q.location!=null&&parent!=null&&!' ${parent.city} ${parent.province} ${parent.address}'.toLowerCase().contains(q.location!.toLowerCase()))continue;
+        if(_filterCity!='All'&&parent!=null&&parent.city!=_filterCity)continue;
+        if(_filterArea!='All'&&parent!=null&&parent.area!=_filterArea&&parent.town!=_filterArea)continue;
         final score=_score(q,o.title,[o.kind,o.status,o.academicYear,o.intake,o.eligibility,o.description,o.provider,o.feeDetails,parent?.name??'',parent?.city??'',parent?.programs.join(' ')??'']);
         if(score>0)hits.add(_Hit(o.title,_title(o.kind),'${o.status} • ${o.academicYear} • ${parent?.name??o.provider}',parent?.city??'',parent==null?'/institutes':'/institute/${parent.id}/opportunities',Icons.event_available_outlined,score,o));
       }
