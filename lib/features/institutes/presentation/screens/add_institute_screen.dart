@@ -454,6 +454,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: Autocomplete<String>(
+      key: ValueKey('${label}-${label == 'City' ? _province.text : 'province'}'),
       optionsBuilder: (value) {
         final query = value.text.trim().toLowerCase();
         if (query.isEmpty) return options;
