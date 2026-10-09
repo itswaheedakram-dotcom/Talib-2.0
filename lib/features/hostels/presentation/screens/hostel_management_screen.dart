@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -217,6 +221,65 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
     'meals': _c['meals']!.text.trim(),
     'ac': _hostel?.ac ?? false,
   });
+
+  Future<void> _pickGalleryPhotos() async {
+    final hostel = _hostel;
+    if (hostel == null || !_can(HostelManagerPermissions.photos) || _saving) return;
+
+    try {
+      final selected = await ImagePicker().pickMultiImage(imageQuality: 85);
+      if (selected.isEmpty || !mounted) return;
+
+      setState(() => _saving = true);
+      final urls = _lines(_c['imageUrls']!.text).toSet();
+      final isDemo = hostel.isDemo || !FirebaseService.initialized;
+
+      for (final image in selected) {
+        if (isDemo) {
+          // Demo mode keeps local paths in the in-memory demo hostel only.
+          urls.add(image.path);
+        } else {
+          final safeName = image.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+          final objectName = DateTime.now().microsecondsSinceEpoch.toString() + '_' + safeName;
+          final ref = FirebaseStorage.instance
+              .ref()
+              .child('hostels/' + hostel.id + '/gallery/' + objectName);
+          await ref.putData(
+            await image.readAsBytes(),
+            SettableMetadata(contentType: image.mimeType ?? 'image/jpeg'),
+          );
+          urls.add(await ref.getDownloadURL());
+        }
+      }
+
+      if (!mounted) return;
+      final gallery = urls.toList();
+      setState(() {
+        _c['imageUrls']!.text = gallery.join('\n');
+        if (_c['imageUrl']!.text.trim().isEmpty && gallery.isNotEmpty) {
+          _c['imageUrl']!.text = gallery.first;
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isDemo
+                ? selected.length.toString() + ' photo(s) selected for this demo session. Tap Save section.'
+                : selected.length.toString() + ' photo(s) uploaded. Tap Save section to update the listing.',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Photos could not be added. Check gallery permission and Firebase Storage setup.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   Future<void> _savePhotos() => _saveSection(HostelManagerPermissions.photos, {
     'imageUrl': _c['imageUrl']!.text.trim(),
@@ -486,8 +549,21 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
             _fieldWidget('availability', 'Availability', hint: 'e.g. 6 beds available'),
           ], _saveAvailability),
           _section('Photos', HostelManagerPermissions.photos, [
-            _fieldWidget('imageUrl', 'Main image URL'),
-            _fieldWidget('imageUrls', 'Gallery image URLs', maxLines: 4, hint: 'One URL per line'),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _saving ? null : _pickGalleryPhotos,
+                icon: const Icon(Icons.add_photo_alternate_outlined),
+                label: const Text('Choose photos from gallery'),
+              ),
+            ),
+            const SizedBox(height: 6),
+            _fieldWidget('imageUrl', 'Main image URL or selected photo path'),
+            _fieldWidget('imageUrls', 'Gallery image URLs / demo photo paths', maxLines: 4, hint: 'One URL or demo path per line'),
+            const Text(
+              'Real listings upload to Firebase Storage. Demo photos stay available in the current app session. Tap Save section after selecting photos.',
+              style: TextStyle(color: AppColors.mutedText, fontSize: 12, height: 1.35),
+            ),
           ], _savePhotos),
           _section('Facilities & meals', HostelManagerPermissions.facilities, [
             _fieldWidget('facilities', 'Facilities', maxLines: 5, hint: 'One facility per line'),
