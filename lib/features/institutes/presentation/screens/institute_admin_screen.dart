@@ -108,8 +108,8 @@ class _InstituteAdminScreenState extends State<InstituteAdminScreen> {
   @override
   Widget build(BuildContext context) {
     if (_busy) {
-      return const Scaffold(
-        appBar: AppBar(title: Text('Manage Institute')),
+      return Scaffold(
+        appBar: AppBar(title: const Text('Manage Institute')),
         body: Center(child: CircularProgressIndicator()),
       );
     }

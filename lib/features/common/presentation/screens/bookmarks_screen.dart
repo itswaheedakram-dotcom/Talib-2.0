@@ -18,8 +18,8 @@ class BookmarksScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final demo = ActiveProfileController.instance.isDemo;
     if (!demo && !FirebaseService.initialized) {
-      return const Scaffold(
-        appBar: AppBar(title: Text('Bookmarks')),
+      return Scaffold(
+        appBar: AppBar(title: const Text('Bookmarks')),
         body: _EmptyState(
           icon: Icons.cloud_off,
           title: 'Bookmarks unavailable',
