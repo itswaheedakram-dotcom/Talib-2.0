@@ -141,11 +141,39 @@ class DatabaseService {
 
   Stream<bool> followingStream(String uid,String targetId){uid=_uid(uid);targetId=_uid(targetId);if(_demo(uid)||_demo(targetId))return _demoStream(DemoDataService.instance.isFollowing(uid,targetId),()=>DemoDataService.instance.isFollowing(uid,targetId));return _db.collection('users').doc(uid).collection('following').doc(targetId).snapshots().map((s)=>s.exists);}
   Stream<bool> mutualFollowStream(String uid,String targetId) {
+    uid=_uid(uid);
+    targetId=_uid(targetId);
     if (uid == targetId) return Stream<bool>.value(false);
-    return followingStream(uid, targetId).asyncMap((following) async {
-      if (!following) return false;
-      final reverse = await _db.collection('users').doc(targetId).collection('following').doc(uid).get();
-      return reverse.exists;
+    return Stream<bool>.multi((controller) {
+      var following = false;
+      var reverseFollowing = false;
+      var cancelled = false;
+      Future<void> emitCurrent() async {
+        if (cancelled) return;
+        if (!following || !reverseFollowing) {
+          controller.add(false);
+          return;
+        }
+        try {
+          final blocked = await isEitherBlocked(uid, targetId);
+          if (!cancelled) controller.add(!blocked);
+        } catch (_) {
+          if (!cancelled) controller.add(false);
+        }
+      }
+      final first = followingStream(uid, targetId).listen((value) {
+        following = value;
+        emitCurrent();
+      }, onError: controller.addError);
+      final second = followingStream(targetId, uid).listen((value) {
+        reverseFollowing = value;
+        emitCurrent();
+      }, onError: controller.addError);
+      controller.onCancel = () {
+        cancelled = true;
+        first.cancel();
+        second.cancel();
+      };
     });
   }
   Stream<int> followerCountStream(String uid){uid=_uid(uid);if(_demo(uid))return _demoStream(DemoDataService.instance.followerCount(uid),()=>DemoDataService.instance.followerCount(uid));return _db.collection('users').doc(uid).collection('followers').snapshots().map((s)=>s.size);}
@@ -166,6 +194,8 @@ class DatabaseService {
     }
   }
   Future<Map<String,dynamic>> reputation(String uid)async{
+    uid=_uid(uid);
+    if(_demo(uid)) return DemoDataService.instance.reputation(uid);
     final posts=(await _db.collection('posts').where('authorId',isEqualTo:uid).get()).docs;
     var likes=0,comments=0,bestAnswers=0;
     for(final p in posts){
