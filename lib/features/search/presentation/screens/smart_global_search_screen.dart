@@ -348,7 +348,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
           _filterDropdown('Area / town',options(areas),area,(v)=>setSheet(()=>area=v)),
           TextField(controller:budgetController,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Maximum budget / rent (PKR)')),
           const SizedBox(height:8),
-          _filterDropdown('Hostel gender',options(['Male','Female','Both'],all:'All'),gender,(v)=>setSheet(()=>gender=v)),
+          _filterDropdown('Hostel gender',options(HostelRegistry.genders,all:'All'),gender,(v)=>setSheet(()=>gender=v)),
           _filterDropdown('Hostel type',options(HostelRegistry.types),hostelType,(v)=>setSheet(()=>hostelType=v)),
           _filterDropdown('Room type',options(HostelRegistry.roomTypes),roomType,(v)=>setSheet(()=>roomType=v)),
           SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('AC room / hostel only'),value:acOnly,onChanged:(v)=>setSheet(()=>acOnly=v)),
