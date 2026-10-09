@@ -156,7 +156,7 @@ class _InstituteBookmarksTabState extends State<_InstituteBookmarksTab> {
       }
       final institutes = ids
           .map(_repository.byId)
-          .whereType()
+          .whereType<Institute>()
           .toList()
         ..sort((a, b) => a.name.compareTo(b.name));
       if (institutes.isEmpty && _repository.loading) {
