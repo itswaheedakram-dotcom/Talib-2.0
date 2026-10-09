@@ -3,7 +3,7 @@ import '../../../../app/theme.dart';
 import '../../../../core/services/admin_access_service.dart';
 import '../../../../core/services/push_token_registration_service.dart';
 import '../../../admin/presentation/screens/admin_panel_screen.dart';
-import '../../../search/presentation/screens/search_screen.dart';
+import '../../../search/presentation/screens/smart_global_search_screen.dart';
 import '../../../community/presentation/screens/community_screen.dart';
 import '../../../common/presentation/widgets/custom_scaffold.dart';
 import '../../../messages/presentation/screens/messages_screen.dart';
@@ -34,7 +34,7 @@ class _MainScreenState extends State<MainScreen> {
       builder: (context, _) {
         final pages = <Widget>[
           const HomeScreen(),
-          const SearchScreen(),
+          const SmartGlobalSearchScreen(),
           const CommunityScreen(),
           const MessagesScreen(),
           if (access.canOpenPanel) const AdminPanelScreen(),
