@@ -233,6 +233,15 @@ class DemoDataService extends ChangeNotifier {
   bool instituteBookmarked(String uid,String id)=>_instituteBookmarks.contains('$uid|$id');
   Set<String> instituteBookmarkIds(String uid)=>Set.unmodifiable(_instituteBookmarks.where((key)=>key.startsWith('$uid|')).map((key)=>key.substring(uid.length+1)));
   void toggleInstituteBookmark(String uid,String id,bool save){final k='$uid|$id';if(save){_instituteBookmarks.add(k);}else{_instituteBookmarks.remove(k);}_emit();}
+  List<String> usersWhoBookmarkedInstitute(String instituteId) => _instituteBookmarks
+      .where((key) => key.endsWith('|$instituteId'))
+      .map((key) => key.substring(0, key.indexOf('|')))
+      .toSet()
+      .toList();
+  void addNotification(String uid, Map<String, dynamic> notification) {
+    _addNotification(uid, notification);
+    _emit();
+  }
   bool claimed(String uid,String id)=>_instituteClaims.contains('$uid|$id');
 
   void claimInstitute(
