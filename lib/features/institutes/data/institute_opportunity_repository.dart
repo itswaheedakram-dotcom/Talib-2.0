@@ -51,6 +51,53 @@ class InstituteOpportunityRepository extends ChangeNotifier {
     }
   }
 
+  List<InstituteOpportunity> get allItems {
+    final source = isDemoMode ? _demoItems : _realItems;
+    return List.unmodifiable(source.values.expand((items) => items));
+  }
+
+  Future<void> loadAll() async {
+    error = null;
+    if (isDemoMode) {
+      loading = false;
+      notifyListeners();
+      return;
+    }
+    loading = true;
+    notifyListeners();
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collectionGroup('opportunities')
+          .get();
+      final grouped = <String, List<InstituteOpportunity>>{};
+      for (final doc in snapshot.docs) {
+        final data = Map<String, dynamic>.from(doc.data());
+        final parentId = doc.reference.parent.parent?.id ?? '';
+        if ((data['instituteId'] ?? '').toString().isEmpty) {
+          data['instituteId'] = parentId;
+        }
+        final item = InstituteOpportunity.fromMap(doc.id, data);
+        if (item.instituteId.isEmpty) continue;
+        (grouped[item.instituteId] ??= []).add(item);
+      }
+      for (final items in grouped.values) {
+        items.sort((a, b) {
+          final aDate = DateTime.tryParse(a.openingDate) ?? DateTime(9999);
+          final bDate = DateTime.tryParse(b.openingDate) ?? DateTime(9999);
+          return aDate.compareTo(bDate);
+        });
+      }
+      _realItems
+        ..clear()
+        ..addAll(grouped);
+    } catch (e) {
+      error = e.toString();
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
+  }
+
   Future<InstituteOpportunity?> add(InstituteOpportunity item) async {
     error = null;
     try {
