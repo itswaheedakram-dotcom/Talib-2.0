@@ -52,7 +52,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
     if(text.isEmpty)return;
     _controller.text=text;
     final q=SmartSearchParser.parse(text);
-    setState(()=>{_parsed=q,_loading=true,_searched=true,_error=null});
+    setState(() { _parsed=q; _loading=true; _searched=true; _error=null; });
     final hits=< _Hit>[];
     try {
       final ir=InstituteRepository.instance;
@@ -157,10 +157,10 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
 
       hits.sort((a,b)=>b.score.compareTo(a.score));
       if(!mounted)return;
-      setState(()=>{_hits=hits.take(60).toList(),_loading=false});
+      setState(() { _hits=hits.take(60).toList(); _loading=false; });
     } catch (_) {
       if(!mounted)return;
-      setState(()=>{_loading=false,_error:'Search complete nahi ho saki. Dobara try karein.'});
+      setState(() { _loading=false; _error='Search complete nahi ho saki. Dobara try karein.'; });
     }
   }
 
@@ -234,7 +234,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
 
   @override Widget build(BuildContext context) {
     return Scaffold(
-      appBar:AppBar(title:const Text('Smart Global Search'),actions:[if(_controller.text.isNotEmpty)IconButton(onPressed:(){_controller.clear();setState(()=>{_hits=[],_parsed=null,_searched=false,_error=null});},icon:const Icon(Icons.close))]),
+      appBar:AppBar(title:const Text('Smart Global Search'),actions:[if(_controller.text.isNotEmpty)IconButton(onPressed:(){_controller.clear();setState(() { _hits=[]; _parsed=null; _searched=false; _error=null; });},icon:const Icon(Icons.close))]),
       body:SafeArea(child:Column(children:[
         Padding(padding:const EdgeInsets.fromLTRB(14,14,14,8),child:TextField(
           controller:_controller,textInputAction:TextInputAction.search,onSubmitted:search,onChanged:(_)=>setState((){}),
