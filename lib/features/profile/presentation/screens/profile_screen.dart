@@ -167,6 +167,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
+                _section('My Activity', _action(Icons.article_outlined, 'My Posts', 'View posts created by ${p.name}', () => context.push('/community?authorId=${Uri.encodeComponent(p.id)}'))),
+                const SizedBox(height: 12),
                 _section('Test Mode', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Text('The app is currently using this temporary profile for profile-related testing.'),
                   const SizedBox(height: 10),
@@ -348,7 +350,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Icons.article_outlined,
                 'My Posts',
                 'View posts you have created',
-                () => context.push('/community'),
+                () => context.push('/community?authorId=${Uri.encodeComponent(u.uid)}'),
               ),
               _action(
                 Icons.bookmark_outline,
