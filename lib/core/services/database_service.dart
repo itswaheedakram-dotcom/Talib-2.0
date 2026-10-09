@@ -261,7 +261,7 @@ class DatabaseService {
       await ref.delete();
     }
   }
-  Future<void> claimDemoInstitute(String uid,String instituteId){DemoDataService.instance.claimInstitute(_uid(uid),instituteId);return Future.value();}
+  Future<void> claimDemoInstitute(String uid,String instituteId,{String instituteName=''}){DemoDataService.instance.claimInstitute(_uid(uid),instituteId,instituteName:instituteName);return Future.value();}
 
   Stream<Set<String>> timelineInstitutesStream(String uid){
     uid=_uid(uid);
