@@ -45,7 +45,7 @@ class AdminAccessService extends ChangeNotifier {
     try {
       final token = await current.getIdTokenResult();
       final claims = token.claims ?? const <String, dynamic>{};
-      if (claims['admin'] == true || claims['role'] == 'super_admin') {
+      if (claims['admin'] == true) {
         _setRole(TalibAdminRole.superAdmin, const {}, current.uid);
         return;
       }
