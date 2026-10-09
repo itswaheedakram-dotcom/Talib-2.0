@@ -34,6 +34,8 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
     final name = TextEditingController(text: existing?.label ?? '');
     final id = TextEditingController(text: existing?.id ?? '');
     final subcategories = TextEditingController(text: existing?.subcategories.join(', ') ?? '');
+    final programLabel = TextEditingController(text: existing?.programLabel ?? 'Programs / courses');
+    final eligibilityLabel = TextEditingController(text: existing?.eligibilityLabel ?? 'Eligibility criteria');
     final order = TextEditingController(text: (existing?.sortOrder ?? (_catalog.allTypes.length + 1) * 10).toString());
     var iconKey = existing?.iconKey ?? 'school';
     var enabled = existing?.enabled ?? true;
@@ -91,6 +93,19 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
                 ),
                 const SizedBox(height: 10),
                 TextField(
+                  controller: programLabel,
+                  decoration: const InputDecoration(
+                    labelText: 'Programs field label',
+                    hintText: 'Classes / levels, Degrees / programs, Deeni courses',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: eligibilityLabel,
+                  decoration: const InputDecoration(labelText: 'Eligibility field label'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
                   controller: order,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: 'Display order'),
@@ -122,6 +137,8 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
       name.dispose();
       id.dispose();
       subcategories.dispose();
+      programLabel.dispose();
+      eligibilityLabel.dispose();
       order.dispose();
       return;
     }
@@ -148,6 +165,12 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
               .where((value) => value.isNotEmpty)
               .toSet()
               .toList(),
+          programLabel: programLabel.text.trim().isEmpty
+              ? 'Programs / courses'
+              : programLabel.text.trim(),
+          eligibilityLabel: eligibilityLabel.text.trim().isEmpty
+              ? 'Eligibility criteria'
+              : eligibilityLabel.text.trim(),
           enabled: enabled,
           sortOrder: int.tryParse(order.text.trim()) ?? 100,
         ));
@@ -167,6 +190,8 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
     name.dispose();
     id.dispose();
     subcategories.dispose();
+    programLabel.dispose();
+    eligibilityLabel.dispose();
     order.dispose();
   }
 
@@ -211,7 +236,7 @@ class _AdminInstituteTypesScreenState extends State<AdminInstituteTypesScreen> {
                 title: Text(type.label, style: const TextStyle(fontWeight: FontWeight.w700)),
                 subtitle: Text(type.subcategories.isEmpty
                     ? type.id
-                    : '${type.id} • ${type.subcategories.join(', ')}'),
+                    : '${type.id} • ${type.programLabel} • ${type.subcategories.join(', ')}'),
                 isThreeLine: type.subcategories.length > 3,
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                   if (!type.enabled)
