@@ -29,7 +29,7 @@ class InstituteTypeOption {
     'academy' => Icons.menu_book_rounded,
     'technical' => Icons.build_circle_outlined,
     'medical' => Icons.medical_services_outlined,
-    'religious' => Icons.mosque_outlined,
+    'religious' => Icons.menu_book_outlined,
     'training' => Icons.workspace_premium_outlined,
     _ => Icons.school_rounded,
   };
