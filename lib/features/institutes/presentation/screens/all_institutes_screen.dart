@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
-import '../../../models/institute.dart';
 import '../../data/institute_catalog.dart';
 import '../../data/institute_repository.dart';
 

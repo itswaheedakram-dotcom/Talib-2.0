@@ -24,6 +24,8 @@ class _AdminInstituteSubmissionsScreenState extends State<AdminInstituteSubmissi
   void initState() {
     super.initState();
     _repository.addListener(_onChanged);
+    _catalog.addListener(_onChanged);
+    _catalog.load();
     _repository.load();
   }
 
@@ -34,6 +36,7 @@ class _AdminInstituteSubmissionsScreenState extends State<AdminInstituteSubmissi
   @override
   void dispose() {
     _repository.removeListener(_onChanged);
+    _catalog.removeListener(_onChanged);
     super.dispose();
   }
 

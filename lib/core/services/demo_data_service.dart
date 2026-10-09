@@ -241,7 +241,7 @@ class DemoDataService extends ChangeNotifier {
   }) {
     final key = '$uid|$id';
     final existing = _instituteClaimRecords[key];
-    if (existing != null && existing['status'] == 'pending') return;
+    if (existing != null && const {'pending', 'approved'}.contains(existing['status'])) return;
     _instituteClaims.add(key);
     _instituteClaimRecords[key] = {
       'id': key,

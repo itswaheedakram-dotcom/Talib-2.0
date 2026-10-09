@@ -289,9 +289,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             'Institute Claims',
             'Demo-safe ownership review',
             Icons.school_outlined,
-            () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Demo institute-claim review will be connected next. No Firebase data was changed.')),
-            ),
+            () => context.push('/admin/institute-claims'),
           ),
           _section(
             'Community Moderation',

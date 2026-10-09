@@ -23,11 +23,7 @@ class InstituteDetailScreen extends StatelessWidget {
     final institute = InstituteRepository.instance.byId(id);
     if (institute == null) return const Scaffold(body: Center(child: Text('Institute not found')));
     final typeLabel = InstituteCatalog.instance.labelFor(institute.type);
-    final image = institute.imageUrl.isNotEmpty ? institute.imageUrl : institute.type == 'schools'
-        ? 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1200&q=80'
-        : institute.type == 'colleges'
-            ? 'https://images.unsplash.com/photo-1564981797816-1043664bf78d?auto=format&fit=crop&w=1200&q=80'
-            : 'https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1200&q=80';
+    final image = institute.imageUrl.trim();
 
     return Scaffold(
       appBar: AppBar(
@@ -46,10 +42,19 @@ class InstituteDetailScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             child: SizedBox(
               height: 185,
-              child: Image.network(image, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(
-                color: lightGreen,
-                child: const Icon(Icons.account_balance, size: 70, color: green),
-              )),
+              child: image.isEmpty
+                  ? Container(
+                      color: lightGreen,
+                      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Icon(InstituteCatalog.instance.iconFor(institute.type), size: 62, color: green),
+                        const SizedBox(height: 8),
+                        Text(typeLabel, style: const TextStyle(color: darkGreen, fontWeight: FontWeight.w600)),
+                      ]),
+                    )
+                  : Image.network(image, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(
+                      color: lightGreen,
+                      child: Icon(InstituteCatalog.instance.iconFor(institute.type), size: 70, color: green),
+                    )),
             ),
           ),
           const SizedBox(height: 12),

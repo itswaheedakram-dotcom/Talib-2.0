@@ -69,12 +69,9 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
     return [all, ...values];
   }
 
-  List<String> get _provinces => _values(_typeItems, (i) => i.province, 'All provinces');
   List<String> get _feeRanges => _values(InstituteRepository.instance.items, (i) => i.feeRange, 'Any fee range');
   List<String> get _cities =>
       _values(_provinceItems, (i) => i.city, 'All cities');
-
-  List<String> get _institutes => ['All institutes', ..._sectorItems.map((i) => '${i.name}||${i.id}').toSet().map((v) => v.split('||').last).map((id) => InstituteRepository.instance.byId(id)?.name ?? id)];
 
   Institute? get _selectedInstitute => _instituteId == 'All institutes' ? null : InstituteRepository.instance.byId(_instituteId);
 
@@ -99,7 +96,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
 
     return InstituteRepository.instance.items.where((i) {
       final searchable =
-          '${i.name} ${i.city} ${i.province} ${i.campus} ${i.address} '
+          '${i.name} ${i.subcategory} ${i.city} ${i.town} ${i.province} ${i.campus} ${i.address} '
           '${i.description} ${i.programs.join(' ')} ${i.nextProgram}'.toLowerCase();
       final programMatch = _program == 'All programs' ||
           i.nextProgram.toLowerCase() == _program.toLowerCase() ||

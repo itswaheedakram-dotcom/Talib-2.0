@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../app/theme.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../../models/institute.dart';
@@ -17,7 +18,7 @@ class InstituteDashboardScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Institute Dashboard')),
       body: owned.isEmpty
           ? ListView(padding: const EdgeInsets.all(20), children: [
-              const Icon(Icons.business_outlined, size: 64, color: Colors.green),
+              const Icon(Icons.business_outlined, size: 64, color: AppColors.primaryGreen),
               const SizedBox(height: 14),
               const Text('No approved institute claims yet', textAlign: TextAlign.center, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
