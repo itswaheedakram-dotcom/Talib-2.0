@@ -40,9 +40,7 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final allAdmissions = _opportunities.allItems
-        .where((item) => item.kind == 'admission')
-        .toList();
+    final allAdmissions = _allFeedAdmissions();
     final openAdmissions = allAdmissions.where(_isOpen).toList()
       ..sort(_sortByDeadline);
     final upcomingAdmissions = allAdmissions.where(_isUpcoming).toList()
@@ -131,6 +129,39 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
         ],
       ),
     );
+  }
+
+  List<InstituteOpportunity> _allFeedAdmissions() {
+    final admissions = _opportunities.allItems
+        .where((item) => item.kind == 'admission')
+        .toList();
+    final institutesWithListings = admissions.map((item) => item.instituteId).toSet();
+
+    // Support older institute profiles that already store admission status/deadline,
+    // while avoiding duplicate cards when the institute manages individual intakes.
+    for (final institute in _institutes.items) {
+      if (institutesWithListings.contains(institute.id)) continue;
+      final status = institute.admissionStatus.trim().toLowerCase();
+      final hasUsefulDetails = institute.nextProgram.trim().isNotEmpty ||
+          institute.admissionDeadline.trim().isNotEmpty;
+      if (status != 'open' && status != 'upcoming') continue;
+      if (!hasUsefulDetails && status != 'upcoming') continue;
+      admissions.add(InstituteOpportunity(
+        id: 'profile-${institute.id}',
+        instituteId: institute.id,
+        kind: 'admission',
+        title: institute.nextProgram.trim().isNotEmpty
+            ? institute.nextProgram.trim()
+            : 'Admissions at ${institute.name}',
+        status: institute.admissionStatus,
+        deadline: institute.admissionDeadline,
+        eligibility: institute.eligibility,
+        feeDetails: institute.feeRange,
+        applicationUrl: institute.applicationUrl,
+        description: 'Admission information from the institute profile.',
+      ));
+    }
+    return admissions;
   }
 
   Widget _admissionSection({
