@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme.dart';
 import '../../../models/hostel.dart';
@@ -13,7 +15,7 @@ class ManageHostelScreen extends StatefulWidget {
 
 class _ManageHostelScreenState extends State<ManageHostelScreen> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _name, _city, _area, _address, _description,
+  late final TextEditingController _name, _city, _area, _address, _description, _rules,
       _price, _security, _room, _availability, _meals, _phone, _website, _photos;
   late String _gender, _type;
   late bool _ac;
@@ -36,6 +38,7 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
     _area = TextEditingController(text: h.area);
     _address = TextEditingController(text: h.address);
     _description = TextEditingController(text: h.description);
+    _rules = TextEditingController(text: h.rules);
     _price = TextEditingController(text: h.price);
     _security = TextEditingController(text: h.securityFee);
     _room = TextEditingController(text: h.roomType);
@@ -53,7 +56,7 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
 
   @override
   void dispose() {
-    for (final c in [_name,_city,_area,_address,_description,_price,_security,
+    for (final c in [_name,_city,_area,_address,_description,_rules,_price,_security,
       _room,_availability,_meals,_phone,_website,_photos]) { c.dispose(); }
     super.dispose();
   }
@@ -63,7 +66,7 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
       _name.text.trim().isNotEmpty, _city.text.trim().isNotEmpty,
       _address.text.trim().isNotEmpty, _price.text.trim().isNotEmpty,
       _room.text.trim().isNotEmpty, _phone.text.trim().isNotEmpty,
-      _description.text.trim().isNotEmpty, _photos.text.trim().isNotEmpty,
+      _description.text.trim().isNotEmpty, _rules.text.trim().isNotEmpty, _photos.text.trim().isNotEmpty,
       _facilities.isNotEmpty, _availability.text.trim().isNotEmpty,
       _rooms.isNotEmpty,
     ];
@@ -89,7 +92,7 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
       meals: _meals.text.trim(), ac: _ac, facilities: _facilities.toList(),
       imageUrl: photoList.isEmpty ? '' : photoList.first, imageUrls: photoList,
       rooms: _rooms.map((room) => Map<String, dynamic>.from(room)).toList(),
-      description: _description.text.trim(), phone: _phone.text.trim(),
+      description: _description.text.trim(), rules: _rules.text.trim(), phone: _phone.text.trim(),
       website: _website.text.trim(), ownerId: old.ownerId, ownerName: old.ownerName,
       status: publish ? 'pending' : old.status, isVerified: publish ? false : old.isVerified,
       isDemo: old.isDemo, rating: old.rating, reviewCount: old.reviewCount,
@@ -148,6 +151,7 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
             _roomInventory(),
           ]),
           _section('Photos', Icons.photo_library_outlined, [
+            SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: _saving ? null : _pickAndUploadPhotos, icon: const Icon(Icons.add_photo_alternate_outlined), label: const Text('Choose photos from gallery'))),
             _field(_photos, 'Photo links (one per line)', maxLines: 3, hint: 'Paste image links here'),
             const Text('This version accepts image links. Direct gallery upload needs Firebase Storage integration.', style: TextStyle(color: AppColors.mutedText, fontSize: 12)),
           ]),
@@ -164,7 +168,7 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
           _section('Rules & Contact', Icons.rule_outlined, [
             _field(_phone, 'Phone / WhatsApp', required: true, keyboard: TextInputType.phone),
             _field(_website, 'Website (optional)', keyboard: TextInputType.url),
-            const Text('Rules such as visitors, curfew and cooking can be added in the next rules section update.', style: TextStyle(color: AppColors.mutedText, fontSize: 12)),
+            _field(_rules, 'Hostel rules', maxLines: 4, hint: 'Visitors, curfew, cooking, smoking, quiet hours...'),
           ]),
           const SizedBox(height: 10),
           Row(children: [if (_saved) const Icon(Icons.check_circle, color: AppColors.primaryGreen, size: 18), if (_saved) const SizedBox(width: 6), Text(_saved ? 'Saved' : 'Changes are saved when you tap Save Draft', style: const TextStyle(color: AppColors.mutedText, fontSize: 12))]),
@@ -211,6 +215,44 @@ class _ManageHostelScreenState extends State<ManageHostelScreen> {
     _action('Managers', Icons.people_outline, () => context.push('/hostel/${h.id}/managers', extra: h)),
     _action('View Hostel', Icons.visibility_outlined, () => context.push('/hostel/${h.id}', extra: h)),
   ]);
+
+  Future<void> _pickAndUploadPhotos() async {
+    final hostel = widget.hostel;
+    if (hostel.isDemo || hostel.id.startsWith('example_')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gallery upload needs a real Firebase hostel listing. Demo hostels can use image links for now.')),
+      );
+      return;
+    }
+
+    try {
+      final files = await ImagePicker().pickMultiImage(imageQuality: 85);
+      if (files.isEmpty || !mounted) return;
+      setState(() => _saving = true);
+      final urls = _photos.text.split('\n').map((value) => value.trim()).where((value) => value.isNotEmpty).toSet();
+      for (final file in files) {
+        final objectName = DateTime.now().microsecondsSinceEpoch.toString() + '_' + file.name;
+        final reference = FirebaseStorage.instance.ref().child('hostels/' + hostel.id + '/gallery/' + objectName);
+        await reference.putData(await file.readAsBytes());
+        urls.add(await reference.getDownloadURL());
+      }
+      if (!mounted) return;
+      setState(() {
+        _photos.text = urls.join('\n');
+        _saved = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(files.length.toString() + ' photo(s) uploaded. Tap Save Draft to keep the listing changes.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Photos could not be uploaded. Check Firebase Storage setup and try again.')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   Widget _roomInventory() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
