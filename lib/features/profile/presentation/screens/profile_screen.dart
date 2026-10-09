@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../../../core/services/database_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
+import '../../../../core/services/demo_data_service.dart';
 import '../../../../app/theme.dart';
 
 class ProfileScreen extends StatefulWidget {
