@@ -4,6 +4,10 @@ import 'hostel_seed_data.dart';
 import 'hostel_review.dart';
 
 class HostelRepository {
+  // Session-only overrides keep sample hostels editable without requiring Firebase.
+  static final Map<String, Hostel> _demoOverrides = <String, Hostel>{};
+
+  static Hostel? demoOverride(String id) => _demoOverrides[id];
   HostelRepository({FirebaseFirestore? firestore}) : _db = firestore ?? FirebaseFirestore.instance;
   final FirebaseFirestore _db;
   CollectionReference<Map<String, dynamic>> get _collection => _db.collection('hostels');
@@ -53,6 +57,6 @@ class HostelRepository {
   }
 
   Future<String> submitHostel(Hostel hostel) async { final ref=_collection.doc(); await ref.set({...hostel.toMap(),'ownerId':hostel.ownerId,'ownerName':hostel.ownerName,'status':'pending','isVerified':false,'isDemo':false,'reviewCount':0,'ratingTotal':0.0,'rating':0.0,'createdAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()}); return ref.id; }
-  Future<void> updateHostel(Hostel hostel) => _collection.doc(hostel.id).update({...hostel.toMap(),'updatedAt':FieldValue.serverTimestamp()});
+  Future<void> updateHostel(Hostel hostel) async {\n    if (hostel.isDemo || hostel.id.startsWith('example_')) {\n      _demoOverrides[hostel.id] = hostel;\n      return;\n    }\n    await _collection.doc(hostel.id).update({...hostel.toMap(),'updatedAt':FieldValue.serverTimestamp()});\n  }
   Future<void> deleteHostel(String hostelId) => _collection.doc(hostelId).delete();
 }
