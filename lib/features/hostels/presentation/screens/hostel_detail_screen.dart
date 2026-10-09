@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme.dart';
@@ -183,7 +184,23 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.cream,
-      appBar: AppBar(title: const Text('Hostel Details')),
+      appBar: AppBar(
+        title: const Text('Hostel Details'),
+        actions: [
+          if (hostel.isDemo || hostel.ownerId.isEmpty || (FirebaseAuth.instance.currentUser?.uid == hostel.ownerId && hostel.ownerId.isNotEmpty))
+            PopupMenuButton<String>(
+              tooltip: 'Manage hostel',
+              onSelected: (value) {
+                if (value == 'manage') context.push('/hostel/\u0024{hostel.id}/manage', extra: hostel);
+                if (value == 'managers') context.push('/hostel/\u0024{hostel.id}/managers', extra: hostel);
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'manage', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Manage Hostel'), contentPadding: EdgeInsets.zero)),
+                PopupMenuItem(value: 'managers', child: ListTile(leading: Icon(Icons.people_outline), title: Text('Manage Managers'), contentPadding: EdgeInsets.zero)),
+              ],
+            ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
         children: [
