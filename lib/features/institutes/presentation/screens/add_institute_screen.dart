@@ -572,6 +572,15 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
     return const [];
   }
 
+  String _locationKey(String label) => switch (label) {
+    'Country' => 'country',
+    'Province / State / Region' => 'region-${_country.text}',
+    'District / County (optional)' => 'district-${_province.text}',
+    'City' || 'City / Town' => 'city-${_province.text}-${_district.text}',
+    'Area / Locality (optional)' => 'area-${_city.text}',
+    _ => label,
+  };
+
   Widget _locationAutocomplete({
     required TextEditingController controller,
     required String label,
@@ -581,7 +590,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: Autocomplete<String>(
-      key: ValueKey("${label}-${label == 'City' ? _province.text : 'province'}"),
+      key: ValueKey(_locationKey(label)),
       optionsBuilder: (value) {
         final query = value.text.trim().toLowerCase();
         if (query.isEmpty) return options;
