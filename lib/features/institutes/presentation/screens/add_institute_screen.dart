@@ -234,26 +234,29 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
     final types = _catalog.types;
     final selectedType = _catalog.byId(_type);
     final subcategories = _catalog.subcategoriesFor(_type);
-    final countries = _locations.options(type: 'country').isNotEmpty
-        ? _locations.options(type: 'country')
-        : LocationCatalog.defaultCountries;
+    final countries = <String>{...LocationCatalog.defaultCountries, ..._locations.options(type: 'country')}.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final pakistanRegions = const [
       'Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan',
       'Islamabad Capital Territory', 'Azad Jammu & Kashmir', 'Gilgit-Baltistan',
     ];
-    final regions = _locations.options(type: 'region', country: _country.text).isNotEmpty
-        ? _locations.options(type: 'region', country: _country.text)
-        : (_country.text.trim().toLowerCase() == 'pakistan' ? pakistanRegions : const <String>[]);
+    final remoteRegions = _locations.options(type: 'region', country: _country.text);
+    final regions = (_country.text.trim().toLowerCase() == 'pakistan'
+        ? <String>{...pakistanRegions, ...remoteRegions}
+        : remoteRegions.toSet()).toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final remoteDistricts = _locations.options(
       type: 'district', parentName: _province.text, country: _country.text,
     );
-    final districts = remoteDistricts.isNotEmpty ? remoteDistricts : _districtsForProvince(_province.text);
+    final districts = <String>{..._districtsForProvince(_province.text), ...remoteDistricts}.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final remoteCities = _locations.options(
       type: 'city',
       parentName: _district.text.trim().isNotEmpty ? _district.text : _province.text,
       country: _country.text,
     );
-    final cities = remoteCities.isNotEmpty ? remoteCities : _citiesForProvince(_province.text);
+    final cities = <String>{..._citiesForProvince(_province.text), ...remoteCities}.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final areas = _locations.options(type: 'area', parentName: _city.text, country: _country.text);
     if (_type.isNotEmpty && !types.any((type) => type.id == _type) && types.isNotEmpty) {
       _type = types.first.id;
