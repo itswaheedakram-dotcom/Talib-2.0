@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/institute_repository.dart';
 import '../../../models/institute.dart';
 import '../../../../app/theme.dart';
+import '../../data/institute_catalog.dart';
 
 class EditInstituteScreen extends StatefulWidget {
   final String id;
@@ -46,7 +47,7 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
     if(old==null) return;
     setState(()=>_saving=true);
     final updated=Institute(
-      id: old.id, name:_name.text.trim(), type:old.type, subcategory:_subcategory.text.trim(), ownerId:old.ownerId, representativeId:old.representativeId, campus:_campus.text.trim(),
+      id: old.id, name:_name.text.trim(), type:old.type, subcategory:_subcategory.text.trim(), ownerId:old.ownerId, representativeId:old.representativeId, createdBy:old.createdBy, campus:_campus.text.trim(),
       province:_province.text.trim(), city:_city.text.trim(), town:_town.text.trim(), sector:_sector,
       address:_address.text.trim(), description:_description.text.trim(), website:_website.text.trim(), applicationUrl:_applicationUrl.text.trim(),
       submissionMode:_submission, eligibility:_eligibility.text.trim(),
@@ -83,7 +84,7 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
         Row(children:[Expanded(child:_field(_province,'Province',Icons.map_outlined,required:true)),const SizedBox(width:10),Expanded(child:_field(_city,'City',Icons.location_on_outlined,required:true))]),
         _field(_town,'Town / Area',Icons.place_outlined),
         _field(_address,'Full Address',Icons.place_outlined),
-        _dropdown('Sector',_sector,['Private','Government','Semi-government'],(v)=>setState(()=>_sector=v)),
+        _dropdown('Sector',_sector,InstituteCatalog.sectors,(v)=>setState(()=>_sector=v)),
         _field(_contact,'Contact',Icons.phone_outlined),
         _field(_website,'Website',Icons.language_outlined,keyboard:TextInputType.url),
         _field(_applicationUrl,'Direct Admission / Application URL',Icons.open_in_new_outlined,keyboard:TextInputType.url),
@@ -99,10 +100,10 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
         const SizedBox(height:8),
         Text('Admissions',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w700,color:dark)),
         const SizedBox(height:12),
-        _dropdown('Admission Status',_admissionStatus,['Open','Closed','Upcoming','Not announced'],(v)=>setState(()=>_admissionStatus=v)),
+        _dropdown('Admission Status',_admissionStatus,InstituteCatalog.admissionStatuses,(v)=>setState(()=>_admissionStatus=v)),
         _field(_deadline,'Admission Deadline',Icons.calendar_month_outlined),
         _field(_fee,'Fee Range',Icons.payments_outlined),
-        _dropdown('Submission Mode',_submission,['Online','Physical','Online / Physical'],(v)=>setState(()=>_submission=v)),
+        _dropdown('Submission Mode',_submission,InstituteCatalog.submissionModes,(v)=>setState(()=>_submission=v)),
         SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Entry Test Required'),value:_entryTest,onChanged:(v)=>setState(()=>_entryTest=v)),
         const SizedBox(height:8),
         Text('Facilities & Display',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w700,color:dark)),
