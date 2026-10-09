@@ -1,13 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/services/firebase_service.dart';
+import '../../../core/services/active_profile_controller.dart';
 import '../../models/institute.dart';
 
 class InstituteRepository extends ChangeNotifier {
   InstituteRepository._();
   static final instance = InstituteRepository._();
 
-  final List<Institute> _items = [
+  final List<Institute> _demoItems = [
     const Institute(id:'school-1',name:'The Educators',type:'schools',city:'Lahore',province:'Punjab',sector:'Private',address:'Lahore, Punjab',description:'A school offering foundational and secondary education.',programs:['Primary','Middle','Matric']),
     const Institute(id:'school-2',name:'Beaconhouse School System',type:'schools',city:'Lahore',province:'Punjab',sector:'Private',address:'Lahore, Punjab',description:'A private school network providing education from early years through secondary levels.',programs:['Early Years','Primary','Secondary']),
     const Institute(id:'college-1',name:'Government College Lahore',type:'colleges',city:'Lahore',province:'Punjab',sector:'Government',address:'Lahore, Punjab',description:'A historic public college offering intermediate and degree programs.',programs:['FA','FSc','ICS','BS']),
@@ -51,50 +52,88 @@ class InstituteRepository extends ChangeNotifier {
     const Institute(id:'university-37',name:'University of Education, DG Khan Campus',type:'universities',city:'Dera Ghazi Khan',province:'Punjab',sector:'Government',address:'Dera Ghazi Khan, Punjab',description:'Public university campus.',programs:['Education','Undergraduate','Graduate']),
   ];
 
-  List<Institute> get items => List.unmodifiable(_items);
+  final List<Institute> _realItems = [];
   bool loading = false;
   String? error;
 
+  /// Demo and production records are kept in separate collections in memory.
+  /// Only approved institutes are exposed to public browsing screens.
+  bool get isDemoMode =>
+      ActiveProfileController.instance.isDemo || !FirebaseService.initialized;
+
+  List<Institute> get items => List.unmodifiable(
+    (isDemoMode ? _demoItems : _realItems)
+        .where((item) => item.status.toLowerCase() == 'approved'),
+  );
+
+  /// All records for the selected mode, including pending submissions.
+  List<Institute> get moderationItems =>
+      List.unmodifiable(isDemoMode ? _demoItems : _realItems);
+
   Institute? byId(String id) {
-    for (final item in _items) { if (item.id == id) return item; }
+    final source = isDemoMode ? _demoItems : _realItems;
+    for (final item in source) {
+      if (item.id == id) return item;
+    }
     return null;
   }
 
   Future<void> load() async {
-    if (!FirebaseService.initialized) return;
-    loading = true; error = null; notifyListeners();
+    if (isDemoMode) {
+      loading = false;
+      error = null;
+      notifyListeners();
+      return;
+    }
+    loading = true;
+    error = null;
+    notifyListeners();
     try {
-      final snap = await FirebaseFirestore.instance.collection('institutes').get();
-      for (final doc in snap.docs) {
-        final item = Institute.fromMap(doc.id, doc.data());
-        if (item.status == 'approved' && !_items.any((e) => e.id == item.id)) _items.add(item);
-      }
+      final snapshot = await FirebaseFirestore.instance
+          .collection('institutes')
+          .where('status', isEqualTo: 'approved')
+          .get();
+      final loaded = snapshot.docs
+          .map((doc) => Institute.fromMap(doc.id, doc.data()))
+          .where((item) => item.status.toLowerCase() == 'approved')
+          .toList();
+      _realItems
+        ..clear()
+        ..addAll(loaded);
     } catch (e) {
-      error = 'Could not load institutes. Showing available local data.';
+      error = e.toString();
     } finally {
-      loading = false; notifyListeners();
+      loading = false;
+      notifyListeners();
     }
   }
 
   Future<bool> update(Institute institute) async {
     error = null;
     try {
-      if (FirebaseService.initialized) {
-        await FirebaseFirestore.instance.collection('institutes').doc(institute.id).set(
-          institute.toMap(),
-          SetOptions(merge: true),
-        );
+      if (isDemoMode) {
+        final index = _demoItems.indexWhere((item) => item.id == institute.id);
+        if (index < 0) {
+          error = 'Institute was not found in demo data.';
+          return false;
+        }
+        _demoItems[index] = institute;
+        notifyListeners();
+        return true;
       }
-      final index = _items.indexWhere((e) => e.id == institute.id);
-      if (index >= 0) {
-        _items[index] = institute;
-      } else {
-        _items.add(institute);
-      }
+
+      // Moderation status is deliberately not editable through the normal form.
+      final data = institute.toMap()..remove('status');
+      await FirebaseFirestore.instance
+          .collection('institutes')
+          .doc(institute.id)
+          .update(data);
+      final index = _realItems.indexWhere((item) => item.id == institute.id);
+      if (index >= 0) _realItems[index] = institute;
       notifyListeners();
       return true;
     } catch (e) {
-      error = 'Institute could not be updated. Please try again.';
+      error = e.toString();
       notifyListeners();
       return false;
     }
@@ -103,21 +142,69 @@ class InstituteRepository extends ChangeNotifier {
   Future<Institute?> add(Institute institute) async {
     error = null;
     try {
-      if (FirebaseService.initialized) {
-        final ref = await FirebaseFirestore.instance.collection('institutes').add({...institute.toMap(), 'status': 'pending'});
-        final saved = Institute.fromMap(ref.id, {...institute.toMap(), 'status':'pending'});
-        _items.add(saved);
+      final pending = Institute.fromMap(
+        institute.id.isEmpty
+            ? 'demo-institute-${DateTime.now().millisecondsSinceEpoch}'
+            : institute.id,
+        {...institute.toMap(), 'status': 'pending'},
+      );
+      if (isDemoMode) {
+        _demoItems.add(pending);
         notifyListeners();
-        return saved;
+        return pending;
       }
-      final local = Institute.fromMap('local-${DateTime.now().millisecondsSinceEpoch}', {...institute.toMap(), 'status':'pending'});
-      _items.add(local);
+
+      final ref = await FirebaseFirestore.instance
+          .collection('institutes')
+          .add({...institute.toMap(), 'status': 'pending'});
+      final saved = Institute.fromMap(
+        ref.id,
+        {...institute.toMap(), 'status': 'pending'},
+      );
+      _realItems.add(saved);
       notifyListeners();
-      return local;
+      return saved;
     } catch (e) {
-      error = 'Institute could not be saved. Please try again.';
+      error = e.toString();
       notifyListeners();
       return null;
+    }
+  }
+
+  Future<bool> setSubmissionStatus(String instituteId, String status) async {
+    if (!const {'approved', 'pending', 'rejected'}.contains(status)) {
+      error = 'Unsupported institute status.';
+      return false;
+    }
+    try {
+      if (isDemoMode) {
+        final index = _demoItems.indexWhere((item) => item.id == instituteId);
+        if (index < 0) return false;
+        final current = _demoItems[index];
+        _demoItems[index] = Institute.fromMap(
+          current.id,
+          {...current.toMap(), 'status': status},
+        );
+      } else {
+        await FirebaseFirestore.instance
+            .collection('institutes')
+            .doc(instituteId)
+            .update({'status': status});
+        _realItems.removeWhere((item) => item.id == instituteId);
+        if (status == 'approved') {
+          final doc = await FirebaseFirestore.instance
+              .collection('institutes')
+              .doc(instituteId)
+              .get();
+          if (doc.exists) _realItems.add(Institute.fromMap(doc.id, doc.data()!));
+        }
+      }
+      notifyListeners();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
+      return false;
     }
   }
 }
