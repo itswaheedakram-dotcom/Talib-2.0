@@ -12,8 +12,8 @@ import '../../../institutes/data/institute_repository.dart';
 import '../../../models/institute.dart';
 
 class CommunityScreen extends StatefulWidget{
-  final String? instituteId;final String? instituteName;
-  const CommunityScreen({super.key,this.instituteId,this.instituteName});
+  final String? instituteId;final String? instituteName;final String? authorId;
+  const CommunityScreen({super.key,this.instituteId,this.instituteName,this.authorId});
   @override State<CommunityScreen> createState()=>_CommunityScreenState();
 }
 class _CommunityScreenState extends State<CommunityScreen>{
@@ -103,7 +103,7 @@ class _CommunityScreenState extends State<CommunityScreen>{
     final uid=identity.resolveUid(user?.uid??'');
 
     return Scaffold(
-      appBar:AppBar(title:Text(widget.instituteName==null?'Community':'${widget.instituteName} Community'),actions:[
+      appBar:AppBar(title:Text(widget.authorId!=null?'My Posts':widget.instituteName==null?'Community':'${widget.instituteName} Community'),actions:[
         IconButton(tooltip:'Notifications',icon:const Icon(Icons.notifications_none),onPressed:()=>context.push('/notifications')),
         PopupMenuButton<bool>(onSelected:(v)=>setState(()=>popular=v),itemBuilder:(_)=>const[
           PopupMenuItem(value:false,child:Text('Latest')),PopupMenuItem(value:true,child:Text('Popular')),
@@ -197,6 +197,8 @@ class _CommunityScreenState extends State<CommunityScreen>{
       if(!demo&&!ready)return _errorState(StateError(FirebaseService.initializationErrorMessage.isEmpty?'Firebase is not initialized.':FirebaseService.initializationErrorMessage));
       if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
       var posts=s.data??const <Post>[];
+      final authorId=widget.authorId;
+      if(authorId!=null)posts=posts.where((p)=>p.authorId==authorId).toList();
       if(instituteFilterId!=null){
         posts=posts.where((p)=>p.instituteIds.contains(instituteFilterId)||p.instituteId==instituteFilterId).toList();
       }else if(timelineTab==0){
