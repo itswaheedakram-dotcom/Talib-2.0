@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../../../core/services/database_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
+import '../../../../app/theme.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,7 +13,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  static const green = Color(0xFF00A66A), darkGreen = Color(0xFF00543D), lightGreen = Color(0xFFEAF8F2);
+  static const green = AppColors.primaryGreen, darkGreen = AppColors.darkGreen, lightGreen = AppColors.softGreen;
   final name = TextEditingController(), level = TextEditingController(), institute = TextEditingController(), program = TextEditingController(), city = TextEditingController();
   bool loading = false, saving = false;
   User? get user => FirebaseService.initialized ? FirebaseAuth.instance.currentUser : null;
@@ -57,8 +58,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }, SetOptions(merge: true));
       await u.updateDisplayName(name.text.trim().isEmpty ? null : name.text.trim());
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated')));
-    } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not save profile. Please try again.')));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not save profile: $error')));
     } finally {
       if (mounted) setState(() => saving = false);
     }
