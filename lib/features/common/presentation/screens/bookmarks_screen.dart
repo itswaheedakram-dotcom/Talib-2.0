@@ -8,6 +8,7 @@ import '../../../../core/services/database_service.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../../institutes/data/institute_catalog.dart';
 import '../../../institutes/data/institute_repository.dart';
+import '../../../models/institute.dart';
 import '../../../models/post.dart';
 
 class BookmarksScreen extends StatelessWidget {
