@@ -146,7 +146,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     ),
                   ),
                 ),
-                if (currentId != null && currentId != widget.id) ...[
+                if (currentId != null && currentId.startsWith('demo-user-') && currentId != widget.id) ...[
                   const SizedBox(height: 8),
                   Row(
                     children: [
