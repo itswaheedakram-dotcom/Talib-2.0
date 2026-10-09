@@ -265,7 +265,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
           const SizedBox(height: 14),
           Row(
             children: [
-              if (hostel.isDemo || hostel.ownerId.isEmpty)
+              if (hostel.ownerId.trim().isEmpty)
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => context.push('/hostel/' + Uri.encodeComponent(hostel.id) + '/claim?name=' + Uri.encodeComponent(hostel.name)),
@@ -274,7 +274,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                   ),
                 ),
               if (_canManage) ...[
-                if (hostel.isDemo || hostel.ownerId.isEmpty) const SizedBox(width: 8),
+                if (hostel.ownerId.trim().isEmpty) const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => context.push('/hostel/' + Uri.encodeComponent(hostel.id) + '/manage', extra: hostel),
