@@ -104,12 +104,16 @@ class InstituteRepository extends ChangeNotifier {
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('institutes')
-          .where('status', isEqualTo: 'approved')
+          .where('status', whereIn: const ['approved', 'verified'])
           .get();
-      final loaded = snapshot.docs
-          .map((doc) => Institute.fromMap(doc.id, doc.data()))
-          .where((item) => item.status.toLowerCase() == 'approved')
-          .toList();
+      final loaded = snapshot.docs.map((doc) {
+        final data = Map<String, dynamic>.from(doc.data());
+        // Normalize legacy records written with the old claim status into the shared model.
+        if ((data['status'] ?? '').toString().toLowerCase() == 'verified') {
+          data['status'] = 'approved';
+        }
+        return Institute.fromMap(doc.id, data);
+      }).where((item) => item.status.toLowerCase() == 'approved').toList();
       _realItems
         ..clear()
         ..addAll(loaded);

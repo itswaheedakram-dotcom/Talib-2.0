@@ -48,7 +48,7 @@ service cloud.firestore {
       match /comments/{commentId} { allow read, write: if signedIn(); }
     }
     match /institutes/{instituteId} {
-      allow read: if resource.data.status == 'approved'
+      allow read: if resource.data.status in ['approved', 'verified']
         || admin()
         || managerAdminPermission('manage_institutes')
         || (signedIn() && (
@@ -71,9 +71,10 @@ service cloud.firestore {
       allow update: if admin()
         || managerAdminPermission('manage_institutes')
         || (managerAdminPermission('ownership_claim_review')
-          && request.resource.data.status == resource.data.status
+          && (request.resource.data.status == resource.data.status
+            || (resource.data.status == 'verified' && request.resource.data.status == 'approved'))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'ownerId', 'representativeId', 'ownershipVerified', 'updatedAt'
+            'ownerId', 'representativeId', 'ownershipVerified', 'updatedAt', 'status'
           ]))
         || (signedIn()
           && resource.data.ownerId == request.auth.uid

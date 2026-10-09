@@ -40,6 +40,7 @@ class AdminInstituteClaimsScreen extends StatelessWidget {
         'ownerId': representativeId,
         'representativeId': representativeId,
         'ownershipVerified': true,
+        'status': 'approved',
         'updatedAt': FieldValue.serverTimestamp(),
       };
       if (existingInstitute.exists) {
