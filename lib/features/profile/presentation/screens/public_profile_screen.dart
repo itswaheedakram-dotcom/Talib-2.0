@@ -15,7 +15,7 @@ class PublicProfileScreen extends StatefulWidget {
 }
 
 class _PublicProfileScreenState extends State<PublicProfileScreen> {
-  User? get me => FirebaseAuth.instance.currentUser;
+  User? get me => FirebaseService.initialized ? FirebaseAuth.instance.currentUser : null;
 
   Future<void> _review(String name) async {
     final current = me;
