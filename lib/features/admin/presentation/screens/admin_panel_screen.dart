@@ -217,6 +217,87 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
+  Widget _buildDemoPanel(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Admin Panel'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Center(
+              child: Chip(
+                label: const Text('Demo Super Admin'),
+                backgroundColor: AppColors.softGreen,
+                labelStyle: const TextStyle(color: AppColors.darkGreen),
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text('Demo administration', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          const Text(
+            'Waheed Akram is Super Admin in Demo Mode. These tools are isolated from Firebase and real user data.',
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.verified_user_outlined, color: AppColors.darkGreen),
+              title: const Text('Demo identity active'),
+              subtitle: const Text('Profile ID: demo-user-6 • Profile handle: waheed'),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.security_outlined, color: AppColors.darkGreen),
+              title: const Text('Permission boundary'),
+              subtitle: const Text(
+                'Demo Super Admin cannot create Firebase Manager Admins, approve real claims, or modify real platform records.',
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text('Admin modules', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          _section(
+            'Hostel Ownership Claims',
+            'Demo-safe claim review will use demo records only',
+            Icons.hotel_outlined,
+            () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Demo claim-review workflow is being connected to demo records. No Firebase data was changed.')),
+            ),
+          ),
+          _section(
+            'Institute Claims',
+            'Demo-safe ownership review',
+            Icons.school_outlined,
+            () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Demo institute-claim workflow is not connected yet. No Firebase data was changed.')),
+            ),
+          ),
+          _section(
+            'Community Moderation',
+            'Demo-safe moderation tools',
+            Icons.forum_outlined,
+            () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Demo moderation workflow is not connected yet. No Firebase data was changed.')),
+            ),
+          ),
+          _section(
+            'Reports & Audit Log',
+            'Demo-only administrative history',
+            Icons.history_rounded,
+            () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Demo reports and audit history are not connected yet. No Firebase data was changed.')),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -230,6 +311,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             body: Center(child: Text('Admin access is not assigned to this account.')),
           );
         }
+        if (_access.isDemoSuperAdmin) return _buildDemoPanel(context);
         final canReviewClaims = _access.can('ownership_claim_review');
         final canManageInstitutes = _access.can('manage_institutes');
         final canManageHostels = _access.can('manage_hostels');
