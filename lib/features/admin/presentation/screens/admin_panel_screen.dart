@@ -263,11 +263,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           const Text('Admin modules', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
           _section(
             'Hostel Ownership Claims',
-            'Demo-safe claim review will use demo records only',
+            'Review, approve or reject demo hostel ownership requests',
             Icons.hotel_outlined,
-            () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Demo claim-review workflow is being connected to demo records. No Firebase data was changed.')),
-            ),
+            () => context.push('/admin/hostel-claims'),
           ),
           _section(
             'Institute Claims',
