@@ -113,6 +113,16 @@ class InstituteCatalog extends ChangeNotifier {
     ),
   ];
 
+  static const List<String> sectors = [
+    'Private', 'Government', 'Semi-government', 'Non-profit',
+  ];
+  static const List<String> submissionModes = [
+    'Online', 'Physical', 'Online / Physical', 'Not applicable',
+  ];
+  static const List<String> admissionStatuses = [
+    'Open', 'Upcoming', 'Closed', 'Not announced',
+  ];
+
   List<InstituteTypeOption> _types = List.unmodifiable(_defaults);
   bool loading = false;
   String? error;
