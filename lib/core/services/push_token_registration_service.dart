@@ -27,7 +27,7 @@ class PushTokenRegistrationService {
     if (user == null || user.isAnonymous) return;
     try {
       await AdminAccessService.instance.refresh(user:user);
-      final settings = await FirebaseMessaging.instance.requestPermission(alert:true,badge:true,sound:true);
+      await FirebaseMessaging.instance.requestPermission(alert:true,badge:true,sound:true);
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) await _save(user.uid, token);
       _tokenSubscription ??= FirebaseMessaging.instance.onTokenRefresh.listen((token) {

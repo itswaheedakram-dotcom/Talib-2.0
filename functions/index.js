@@ -29,9 +29,10 @@ exports.onIssueTicketCreated = onDocumentCreated('issueTickets/{ticketId}', asyn
   const ticketId = event.params.ticketId;
   const ticketNumber = ticket.ticketNumber || ticketId;
   const recipients = new Set();
-  const managers = await db.collection('adminRoles').where('role', '==', 'manager_admin').where('status', '==', 'active').get();
+  const managers = await db.collection('adminRoles').where('role', '==', 'manager_admin').get();
   for (const doc of managers.docs) {
-    if (doc.data().permissions?.manage_reports === true) recipients.add(doc.id);
+    const role = doc.data();
+    if (role.status === 'active' && role.permissions?.manage_reports === true) recipients.add(doc.id);
   }
   const tokenCandidates = await db.collection('pushTokens').where('adminRecipient', '==', true).get();
   for (const doc of tokenCandidates.docs) {

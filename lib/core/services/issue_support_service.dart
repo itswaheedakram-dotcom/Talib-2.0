@@ -35,7 +35,7 @@ class IssueSupportService extends ChangeNotifier {
     final merged = <String, Map<String, dynamic>>{for (final f in defaultFaqs) f['id'] as String: Map<String,dynamic>.from(f)};
     if (isDemo) for (final e in _demoFaqOverrides.entries) { merged[e.key] = Map<String,dynamic>.from(e.value); }
     for (final f in remote) { final id = f['id']?.toString() ?? ''; if (id.isNotEmpty) merged[id] = Map<String,dynamic>.from(f); }
-    return merged.values.where((f) => f['isEnabled'] != false).toList()..sort((a,b) {
+    return merged.values.where((f) => includeDisabled || f['isEnabled'] != false).toList()..sort((a,b) {
       final c = (a['category'] ?? '').toString().compareTo((b['category'] ?? '').toString());
       return c != 0 ? c : ((a['order'] as num?)?.toInt() ?? 999).compareTo(((b['order'] as num?)?.toInt() ?? 999));
     });

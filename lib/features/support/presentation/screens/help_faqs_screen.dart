@@ -37,7 +37,7 @@ class AdminFaqManagementScreen extends StatelessWidget{
       TextFormField(controller:c,maxLength:80,decoration:const InputDecoration(labelText:'Category'),validator:(v)=>v==null||v.trim().isEmpty?'Category is required.':null),
       TextFormField(controller:o,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Sort order')),
       SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Enabled'),value:enabled,onChanged:(v)=>setD(()=>enabled=v)),
-    ])))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancel')),FilledButton(onPressed:()=>key.currentState?.validate()==true?Navigator.pop(ctx,true):null,child:const Text('Save FAQ'))])));
+    ])))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancel')),FilledButton(onPressed:(){if(key.currentState?.validate()==true) Navigator.pop(ctx,true);},child:const Text('Save FAQ'))])));
     if(save==true){try{await IssueSupportService.instance.saveFaq(id:faq?['id']?.toString(),question:q.text,answer:a.text,category:c.text,order:int.tryParse(o.text)??100,enabled:enabled);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('FAQ saved.')));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Could not save FAQ: '+e.toString())));}}
     q.dispose();a.dispose();c.dispose();o.dispose();
   }
