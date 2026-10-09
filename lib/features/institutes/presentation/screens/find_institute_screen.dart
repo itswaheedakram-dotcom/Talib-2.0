@@ -24,6 +24,9 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
   String _program = 'All programs';
   String _submissionMode = 'All modes';
   String _campus = 'All campuses';
+  String _admission = 'All admission statuses';
+  String _entryTest = 'Any entry test';
+  String _feeRange = 'Any fee range';
 
   @override
   void initState() {
@@ -67,6 +70,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
   }
 
   List<String> get _provinces => _values(_typeItems, (i) => i.province, 'All provinces');
+  List<String> get _feeRanges => _values(InstituteRepository.instance.items, (i) => i.feeRange, 'Any fee range');
   List<String> get _cities =>
       _values(_provinceItems, (i) => i.city, 'All cities');
 
@@ -110,6 +114,9 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
           programMatch &&
           (_submissionMode == 'All modes' || i.submissionMode == _submissionMode) &&
           (_campus == 'All campuses' || i.campus == _campus) &&
+          (_admission == 'All admission statuses' || i.admissionStatus == _admission) &&
+          (_entryTest == 'Any entry test' || (_entryTest == 'Required' ? i.entryTestRequired : !i.entryTestRequired)) &&
+          (_feeRange == 'Any fee range' || i.feeRange == _feeRange) &&
           (score == null || score >= i.minScore);
     }).toList();
   }
@@ -125,6 +132,9 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
     if (_program != 'All programs') _program,
     if (_submissionMode != 'All modes') _submissionMode,
     if (_campus != 'All campuses') _campus,
+    if (_admission != 'All admission statuses') _admission,
+    if (_entryTest != 'Any entry test') 'Entry test: $_entryTest',
+    if (_feeRange != 'Any fee range') _feeRange,
     if (_scoreController.text.trim().isNotEmpty) 'Score ≥ ${_scoreController.text.trim()}',
   ];
 
@@ -138,7 +148,60 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
       _program = 'All programs';
       _submissionMode = 'All modes';
       _campus = 'All campuses';
+      _admission = 'All admission statuses';
+      _entryTest = 'Any entry test';
+      _feeRange = 'Any fee range';
       _scoreController.clear();
+    });
+  }
+
+  void _removeFilter(String filter) {
+    setState(() {
+      if (_education != 'All' && filter == _catalog.labelFor(_education)) {
+        _education = 'All';
+        _province = 'All provinces';
+        _city = 'All cities';
+        _sector = 'All sectors';
+        _instituteId = 'All institutes';
+        _program = 'All programs';
+        _campus = 'All campuses';
+      } else if (filter == _province) {
+        _province = 'All provinces';
+        _city = 'All cities';
+        _sector = 'All sectors';
+        _instituteId = 'All institutes';
+        _program = 'All programs';
+        _campus = 'All campuses';
+      } else if (filter == _city) {
+        _city = 'All cities';
+        _sector = 'All sectors';
+        _instituteId = 'All institutes';
+        _program = 'All programs';
+        _campus = 'All campuses';
+      } else if (filter == _sector) {
+        _sector = 'All sectors';
+        _instituteId = 'All institutes';
+        _program = 'All programs';
+        _campus = 'All campuses';
+      } else if (filter == (_selectedInstitute?.name ?? _instituteId)) {
+        _instituteId = 'All institutes';
+        _program = 'All programs';
+        _campus = 'All campuses';
+      } else if (filter == _program) {
+        _program = 'All programs';
+      } else if (filter == _submissionMode) {
+        _submissionMode = 'All modes';
+      } else if (filter == _campus) {
+        _campus = 'All campuses';
+      } else if (filter == _admission) {
+        _admission = 'All admission statuses';
+      } else if (filter == 'Entry test: $_entryTest') {
+        _entryTest = 'Any entry test';
+      } else if (filter == _feeRange) {
+        _feeRange = 'Any fee range';
+      } else if (filter.startsWith('Score ≥ ')) {
+        _scoreController.clear();
+      }
     });
   }
 
@@ -151,6 +214,9 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
     var program = _program;
     var mode = _submissionMode;
     var campus = _campus;
+    var admission = _admission;
+    var entryTest = _entryTest;
+    var feeRange = _feeRange;
     var score = _scoreController.text;
 
     showModalBottomSheet<void>(
@@ -187,6 +253,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
             if (i.nextProgram.trim().isNotEmpty) programSet.add(i.nextProgram.trim());
           }
           final programOptions = ['All programs', ...programSet.toList()..sort()];
+          final feeOptions = _values(InstituteRepository.instance.items, (i) => i.feeRange, 'Any fee range');
 
           return Padding(
           padding: EdgeInsets.fromLTRB(20, 8, 20, 24 + MediaQuery.viewInsetsOf(context).bottom),
@@ -199,7 +266,9 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                   TextButton(onPressed: () {
                     education = 'All'; province = 'All provinces'; city = 'All cities';
                     sector = 'All sectors'; instituteId = 'All institutes'; program = 'All programs';
-                    mode = 'All modes'; campus = 'All campuses'; score = '';
+                    mode = 'All modes'; campus = 'All campuses';
+                    admission = 'All admission statuses'; entryTest = 'Any entry test';
+                    feeRange = 'Any fee range'; score = '';
                     _scoreController.clear(); sheetSet(() {});
                   }, child: const Text('Clear all')),
                 ]),
@@ -237,6 +306,9 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                 if (instituteId != 'All institutes') _AdmissionSummary(instituteItems().firstWhere((i) => i.id == instituteId, orElse: () => InstituteRepository.instance.byId(instituteId)!)),
                 _Group('Application / Submission', ['All modes', ...InstituteCatalog.submissionModes], mode, (v) => sheetSet(() => mode = v)),
                 _Group('Campus', campuses, campus, (v) => sheetSet(() => campus = v)),
+                _Group('Admission Status', ['All admission statuses', ...InstituteCatalog.admissionStatuses], admission, (v) => sheetSet(() => admission = v)),
+                _Group('Entry Test', const ['Any entry test', 'Required', 'Not required'], entryTest, (v) => sheetSet(() => entryTest = v)),
+                _Group('Fee Range', feeOptions, feeRange, (v) => sheetSet(() => feeRange = v)),
                 const Text('Your Percentage / CGPA', style: TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 7),
                 TextField(
@@ -258,7 +330,8 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                     setState(() {
                       _education = education; _province = province; _city = city;
                       _sector = sector; _instituteId = instituteId; _program = program; _submissionMode = mode;
-                      _campus = campus; _scoreController.text = score;
+                      _campus = campus; _admission = admission; _entryTest = entryTest;
+                      _feeRange = feeRange; _scoreController.text = score;
                     });
                     Navigator.pop(sheetContext);
                   }, child: const Text('Apply filters'))),
@@ -308,7 +381,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
               if (_activeFilters.isNotEmpty)
                 Wrap(
                   spacing: 7, runSpacing: 7,
-                  children: _activeFilters.map((f) => Chip(label: Text(f))).toList(),
+                  children: _activeFilters.map((f) => InputChip(label: Text(f), onDeleted: () => _removeFilter(f))).toList(),
                 )
               else
                 const Text('No filters applied', style: TextStyle(color: AppColors.mutedText, fontSize: 13)),
