@@ -32,7 +32,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     finally{if(mounted)setState(()=>_busy=false);}
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('Report an Issue'),actions:[TextButton.icon(onPressed:()=>context.push('/my-reports'),icon:const Icon(Icons.confirmation_number_outlined,color:AppColors.white),label:const Text('My Reports',style:TextStyle(color:AppColors.white)))]),
+    appBar:AppBar(leading:IconButton(tooltip:'Back',icon:const Icon(Icons.arrow_back_rounded),onPressed:()=>context.canPop()?context.pop():context.go('/')),title:const Text('Report an Issue'),actions:[TextButton.icon(onPressed:()=>context.push('/my-reports'),icon:const Icon(Icons.confirmation_number_outlined,color:AppColors.white),label:const Text('My Reports',style:TextStyle(color:AppColors.white)))]),
     body:SafeArea(child:Form(key:_key,child:ListView(padding:const EdgeInsets.all(16),children:[
       Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(16)),child:const Row(children:[Icon(Icons.support_agent_rounded,color:AppColors.darkGreen,size:32),SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('How can we help?',style:TextStyle(fontWeight:FontWeight.w800,fontSize:17,color:AppColors.darkGreen)),SizedBox(height:5),Text('Describe the problem and keep your ticket number for updates.',style:TextStyle(color:AppColors.darkGreen))]))])),
       const SizedBox(height:18),const Text('Issue category',style:TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:7),
@@ -54,7 +54,7 @@ class MyReportsScreen extends StatelessWidget {
   const MyReportsScreen({super.key});
   @override Widget build(BuildContext context){
     final uid=ActiveProfileController.instance.effectiveUid??FirebaseAuth.instance.currentUser?.uid;
-    return Scaffold(appBar:AppBar(title:const Text('My Reports')),body:uid==null?const Center(child:Text('Sign in or activate a Demo profile to view reports.')):StreamBuilder<List<Map<String,dynamic>>>(stream:IssueSupportService.instance.watchMyTickets(uid),builder:(context,s){
+    return Scaffold(appBar:AppBar(leading:IconButton(tooltip:'Back',icon:const Icon(Icons.arrow_back_rounded),onPressed:()=>context.canPop()?context.pop():context.go('/')),title:const Text('My Reports')),body:uid==null?const Center(child:Text('Sign in or activate a Demo profile to view reports.')):StreamBuilder<List<Map<String,dynamic>>>(stream:IssueSupportService.instance.watchMyTickets(uid),builder:(context,s){
       if(s.hasError)return const Center(child:Text('Could not load reports. Please try again.'));
       if(!s.hasData)return const Center(child:CircularProgressIndicator());
       final ts=s.data!;
@@ -83,7 +83,7 @@ class _IssueTicketDetailScreenState extends State<IssueTicketDetailScreen>{
     catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Could not save ticket update: '+e.toString())));}
     finally{if(mounted)setState(()=>_saving=false);}
   }
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Text(widget.adminMode?'Manage Ticket':'Ticket Details')),body:StreamBuilder<Map<String,dynamic>?>(stream:IssueSupportService.instance.watchTicket(widget.ticketId),builder:(context,s){
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(leading:IconButton(tooltip:'Back',icon:const Icon(Icons.arrow_back_rounded),onPressed:()=>context.canPop()?context.pop():context.go(widget.adminMode?'/admin/issue-tickets':'/my-reports')),title:Text(widget.adminMode?'Manage Ticket':'Ticket Details')),body:StreamBuilder<Map<String,dynamic>?>(stream:IssueSupportService.instance.watchTicket(widget.ticketId),builder:(context,s){
     if(s.hasError)return const Center(child:Text('Could not load this ticket.'));
     if(!s.hasData)return const Center(child:CircularProgressIndicator());
     final t=s.data;if(t==null)return const Center(child:Text('Ticket not found.'));
