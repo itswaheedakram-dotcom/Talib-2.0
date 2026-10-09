@@ -11,6 +11,8 @@ import '../../../institutes/data/institute_opportunity_repository.dart';
 import '../../../models/institute.dart';
 import '../../../models/hostel.dart';
 import '../../../hostels/data/hostel_repository.dart';
+import '../../../hostels/data/hostel_registry.dart';
+import '../../../institutes/data/institute_catalog.dart';
 import '../../domain/smart_search_parser.dart';
 
 class _Hit {
@@ -55,7 +57,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
     final q=SmartSearchParser.parse(text);
     final mode=_demo?'demo':'real';
     if(_loadedMode!=mode){_loadedMode=mode;_institutesLoaded=false;_opportunitiesLoaded=false;_hostelCache=null;}
-    setState(() { _parsed=q; _loading=true; _searched=true; _error=null; });
+    setState(() { _parsed=q; _hits=[]; _loading=true; _searched=true; _error=null; });
     final hits=< _Hit>[];
     try {
       final ir=InstituteRepository.instance;
@@ -254,17 +256,25 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
           'Lahore mein Educators','Johar Town mein achy hostel','Girls hostel under 15000','Arid mein admission open hai?','Scholarship for BS students'
         ].map((s)=>ActionChip(label:Text(s),backgroundColor:AppColors.softGreen,side:BorderSide.none,onPressed:()=>search(s))).toList())),
         if(_parsed!=null)_understood(_parsed!),
-        if(_loading)const LinearProgressIndicator(minHeight:2,color:AppColors.primaryGreen),
         if(_error!=null)Padding(padding:const EdgeInsets.all(16),child:Text(_error!)),
-        if(_searched&&!_loading&&_hits.isEmpty&&_error==null)const Expanded(child:Center(child:Padding(padding:EdgeInsets.all(24),child:Text('Matching listing nahi mili. Query ya location badal kar dekhein.',textAlign:TextAlign.center))))
-        else Expanded(child:ListView.separated(padding:const EdgeInsets.all(12),itemCount:_hits.length,separatorBuilder:(_,__)=>const SizedBox(height:6),itemBuilder:(context,index){
-          final h=_hits[index];return Card(color:AppColors.white,margin:EdgeInsets.zero,child:ListTile(
-            leading:CircleAvatar(backgroundColor:AppColors.softGreen,foregroundColor:AppColors.darkGreen,child:Icon(h.icon)),
-            title:Text(h.title,style:const TextStyle(fontWeight:FontWeight.w700,color:AppColors.darkGreen)),
-            subtitle:Padding(padding:const EdgeInsets.only(top:5),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(h.type,style:const TextStyle(color:AppColors.primaryGreen,fontWeight:FontWeight.w600)),if(h.location.isNotEmpty)Text(h.location),if(h.subtitle.isNotEmpty)Text(h.subtitle,maxLines:2,overflow:TextOverflow.ellipsis)])),
-            trailing:const Icon(Icons.chevron_right,color:AppColors.primaryGreen),onTap:()=>_open(h),
-          ));
-        })),
+        Expanded(
+          child: _loading
+              ? const _SearchResultShimmer()
+              : _searched && _hits.isEmpty && _error==null
+                  ? const Center(child:Padding(padding:EdgeInsets.all(24),child:Text('Matching listing nahi mili. Query ya location badal kar dekhein.',textAlign:TextAlign.center)))
+                  : ListView.separated(
+                      padding:const EdgeInsets.all(12),
+                      itemCount:_hits.length,
+                      separatorBuilder:(_,__)=>const SizedBox(height:6),
+                      itemBuilder:(context,index){
+                        final h=_hits[index];return Card(color:AppColors.white,margin:EdgeInsets.zero,child:ListTile(
+                          leading:CircleAvatar(backgroundColor:AppColors.softGreen,foregroundColor:AppColors.darkGreen,child:Icon(h.icon)),
+                          title:Text(h.title,style:const TextStyle(fontWeight:FontWeight.w700,color:AppColors.darkGreen)),
+                          subtitle:Padding(padding:const EdgeInsets.only(top:5),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(h.type,style:const TextStyle(color:AppColors.primaryGreen,fontWeight:FontWeight.w600)),if(h.location.isNotEmpty)Text(h.location),if(h.subtitle.isNotEmpty)Text(h.subtitle,maxLines:2,overflow:TextOverflow.ellipsis)])),
+                          trailing:const Icon(Icons.chevron_right,color:AppColors.primaryGreen),onTap:()=>_open(h),
+                        ));
+                      }),
+        ),
       ])),
     );
   }
@@ -272,48 +282,83 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
   Future<void> _editFilters() async {
     final parsed=_parsed;
     if(parsed==null)return;
-    final city=TextEditingController(text:parsed.location??'');
-    final area=TextEditingController(text:parsed.area??'');
-    final budget=TextEditingController(text:parsed.maxBudget?.toString()??'');
-    var gender=parsed.gender??'Any';
-    final apply=await showModalBottomSheet<bool>(
+    final instituteItems=InstituteRepository.instance.items;
+    final hostels=_hostelCache??HostelRepository.demoHostels;
+    final cities=<String>{...instituteItems.map((i)=>i.city),...hostels.map((h)=>h.city)}..removeWhere((v)=>v.trim().isEmpty);
+    final areas=<String>{...instituteItems.map((i)=>i.area),...instituteItems.map((i)=>i.town),...hostels.map((h)=>h.area)}..removeWhere((v)=>v.trim().isEmpty);
+    final programs=<String>{...instituteItems.expand((i)=>i.programs),...instituteItems.map((i)=>i.nextProgram)}..removeWhere((v)=>v.trim().isEmpty);
+    final sectors=<String>{...instituteItems.map((i)=>i.sector)}..removeWhere((v)=>v.trim().isEmpty);
+    final feeRanges=<String>{...instituteItems.map((i)=>i.feeRange)}..removeWhere((v)=>v.trim().isEmpty);
+    final catalog=InstituteCatalog.instance;
+    String city=parsed.location??'All';
+    String area=parsed.area??'All';
+    String budget=parsed.maxBudget?.toString()??'';
+    String gender=parsed.gender??'All';
+    String hostelType='All';
+    String roomType='All';
+    String instituteType='All';
+    String program=parsed.program??'All';
+    String sector='All';
+    String admissionStatus='All';
+    String feeRange='All';
+    bool acOnly=false;
+    final budgetController=TextEditingController(text:budget);
+    List<DropdownMenuItem<String>> options(Iterable<String> values,{String all='All'})=>[
+      DropdownMenuItem(value:all,child:Text(all)),
+      ...values.toSet().where((v)=>v.trim().isNotEmpty).toList()..sort().map((v)=>DropdownMenuItem(value:v,child:Text(v))),
+    ];
+    final applied=await showModalBottomSheet<bool>(
       context:context,showDragHandle:true,isScrollControlled:true,
       builder:(sheetContext)=>StatefulBuilder(builder:(context,setSheet)=>Padding(
         padding:EdgeInsets.fromLTRB(18,10,18,MediaQuery.of(context).viewInsets.bottom+22),
         child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text('Search filters',style:Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height:12),
-          TextField(controller:city,decoration:const InputDecoration(labelText:'City / location')),
+          Row(children:[
+            Expanded(child:Text('Search filters',style:Theme.of(context).textTheme.titleLarge)),
+            TextButton(onPressed:()=>setSheet((){
+              city='All';area='All';budgetController.clear();gender='All';hostelType='All';roomType='All';instituteType='All';program='All';sector='All';admissionStatus='All';feeRange='All';acOnly=false;
+            }),child:const Text('Clear all')),
+          ]),
+          const SizedBox(height:10),
+          _filterDropdown('City / location',options(cities),city,(v)=>setSheet(()=>city=v)),
+          _filterDropdown('Area / town',options(areas),area,(v)=>setSheet(()=>area=v)),
+          TextField(controller:budgetController,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Maximum budget / rent (PKR)')),
           const SizedBox(height:8),
-          TextField(controller:area,decoration:const InputDecoration(labelText:'Area / town')),
-          const SizedBox(height:8),
-          TextField(controller:budget,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Maximum budget (PKR)')),
-          const SizedBox(height:8),
-          DropdownButtonFormField<String>(
-            value:gender,
-            decoration:const InputDecoration(labelText:'Hostel type'),
-            items:const [
-              DropdownMenuItem(value:'Any',child:Text('Any')),
-              DropdownMenuItem(value:'Male',child:Text('Boys / Male')),
-              DropdownMenuItem(value:'Female',child:Text('Girls / Female')),
-            ],
-            onChanged:(v)=>setSheet(()=>gender=v??'Any'),
-          ),
+          _filterDropdown('Hostel gender',options(['Male','Female','Both'],all:'All'),gender,(v)=>setSheet(()=>gender=v)),
+          _filterDropdown('Hostel type',options(HostelRegistry.types),hostelType,(v)=>setSheet(()=>hostelType=v)),
+          _filterDropdown('Room type',options(HostelRegistry.roomTypes),roomType,(v)=>setSheet(()=>roomType=v)),
+          SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('AC room / hostel only'),value:acOnly,onChanged:(v)=>setSheet(()=>acOnly=v)),
+          const Divider(),
+          const Text('Institute filters',style:TextStyle(fontWeight:FontWeight.w700,color:AppColors.darkGreen)),
+          _filterDropdown('Institute type',[
+            const DropdownMenuItem(value:'All',child:Text('All')),
+            ...catalog.types.map((t)=>DropdownMenuItem(value:t.id,child:Text(t.label))),
+          ],instituteType,(v)=>setSheet(()=>instituteType=v)),
+          _filterDropdown('Program / degree',options(programs),program,(v)=>setSheet(()=>program=v)),
+          _filterDropdown('Sector',options(sectors),sector,(v)=>setSheet(()=>sector=v)),
+          _filterDropdown('Admission status',options(InstituteCatalog.admissionStatuses,all:'All'),admissionStatus,(v)=>setSheet(()=>admissionStatus=v)),
+          _filterDropdown('Fee range',options(feeRanges),feeRange,(v)=>setSheet(()=>feeRange=v)),
           const SizedBox(height:16),
           SizedBox(width:double.infinity,child:FilledButton(
             onPressed:(){
               var base=parsed.original;
               const aliases=['Lahore','Lahor','Islamabad','Islam Abad','Rawalpindi','Pindi','Multan','Bahawalpur','Bahawal Poor','Faisalabad','Faisal Abad','Karachi','Krachi','Peshawar','Peshawer','Quetta','Gujranwala','Sialkot','Sargodha','Johar Town','Gulberg','Bosan Road','Bosan','New Campus','Baghdad-ul-Jadeed'];
-              for(final alias in aliases){base=base.replaceAll(RegExp(r'\b' + RegExp.escape(alias) + r'\b',caseSensitive:false), ' ');}
-              base=base.replaceAll(RegExp(r'\b(?:under|below|less than|max|maximum|budget|rs|pkr)?\s*\d[\d,]{3,}\b',caseSensitive:false),' ');
-              base=base.replaceAll(RegExp(r'\b(?:girls?|female|women|ladies|boys?|male|men)\b',caseSensitive:false),' ');
+              for(final alias in aliases){base=base.replaceAll(RegExp(r'\\b'+RegExp.escape(alias)+r'\\b',caseSensitive:false),' ');}
+              base=base.replaceAll(RegExp(r'\\b(?:under|below|less than|max|maximum|budget|rs|pkr)?\\s*\\d[\\d,]{3,}\\b',caseSensitive:false),' ');
+              base=base.replaceAll(RegExp(r'\\b(?:girls?|female|women|ladies|boys?|male|men)\\b',caseSensitive:false),' ');
               final parts=<String>[base.trim()];
-              if(city.text.trim().isNotEmpty)parts.add('in ${city.text.trim()}');
-              if(area.text.trim().isNotEmpty)parts.add(area.text.trim());
-              if(budget.text.trim().isNotEmpty)parts.add('under ${budget.text.trim()}');
-              if(gender=='Female')parts.add('girls');
-              if(gender=='Male')parts.add('boys');
-              _controller.text=parts.where((v)=>v.isNotEmpty).join(' ');
+              if(city!='All')parts.add('in $city');
+              if(area!='All')parts.add(area);
+              if(budgetController.text.trim().isNotEmpty)parts.add('under ${budgetController.text.trim()}');
+              if(gender!='All')parts.add(gender=='Female'?'girls':gender=='Male'?'boys':'both genders');
+              if(hostelType!='All')parts.add(hostelType);
+              if(roomType!='All')parts.add(roomType);
+              if(acOnly)parts.add('AC');
+              if(instituteType!='All')parts.add(catalog.labelFor(instituteType));
+              if(program!='All')parts.add(program);
+              if(sector!='All')parts.add(sector);
+              if(admissionStatus!='All')parts.add(admissionStatus);
+              if(feeRange!='All')parts.add(feeRange);
+              _controller.text=parts.where((v)=>v.trim().isNotEmpty).join(' ');
               Navigator.pop(sheetContext,true);
             },
             child:const Text('Apply filters'),
@@ -321,18 +366,78 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
         ])),
       )),
     );
-    city.dispose();area.dispose();budget.dispose();
-    if(apply==true)await search();
+    budgetController.dispose();
+    if(applied==true)await search();
+  }
+
+  Widget _filterDropdown(String label,List<DropdownMenuItem<String>> items,String selected,ValueChanged<String> onChanged){
+    final safeValue=items.any((item)=>item.value==selected)?selected:(items.isNotEmpty?items.first.value:'All');
+    return Padding(
+      padding:const EdgeInsets.only(bottom:8),
+      child:DropdownButtonFormField<String>(
+        value:safeValue,
+        isExpanded:true,
+        decoration:InputDecoration(labelText:label,border:const OutlineInputBorder()),
+        items:items,
+        onChanged:(value){if(value!=null)onChanged(value);},
+      ),
+    );
   }
 
   Widget _understood(ParsedGlobalQuery q)=>Container(
-    margin:const EdgeInsets.fromLTRB(14,6,14,4),padding:const EdgeInsets.all(10),
+    width:double.infinity,
+    margin:const EdgeInsets.fromLTRB(14,6,14,4),
+    padding:const EdgeInsets.all(12),
     decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(14),border:Border.all(color:AppColors.divider)),
     child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      const Row(children:[Icon(Icons.psychology_alt_outlined,color:AppColors.darkGreen),SizedBox(width:6),Text('Maine ye samjha',style:TextStyle(fontWeight:FontWeight.w800,color:AppColors.darkGreen))]),
-      const SizedBox(height:6),
-      Wrap(spacing:5,runSpacing:3,children:q.understood.map((s)=>Chip(label:Text(s,style:const TextStyle(fontSize:11,color:AppColors.darkGreen)),backgroundColor:AppColors.white,side:BorderSide.none,visualDensity:VisualDensity.compact)).toList()),
-      Align(alignment:Alignment.centerRight,child:TextButton.icon(onPressed:_editFilters,icon:const Icon(Icons.tune,size:17),label:const Text('Filters edit karein'))),
+      Row(children:[const Icon(Icons.psychology_alt_outlined,color:AppColors.darkGreen),const SizedBox(width:6),Text(q.isRomanUrdu?'Maine ye samjha':'What I understood',style:const TextStyle(fontWeight:FontWeight.w800,color:AppColors.darkGreen))]),
+      const SizedBox(height:7),
+      Text(q.summary,style:const TextStyle(color:AppColors.darkGreen,height:1.35)),
+      if(_loading) Padding(padding:const EdgeInsets.only(top:5),child:Text(q.isRomanUrdu?'Ab relevant results dhoond raha hoon…':'Finding matching results…',style:const TextStyle(color:AppColors.mutedText,fontSize:12))),
+      Align(alignment:Alignment.centerRight,child:TextButton.icon(onPressed:_editFilters,icon:const Icon(Icons.tune,size:17),label:Text(q.isRomanUrdu?'Filters badlein':'Edit filters'))),
     ]),
   );
+}
+
+class _SearchResultShimmer extends StatefulWidget {
+  const _SearchResultShimmer();
+  @override State<_SearchResultShimmer> createState()=>_SearchResultShimmerState();
+}
+
+class _SearchResultShimmerState extends State<_SearchResultShimmer> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller=AnimationController(vsync:this,duration:const Duration(milliseconds:950))..repeat(reverse:true);
+  @override void dispose(){_controller.dispose();super.dispose();}
+  @override Widget build(BuildContext context){
+    return AnimatedBuilder(
+      animation:_controller,
+      builder:(context,_)=>ListView.builder(
+        padding:const EdgeInsets.all(12),
+        itemCount:6,
+        itemBuilder:(context,index){
+          final opacity=0.28+(_controller.value*0.42);
+          return Opacity(
+            opacity:opacity,
+            child:Container(
+              margin:const EdgeInsets.only(bottom:9),
+              padding:const EdgeInsets.all(14),
+              decoration:BoxDecoration(color:AppColors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:AppColors.divider)),
+              child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Container(width:46,height:46,decoration:const BoxDecoration(color:AppColors.softGreen,shape:BoxShape.circle)),
+                const SizedBox(width:12),
+                Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  Container(height:15,width:180,decoration:BoxDecoration(color:AppColors.divider,borderRadius:BorderRadius.circular(5))),
+                  const SizedBox(height:10),
+                  Container(height:10,width:95,decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(5))),
+                  const SizedBox(height:8),
+                  Container(height:10,width:double.infinity,decoration:BoxDecoration(color:AppColors.divider,borderRadius:BorderRadius.circular(5))),
+                  const SizedBox(height:6),
+                  Container(height:10,width:145,decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(5))),
+                ])),
+              ]),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
