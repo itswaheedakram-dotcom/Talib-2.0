@@ -91,7 +91,7 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
 
     HostelManager? manager;
     final uid = _uid;
-    if (hostel != null && uid != null && uid != hostel.ownerId && FirebaseService.initialized) {
+    if (hostel != null && uid != null && uid != hostel.ownerId) {
       try {
         _repo ??= HostelRepository();
         manager = await _repo!.getManager(hostel.id, uid);
