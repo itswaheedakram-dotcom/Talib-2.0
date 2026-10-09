@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/services/active_profile_controller.dart';
@@ -16,6 +19,8 @@ class LocationCatalog extends ChangeNotifier {
   static final instance = LocationCatalog._();
 
   List<Map<String, String>> _entries = [];
+  List<Map<String, String>> _bundledEntries = [];
+  bool _bundledLoaded = false;
   final List<Map<String, String>> _demoEntries = [];
   bool loading = false;
   String? error;
@@ -33,7 +38,27 @@ class LocationCatalog extends ChangeNotifier {
     (isDemoMode ? _demoEntries : _entries).map((entry) => Map<String, String>.unmodifiable(entry)),
   );
 
+  Future<void> _loadBundled() async {
+    if (_bundledLoaded) return;
+    try {
+      final raw = await rootBundle.loadString('assets/data/pakistan_locations.json');
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      _bundledEntries = (decoded['entries'] as List? ?? const [])
+          .whereType<Map>()
+          .map((entry) => Map<String, String>.from(entry.map(
+            (key, value) => MapEntry(key.toString(), value.toString()),
+          )))
+          .toList();
+    } catch (e) {
+      error = 'Bundled Pakistan location data could not be loaded: $e';
+      _bundledEntries = [];
+    } finally {
+      _bundledLoaded = true;
+    }
+  }
+
   Future<void> load({bool force = false}) async {
+    await _loadBundled();
     if (isDemoMode) {
       _loaded = false;
       loading = false;
@@ -78,7 +103,10 @@ class LocationCatalog extends ChangeNotifier {
   }) {
     final normalizedParent = parentName.trim().toLowerCase();
     final normalizedCountry = country.trim().toLowerCase();
-    final source = isDemoMode ? _demoEntries : _entries;
+    final source = <Map<String, String>>[
+      ..._bundledEntries,
+      ...(isDemoMode ? _demoEntries : _entries),
+    ];
     final values = source.where((entry) {
       if (entry['type'] != type.toLowerCase()) return false;
       if (normalizedParent.isNotEmpty &&
