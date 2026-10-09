@@ -6,6 +6,7 @@ import '../../../../core/services/active_profile_controller.dart';
 import '../../../models/institute.dart';
 import '../../data/institute_catalog.dart';
 import '../../data/institute_repository.dart';
+import '../../data/location_catalog.dart';
 import '../widgets/institute_image_field.dart';
 
 class AddInstituteScreen extends StatefulWidget {
@@ -49,6 +50,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
   final Set<String> _customFacilities = {};
 
   final _catalog = InstituteCatalog.instance;
+  final _locations = LocationCatalog.instance;
   final _repository = InstituteRepository.instance;
   String _type = '';
   String _subcategory = '';
@@ -63,6 +65,8 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
     super.initState();
     _type = widget.type == 'all' ? '' : widget.type;
     _catalog.addListener(_onCatalogChanged);
+    _locations.addListener(_onCatalogChanged);
+    _locations.load();
     _catalog.load().then((_) {
       if (!mounted) return;
       if (_type.isEmpty || _catalog.byId(_type) == null) {
@@ -78,6 +82,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
   @override
   void dispose() {
     _catalog.removeListener(_onCatalogChanged);
+    _locations.removeListener(_onCatalogChanged);
     for (final controller in [
       _name, _campus, _country, _province, _district, _city, _area, _board, _town, _address, _description,
       _website, _applicationUrl, _contact, _eligibility, _minScore, _nextProgram, _programs,
@@ -229,6 +234,27 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
     final types = _catalog.types;
     final selectedType = _catalog.byId(_type);
     final subcategories = _catalog.subcategoriesFor(_type);
+    final countries = _locations.options(type: 'country').isNotEmpty
+        ? _locations.options(type: 'country')
+        : LocationCatalog.defaultCountries;
+    final pakistanRegions = const [
+      'Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan',
+      'Islamabad Capital Territory', 'Azad Jammu & Kashmir', 'Gilgit-Baltistan',
+    ];
+    final regions = _locations.options(type: 'region', country: _country.text).isNotEmpty
+        ? _locations.options(type: 'region', country: _country.text)
+        : (_country.text.trim().toLowerCase() == 'pakistan' ? pakistanRegions : const <String>[]);
+    final remoteDistricts = _locations.options(
+      type: 'district', parentName: _province.text, country: _country.text,
+    );
+    final districts = remoteDistricts.isNotEmpty ? remoteDistricts : _districtsForProvince(_province.text);
+    final remoteCities = _locations.options(
+      type: 'city',
+      parentName: _district.text.trim().isNotEmpty ? _district.text : _province.text,
+      country: _country.text,
+    );
+    final cities = remoteCities.isNotEmpty ? remoteCities : _citiesForProvince(_province.text);
+    final areas = _locations.options(type: 'area', parentName: _city.text, country: _country.text);
     if (_type.isNotEmpty && !types.any((type) => type.id == _type) && types.isNotEmpty) {
       _type = types.first.id;
     }
@@ -290,7 +316,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
             _locationAutocomplete(
               controller: _country,
               label: 'Country',
-              options: const ['Pakistan', 'United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Oman', 'Bahrain', 'Kuwait', 'United Kingdom', 'United States', 'Canada', 'Australia', 'Malaysia', 'Turkey'],
+              options: countries,
               required: true,
               onSelected: (_) {
                 _province.clear();
@@ -305,9 +331,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
                 child: _locationAutocomplete(
                   controller: _province,
                   label: 'Province / State / Region',
-                  options: _country.text.trim().toLowerCase() == 'pakistan'
-                      ? const ['Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan', 'Islamabad Capital Territory', 'Azad Jammu & Kashmir', 'Gilgit-Baltistan']
-                      : const [],
+                  options: regions,
                   required: true,
                   onSelected: (_) {
                     _district.clear();
@@ -322,7 +346,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
                 child: _locationAutocomplete(
                   controller: _district,
                   label: 'District / County (optional)',
-                  options: _districtsForProvince(_province.text),
+                  options: districts,
                   required: false,
                   onSelected: (_) {
                     _city.clear();
@@ -337,7 +361,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
                 child: _locationAutocomplete(
                   controller: _city,
                   label: 'City / Town',
-                  options: _citiesForProvince(_province.text),
+                  options: cities,
                   required: true,
                 ),
               ),
@@ -346,7 +370,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
                 child: _locationAutocomplete(
                   controller: _area,
                   label: 'Area / Locality (optional)',
-                  options: const [],
+                  options: areas,
                   required: false,
                 ),
               ),
