@@ -44,6 +44,9 @@ import '../features/messages/presentation/screens/chat_screen.dart';
 import '../features/settings/presentation/screens/settings_screen.dart';
 import '../features/settings/presentation/screens/blocked_users_screen.dart';
 import '../features/settings/presentation/screens/temporary_profiles_screen.dart';
+import '../features/admin/presentation/screens/admin_panel_screen.dart';
+import '../features/admin/presentation/screens/admin_hostel_claims_screen.dart';
+import '../features/admin/presentation/screens/admin_placeholder_screen.dart';
 
 final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/',builder:(_,__)=>const MainScreen()),
@@ -59,7 +62,11 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/institute/:id/programs',builder:(_,s)=>DisciplineInfoScreen(instituteId:s.pathParameters['id']!)),
   GoRoute(path:'/institute-dashboard',builder:(_,__)=>const InstituteDashboardScreen()),
   GoRoute(path:'/institute-admin/:claimId',builder:(_,s)=>InstituteAdminScreen(claimId:s.pathParameters['claimId']!)),
+  GoRoute(path:'/admin',builder:(_,__)=>const AdminPanelScreen()),
   GoRoute(path:'/admin/institute-claims',builder:(_,__)=>const AdminInstituteClaimsScreen()),
+  GoRoute(path:'/admin/hostel-claims',builder:(_,__)=>const AdminHostelClaimsScreen()),
+  GoRoute(path:'/admin/reports',builder:(_,__)=>const AdminPlaceholderScreen(title:'Reports',description:'Report triage and moderation actions will be added in the next admin phase.')),
+  GoRoute(path:'/admin/audit-logs',builder:(_,__)=>const AdminPlaceholderScreen(title:'Audit Log',description:'A secure, append-only history of administrative actions will be added in the next admin phase.')),
   GoRoute(path:'/search',builder:(_,__)=>const SearchScreen()),
   GoRoute(path:'/community',builder:(_,s)=>CommunityScreen(instituteId:s.uri.queryParameters['instituteId'],instituteName:s.uri.queryParameters['instituteName'])),
   GoRoute(path:'/community/add-to-timeline',builder:(_,__)=>const AddToTimelineScreen()),
