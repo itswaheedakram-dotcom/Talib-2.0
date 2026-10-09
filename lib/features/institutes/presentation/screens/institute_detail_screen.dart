@@ -242,7 +242,7 @@ class InstituteDetailScreen extends StatelessWidget {
                 subtitle: Text(pending ? 'Waiting for admin verification.' : 'Institute representatives can claim this profile.'),
                 trailing: pending ? null : FilledButton(
                   onPressed: signedIn
-                      ? () async { if (ActiveProfileController.instance.isDemo) { await DatabaseService().claimDemoInstitute(ActiveProfileController.instance.effectiveUid!,institute.id); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Demo claim recorded for the active test profile.'))); } else { context.push('/institute/' + institute.id + '/claim?name=' + Uri.encodeComponent(institute.name)); } }
+                      ? () async { if (ActiveProfileController.instance.isDemo) { await DatabaseService().claimDemoInstitute(ActiveProfileController.instance.effectiveUid!,institute.id,instituteName:institute.name); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Demo claim recorded for the active test profile.'))); } else { context.push('/institute/' + institute.id + '/claim?name=' + Uri.encodeComponent(institute.name)); } }
                       : () => context.push('/signin'),
                   style: FilledButton.styleFrom(backgroundColor: green),
                   child: Text(signedIn ? 'Claim' : 'Sign In'),
