@@ -28,12 +28,12 @@ class PushTokenRegistrationService {
     try {
       await AdminAccessService.instance.refresh(user:user);
       final settings = await FirebaseMessaging.instance.requestPermission(alert:true,badge:true,sound:true);
-      if (settings.authorizationStatus == AuthorizationStatus.denied) return;
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) await _save(user.uid, token);
       _tokenSubscription ??= FirebaseMessaging.instance.onTokenRefresh.listen((token) {
-        if (!ActiveProfileController.instance.isDemo && FirebaseAuth.instance.currentUser?.uid == user.uid) {
-          _save(user.uid, token);
+        final current = FirebaseAuth.instance.currentUser;
+        if (!ActiveProfileController.instance.isDemo && current != null && !current.isAnonymous) {
+          _save(current.uid, token);
         }
       });
     } catch (_) {

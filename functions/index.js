@@ -28,19 +28,20 @@ exports.onIssueTicketCreated = onDocumentCreated('issueTickets/{ticketId}', asyn
   if (!ticket || !ticket.reporterId) return;
   const ticketId = event.params.ticketId;
   const ticketNumber = ticket.ticketNumber || ticketId;
-  const candidates = await db.collection('pushTokens').where('adminRecipient', '==', true).get();
-  const eligible = await Promise.all(candidates.docs.map(async (doc) => {
-    const role = await db.collection('adminRoles').doc(doc.id).get();
+  const recipients = new Set();
+  const managers = await db.collection('adminRoles').where('role', '==', 'manager_admin').where('status', '==', 'active').get();
+  for (const doc of managers.docs) {
+    if (doc.data().permissions?.manage_reports === true) recipients.add(doc.id);
+  }
+  const tokenCandidates = await db.collection('pushTokens').where('adminRecipient', '==', true).get();
+  for (const doc of tokenCandidates.docs) {
     const user = await admin.auth().getUser(doc.id).catch(() => null);
-    const customAdmin = user?.customClaims?.admin === true;
-    const data = role.data() || {};
-    const managerAllowed = data.role === 'manager_admin' && data.status === 'active' && data.permissions?.manage_reports === true;
-    return customAdmin || managerAllowed ? doc : null;
-  }));
-  const admins = eligible.filter(Boolean);
+    if (user?.customClaims?.admin === true) recipients.add(doc.id);
+  }
+  const admins = await Promise.all([...recipients].map(async (uid) => ({uid, tokenDoc: await db.collection('pushTokens').doc(uid).get()})));
   const batch = db.batch();
-  for (const doc of admins) {
-    const notification = db.collection('users').doc(doc.id).collection('notifications').doc();
+  for (const adminRecipient of admins) {
+    const notification = db.collection('users').doc(adminRecipient.uid).collection('notifications').doc();
     batch.set(notification, {
       type: 'issue_created',
       text: 'New issue report: ' + (ticket.title || ticketNumber),
@@ -51,8 +52,8 @@ exports.onIssueTicketCreated = onDocumentCreated('issueTickets/{ticketId}', asyn
       read: false,
     });
   }
-  if (!admins.empty) await batch.commit();
-  await sendPush(admins.docs, 'New Talib issue: ' + ticketNumber,
+  if (admins.length > 0) await batch.commit();
+  await sendPush(admins.map((item) => item.tokenDoc).filter((doc) => doc.exists && Array.isArray(doc.data().tokens)), 'New Talib issue: ' + ticketNumber,
     (ticket.category || 'Support') + ': ' + (ticket.title || 'New issue report'),
     { type: 'issue_created', ticketId, ticketNumber });
 });

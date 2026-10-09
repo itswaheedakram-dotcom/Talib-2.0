@@ -94,7 +94,37 @@ class _IssueTicketDetailScreenState extends State<IssueTicketDetailScreen>{
       if((t['screenshotUrl']??'').toString().startsWith('http'))... [const SizedBox(height:14),const Text('Attached screenshot',style:TextStyle(fontWeight:FontWeight.w800)),const SizedBox(height:6),ClipRRect(borderRadius:BorderRadius.circular(12),child:Image.network(t['screenshotUrl'].toString(),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Text('Screenshot could not be loaded.')))],
       if((t['latestReply']??'').toString().isNotEmpty)...[const SizedBox(height:16),const Text('Latest support reply',style:TextStyle(fontWeight:FontWeight.w800,fontSize:16)),Card(child:ListTile(leading:const Icon(Icons.support_agent_rounded,color:AppColors.primaryGreen),title:Text((t['latestReplyBy']??'Talib Support').toString()),subtitle:Text(t['latestReply'].toString())))],
       const SizedBox(height:18),const Text('Complete ticket history',style:TextStyle(fontWeight:FontWeight.w800,fontSize:16)),
-      StreamBuilder<List<Map<String,dynamic>>>(stream:IssueSupportService.instance.watchHistory(widget.ticketId),builder:(context,h){if(h.hasError)return const Text('History is temporarily unavailable.');if(!h.hasData)return const Padding(padding:EdgeInsets.all(12),child:Center(child:CircularProgressIndicator()));if(h.data!.isEmpty)return const Text('No history yet.');return Column(children:h.data!.map((e)=>Card(child:ListTile(leading:Icon(e['eventType']=='reply'?Icons.chat_bubble_outline:e['eventType']=='status_changed'?Icons.history_rounded:Icons.fiber_new_rounded,color:AppColors.primaryGreen),title:Text((e['message']??'').toString()),subtitle:Text((e['actorName']??'Talib').toString()+' • '+(e['eventType']??'update').toString()))).toList());}),
+      StreamBuilder<List<Map<String,dynamic>>>(
+        stream: IssueSupportService.instance.watchHistory(widget.ticketId),
+        builder: (context, historySnapshot) {
+          if (historySnapshot.hasError) return const Text('History is temporarily unavailable.');
+          if (!historySnapshot.hasData) return const Padding(
+            padding: EdgeInsets.all(12),
+            child: Center(child: CircularProgressIndicator()),
+          );
+          final history = historySnapshot.data!;
+          if (history.isEmpty) return const Text('No history yet.');
+          return Column(
+            children: history.map((event) => Card(
+              child: ListTile(
+                leading: Icon(
+                  event['eventType'] == 'reply'
+                    ? Icons.chat_bubble_outline
+                    : event['eventType'] == 'status_changed'
+                      ? Icons.history_rounded
+                      : Icons.fiber_new_rounded,
+                  color: AppColors.primaryGreen,
+                ),
+                title: Text((event['message'] ?? '').toString()),
+                subtitle: Text(
+                  (event['actorName'] ?? 'Talib').toString() +
+                  ' • ' + (event['eventType'] ?? 'update').toString(),
+                ),
+              ),
+            )).toList(),
+          );
+        },
+      ),
       if(widget.adminMode)...[const SizedBox(height:18),const Divider(),const Text('Manage report',style:TextStyle(fontWeight:FontWeight.w800,fontSize:17)),const SizedBox(height:8),DropdownButtonFormField<String>(value:_status??status,decoration:const InputDecoration(labelText:'Status'),items:const[DropdownMenuItem(value:'open',child:Text('Open')),DropdownMenuItem(value:'in_progress',child:Text('In Progress')),DropdownMenuItem(value:'resolved',child:Text('Resolved')),DropdownMenuItem(value:'closed',child:Text('Closed'))],onChanged:(v)=>setState(()=>_status=v)),const SizedBox(height:10),TextField(controller:_reply,minLines:3,maxLines:6,maxLength:2000,decoration:const InputDecoration(labelText:'Reply to user',hintText:'Write a helpful response…')),const SizedBox(height:8),FilledButton.icon(onPressed:_saving?null:()=>_save(t),icon:_saving?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:AppColors.white)):const Icon(Icons.save_outlined),label:Text(_saving?'Saving…':'Save update'))],
     ]);
   }));

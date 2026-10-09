@@ -301,7 +301,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               const SnackBar(content: Text('Demo moderation workflow is not connected yet. No Firebase data was changed.')),
             ),
           ),
-          _section('Reports & Audit Log', 'Review demo issue tickets and full ticket history', Icons.history_rounded, () => context.push('/admin/reports')),
+          _section('Reports & Audit Log', 'Review demo issue tickets and full ticket history', Icons.history_rounded, () => context.push('/admin/issue-tickets')),
           _section('Help & FAQs', 'Manage demo FAQ overrides without changing Firebase', Icons.help_outline_rounded, () => context.push('/admin/faqs')),
         ],
       ),
@@ -387,7 +387,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 if (_access.isSuperAdmin || _access.can('moderate_posts'))
                   _section('Community Moderation', 'Review reported community content', Icons.forum_outlined, () => context.push('/admin/reports')),
                 if (_access.isSuperAdmin || _access.can('manage_reports'))
-                  _section('User Reports', 'Process issue tickets with audit history', Icons.flag_outlined, () => context.push('/admin/reports')),
+                  _section('User Reports', 'Process issue tickets with audit history', Icons.flag_outlined, () => context.push('/admin/issue-tickets')),
                 if (_access.isSuperAdmin || _access.can('manage_faqs'))
                   _section('Help & FAQs', 'Manage default and Firebase FAQ content', Icons.help_outline_rounded, () => context.push('/admin/faqs')),
                 if (_access.isSuperAdmin || _access.can('view_audit_logs'))
