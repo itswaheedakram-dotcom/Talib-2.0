@@ -277,6 +277,16 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
             if (hostel.meals.isNotEmpty)
               _infoRow(Icons.restaurant_outlined, 'Meals / Mess', hostel.meals),
           ]),
+          if (hostel.rooms.isNotEmpty) ...[
+            _sectionTitle('Room Inventory'),
+            ...hostel.rooms.map((room) => _infoCard([
+              _infoRow(Icons.meeting_room_outlined, 'Room', (room['number'] ?? 'Room').toString()),
+              _infoRow(Icons.bed_outlined, 'Beds', (room['beds'] ?? 1).toString()),
+              _infoRow(Icons.payments_outlined, 'Monthly Rent', 'Rs. ' + (room['price'] ?? hostel.price).toString()),
+              _infoRow(Icons.event_available_outlined, 'Available Beds', (room['available'] ?? room['beds'] ?? 1).toString()),
+              _infoRow(Icons.ac_unit_outlined, 'Air Conditioning', room['ac'] == true ? 'Available' : 'Not available'),
+            ])),
+          ],
           if (hostel.facilities.isNotEmpty) ...[
             _sectionTitle('Facilities'),
             _infoCard([
@@ -319,6 +329,12 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                   height: 1.45,
                 ),
               ),
+            ]),
+          ],
+          if (hostel.rules.trim().isNotEmpty) ...[
+            _sectionTitle('Hostel Rules'),
+            _infoCard([
+              Text(hostel.rules, style: const TextStyle(color: AppColors.mutedText, fontSize: 14, height: 1.45)),
             ]),
           ],
           if (hostel.ownerName.isNotEmpty && !hostel.isDemo) ...[
