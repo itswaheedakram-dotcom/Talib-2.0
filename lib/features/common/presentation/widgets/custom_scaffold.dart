@@ -95,7 +95,11 @@ class TalibDrawer extends StatelessWidget {
           onTap: () {
             Navigator.of(context).pop();
             if (route != null) {
-              context.go(route);
+              if (route == '/report-issue' || route == '/help-faqs') {
+                context.push(route);
+              } else {
+                context.go(route);
+              }
             }
           },
           child: SizedBox(
