@@ -5,6 +5,7 @@ class Institute {
   final String subcategory;
   final String ownerId;
   final String representativeId;
+  final String createdBy;
   final String campus;
   final String province;
   final String city;
@@ -13,6 +14,7 @@ class Institute {
   final String address;
   final String description;
   final String website;
+  final String applicationUrl;
   final String submissionMode;
   final String eligibility;
   final List<String> programs;
@@ -34,6 +36,7 @@ class Institute {
     this.subcategory = '',
     this.ownerId = '',
     this.representativeId = '',
+    this.createdBy = '',
     this.campus = '',
     this.province = '',
     required this.city,
@@ -42,6 +45,7 @@ class Institute {
     this.address = '',
     this.description = '',
     this.website = '',
+    this.applicationUrl = '',
     this.submissionMode = 'Online',
     this.eligibility = '',
     this.programs = const [],
@@ -58,9 +62,9 @@ class Institute {
   });
 
   Map<String, dynamic> toMap() => {
-    'name': name, 'type': type, 'subcategory': subcategory, 'ownerId': ownerId, 'representativeId': representativeId, 'campus': campus, 'province': province,
+    'name': name, 'type': type, 'subcategory': subcategory, 'ownerId': ownerId, 'representativeId': representativeId, 'createdBy': createdBy, 'campus': campus, 'province': province,
     'city': city, 'town': town, 'sector': sector, 'address': address, 'description': description,
-    'website': website, 'submissionMode': submissionMode, 'eligibility': eligibility,
+    'website': website, 'applicationUrl': applicationUrl, 'submissionMode': submissionMode, 'eligibility': eligibility,
     'programs': programs, 'contact': contact, 'status': status, 'minScore': minScore, 'nextProgram': nextProgram,
     'admissionStatus': admissionStatus, 'admissionDeadline': admissionDeadline, 'feeRange': feeRange, 'entryTestRequired': entryTestRequired,
     'imageUrl': imageUrl, 'facilities': facilities,
@@ -73,6 +77,7 @@ class Institute {
     subcategory: (map['subcategory'] ?? '').toString(),
     ownerId: (map['ownerId'] ?? '').toString(),
     representativeId: (map['representativeId'] ?? '').toString(),
+    createdBy: (map['createdBy'] ?? '').toString(),
     campus: (map['campus'] ?? '').toString(),
     province: (map['province'] ?? '').toString(),
     city: (map['city'] ?? '').toString(),
@@ -81,6 +86,7 @@ class Institute {
     address: (map['address'] ?? '').toString(),
     description: (map['description'] ?? '').toString(),
     website: (map['website'] ?? '').toString(),
+    applicationUrl: (map['applicationUrl'] ?? '').toString(),
     submissionMode: (map['submissionMode'] ?? 'Online').toString(),
     eligibility: (map['eligibility'] ?? '').toString(),
     programs: List<String>.from((map['programs'] ?? const []).map((e) => e.toString())),
