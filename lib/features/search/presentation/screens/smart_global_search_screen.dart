@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/firebase_service.dart';
+import '../../../../core/services/database_service.dart';
+import '../../../models/post.dart';
 import '../../../institutes/data/institute_repository.dart';
 import '../../../institutes/data/institute_opportunity_repository.dart';
 import '../../../models/institute.dart';
@@ -100,6 +103,54 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
             final data=d.data(),title=(data['title']??'Study Resource').toString(),desc=(data['description']??'').toString();
             final score=_score(q,title,[desc,(data['category']??'').toString()]);
             if(score>0)hits.add(_Hit(title,'Resource',desc,'Study material','/resources',Icons.menu_book_outlined,score));
+          }
+        } catch (_) {}
+      }
+
+      // Community: fetch records from the active identity's source, then
+      // rank locally with the new parser (not the legacy query filter).
+      if(q.category==GlobalSearchCategory.all||q.category==GlobalSearchCategory.community) {
+        try {
+          final posts=await DatabaseService().postsStream().first;
+          for(final Post post in posts) {
+            final score=_score(q,post.text,[post.authorName,post.category,post.tags.join(' '),post.attachments.map((a)=>a.values.join(' ')).join(' ')]);
+            if(score>0)hits.add(_Hit(post.text.length>76?' ${post.text.substring(0,76)}…':post.text,'Community • ${post.category}','By ${post.authorName} • ${post.likesCount} likes • ${post.commentsCount} comments','', '/community/post/${post.id}',Icons.forum_outlined,score,post));
+          }
+        } catch (_) {}
+      }
+
+      // People use the active demo profile catalogue in Demo mode and a
+      // bounded users collection read for a real account.
+      if(q.category==GlobalSearchCategory.all||q.category==GlobalSearchCategory.people) {
+        if(_demo) {
+          for(final person in temporaryProfiles) {
+            final score=_score(q,person.name,[person.username,person.city,person.level,person.institute,person.program]);
+            if(score>0)hits.add(_Hit(person.name,'Student / Profile','${person.level} • ${person.institute}',person.city,'/profile/${person.id}',Icons.person_outline,score));
+          }
+        } else {
+          try {
+            final docs=await FirebaseFirestore.instance.collection('users').limit(100).get();
+            for(final doc in docs.docs) {
+              final data=doc.data();
+              final name=(data['name']??data['displayName']??data['fullName']??'Student').toString();
+              final score=_score(q,name,[(data['username']??'').toString(),(data['city']??'').toString(),(data['institute']??'').toString(),(data['program']??'').toString(),(data['bio']??'').toString()]);
+              if(score>0)hits.add(_Hit(name,'Profile',[(data['program']??'').toString(),(data['institute']??'').toString()].where((v)=>v.isNotEmpty).join(' • '),(data['city']??'').toString(),'/profile/${doc.id}',Icons.person_outline,score));
+            }
+          } catch (_) {}
+        }
+      }
+
+      // Demo resources stay inside DemoDataService; they are never read from
+      // the Firebase collection while a temporary profile is active.
+      if(_demo&&(q.category==GlobalSearchCategory.all||q.category==GlobalSearchCategory.resources)) {
+        try {
+          final uid=ActiveProfileController.instance.effectiveUid??'demo-user-1';
+          final docs=await DatabaseService().demoResourcesStream(uid).first;
+          for(final data in docs) {
+            final title=(data['title']??'Study Resource').toString();
+            final description=(data['description']??'').toString();
+            final score=_score(q,title,[description,(data['url']??'').toString()]);
+            if(score>0)hits.add(_Hit(title,'Resource',description,'Study material','/resources',Icons.menu_book_outlined,score));
           }
         } catch (_) {}
       }
