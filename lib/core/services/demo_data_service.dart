@@ -27,6 +27,7 @@ class DemoDataService extends ChangeNotifier {
   final Map<String,List<Map<String,dynamic>>> _reviews={};
   final Set<String> _instituteBookmarks={};
   final Set<String> _instituteClaims={};
+  final Map<String, Map<String, dynamic>> _instituteClaimRecords = {};
   final List<Map<String,dynamic>> _groups=[];
   final Map<String,Set<String>> _groupMembers={};
   final Map<String,Map<String,dynamic>> _settings={};
@@ -232,5 +233,51 @@ class DemoDataService extends ChangeNotifier {
   bool instituteBookmarked(String uid,String id)=>_instituteBookmarks.contains('$uid|$id');
   void toggleInstituteBookmark(String uid,String id,bool save){final k='$uid|$id';if(save){_instituteBookmarks.add(k);}else{_instituteBookmarks.remove(k);}_emit();}
   bool claimed(String uid,String id)=>_instituteClaims.contains('$uid|$id');
-  void claimInstitute(String uid,String id){_instituteClaims.add('$uid|$id');_emit();}
+
+  void claimInstitute(
+    String uid,
+    String id, {
+    String instituteName = '',
+  }) {
+    final key = '$uid|$id';
+    final existing = _instituteClaimRecords[key];
+    if (existing != null && existing['status'] == 'pending') return;
+    _instituteClaims.add(key);
+    _instituteClaimRecords[key] = {
+      'id': key,
+      'instituteId': id,
+      'instituteName': instituteName,
+      'representativeId': uid,
+      'representativeName': _demoName(uid),
+      'status': 'pending',
+      'createdAt': DateTime.now(),
+    };
+    _emit();
+  }
+
+  List<Map<String, dynamic>> pendingInstituteClaims() => List.unmodifiable(
+    _instituteClaimRecords.values
+        .where((claim) => claim['status'] == 'pending')
+        .toList()
+      ..sort((a, b) => (b['createdAt'] as DateTime).compareTo(a['createdAt'] as DateTime)),
+  );
+
+  void reviewInstituteClaim(String claimId, String status) {
+    if (!const {'approved', 'rejected'}.contains(status)) return;
+    final claim = _instituteClaimRecords[claimId];
+    if (claim == null || claim['status'] != 'pending') return;
+    claim['status'] = status;
+    claim['reviewedAt'] = DateTime.now();
+    _emit();
+  }
+
+  String _demoName(String uid) => switch (uid) {
+    'demo-user-1' => 'Ayesha Khan',
+    'demo-user-2' => 'Ali Raza',
+    'demo-user-3' => 'Hira Ahmed',
+    'demo-user-4' => 'Usman Malik',
+    'demo-user-5' => 'Ahtasham Malik',
+    'demo-user-6' => 'Waheed Akram',
+    _ => 'Demo Representative',
+  };
 }
