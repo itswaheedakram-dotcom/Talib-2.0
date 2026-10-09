@@ -5,8 +5,7 @@ import '../../../../app/theme.dart';
 import '../../../models/institute.dart';
 import '../../data/institute_catalog.dart';
 import '../../data/institute_repository.dart';
-import '../../data/institute_image_service.dart';
-import '../widgets/institute_image_preview.dart';
+import '../widgets/institute_image_field.dart';
 
 class AddInstituteScreen extends StatefulWidget {
   final String type;
@@ -47,7 +46,6 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
   String _admissionStatus = 'Not announced';
   bool _entryTest = false;
   bool _saving = false;
-  bool _uploadingImage = false;
 
   @override
   void initState() {
@@ -89,22 +87,6 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
       .where((part) => part.isNotEmpty)
       .toSet()
       .toList();
-
-  Future<void> _chooseImage() async {
-    setState(() => _uploadingImage = true);
-    try {
-      final source = await InstituteImageService.instance.pickAndUpload();
-      if (source != null && mounted) setState(() => _imageUrl.text = source);
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not select/upload image: $error')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _uploadingImage = false);
-    }
-  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -288,23 +270,12 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
             _field(_contact, 'Contact phone / email', Icons.phone_outlined),
             _field(_website, 'Official website URL', Icons.language_outlined, keyboard: TextInputType.url),
             _field(_applicationUrl, 'Direct admission / application URL', Icons.open_in_new_outlined, keyboard: TextInputType.url),
-            Text('Cover image', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            InstituteImagePreview(
-              source: _imageUrl.text,
+            InstituteImageField(
+              controller: _imageUrl,
               fallbackIcon: _catalog.iconFor(_type),
-              label: _type.isEmpty ? 'Institute image' : _catalog.labelFor(_type),
+              label: _type.isEmpty ? 'Institute cover image' : _catalog.labelFor(_type),
               height: 150,
             ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: _uploadingImage || _saving ? null : _chooseImage,
-              icon: _uploadingImage
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.photo_library_outlined),
-              label: Text(_uploadingImage ? 'Uploading image...' : 'Choose image from gallery'),
-            ),
-            _field(_imageUrl, 'Or paste an image URL', Icons.image_outlined, keyboard: TextInputType.url),
             _field(_facilities, 'Facilities (comma separated)', Icons.checklist_outlined, maxLines: 2),
             const SizedBox(height: 12),
             Container(
@@ -352,7 +323,6 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
     padding: const EdgeInsets.only(bottom: 12),
     child: TextFormField(
       controller: controller,
-      onChanged: controller == _imageUrl ? (_) => setState(() {}) : null,
       maxLines: maxLines,
       keyboardType: keyboard,
       validator: required
