@@ -19,7 +19,7 @@ import '../features/institutes/presentation/screens/admin_location_catalog_scree
 import '../features/institutes/presentation/screens/discipline_info_screen.dart';
 import '../features/scholarships/presentation/screens/scholarships_screen.dart';
 import '../features/courses/presentation/screens/courses_screen.dart';
-import '../features/search/presentation/screens/search_screen.dart';
+import '../features/search/presentation/screens/smart_global_search_screen.dart';
 import '../features/community/presentation/screens/community_screen.dart';
 import '../features/community/presentation/screens/create_post_screen.dart';
 import '../features/community/presentation/screens/add_to_timeline_screen.dart';
@@ -87,7 +87,7 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/my-reports/:id',builder:(_,s)=>IssueTicketDetailScreen(ticketId:s.pathParameters['id']!)),
   GoRoute(path:'/help-faqs',builder:(_,__)=>const HelpFaqsScreen()),
   GoRoute(path:'/admin/audit-logs',builder:(_,__)=>const AdminPlaceholderScreen(title:'Audit Log',description:'A secure, append-only history of administrative actions will be added in the next admin phase.')),
-  GoRoute(path:'/search',builder:(_,__)=>const SearchScreen()),
+  GoRoute(path:'/search',builder:(_,__)=>const SmartGlobalSearchScreen()),
   GoRoute(path:'/community',builder:(_,s)=>CommunityScreen(instituteId:s.uri.queryParameters['instituteId'],instituteName:s.uri.queryParameters['instituteName'])),
   GoRoute(path:'/community/add-to-timeline',builder:(_,__)=>const AddToTimelineScreen()),
   GoRoute(path:'/community/create',builder:(_,s)=>CreatePostScreen(post:s.extra is Post?s.extra as Post:null,instituteId:s.uri.queryParameters['instituteId'],instituteName:s.uri.queryParameters['instituteName'])),
