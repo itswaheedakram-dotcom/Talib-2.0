@@ -14,11 +14,15 @@ class PushTokenRegistrationService {
   bool _started = false;
 
   void start() {
-    if (_started) return;
+    if (_started || !FirebaseService.initialized) return;
     _started = true;
-    ActiveProfileController.instance.addListener(_sync);
-    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((_) => _sync());
-    _sync();
+    try {
+      ActiveProfileController.instance.addListener(_sync);
+      _authSubscription = FirebaseAuth.instance.authStateChanges().listen((_) => _sync());
+      _sync();
+    } catch (_) {
+      _started = false;
+    }
   }
 
   Future<void> _sync() async {
