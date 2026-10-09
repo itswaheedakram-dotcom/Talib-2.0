@@ -11,6 +11,8 @@ class InstituteTypeOption {
   final String label;
   final String iconKey;
   final List<String> subcategories;
+  final String programLabel;
+  final String eligibilityLabel;
   final bool enabled;
   final int sortOrder;
 
@@ -19,6 +21,8 @@ class InstituteTypeOption {
     required this.label,
     this.iconKey = 'school',
     this.subcategories = const [],
+    this.programLabel = 'Programs / courses',
+    this.eligibilityLabel = 'Eligibility criteria',
     this.enabled = true,
     this.sortOrder = 100,
   });
@@ -42,6 +46,8 @@ class InstituteTypeOption {
       subcategories: List<String>.from(
         (data['subcategories'] as List? ?? const []).map((value) => value.toString()),
       ),
+      programLabel: (data['programLabel'] ?? _defaultProgramLabel(id)).toString(),
+      eligibilityLabel: (data['eligibilityLabel'] ?? 'Eligibility criteria').toString(),
       enabled: data['enabled'] != false,
       sortOrder: int.tryParse((data['sortOrder'] ?? 100).toString()) ?? 100,
     );
@@ -60,56 +66,90 @@ class InstituteCatalog extends ChangeNotifier {
       label: 'Schools',
       iconKey: 'school',
       sortOrder: 10,
-      subcategories: ['Early Years', 'Primary', 'Middle', 'Secondary', 'Higher Secondary', 'O-Level', 'A-Level'],
+      subcategories: ['Montessori / Early Years', 'Primary', 'Middle', 'High School (Matric)', 'Higher Secondary', 'O-Level', 'A-Level', 'Special Education'],
+      programLabel: 'Classes / levels',
+      eligibilityLabel: 'Age / admission requirements',
     ),
     InstituteTypeOption(
       id: 'colleges',
       label: 'Colleges',
       iconKey: 'college',
       sortOrder: 20,
-      subcategories: ['Intermediate', 'Degree College', 'Commerce College', 'Government College', 'Private College'],
+      subcategories: ['Intermediate College', 'Degree College', 'Commerce College', 'Science College', 'Medical College', 'Engineering College', 'Law College', 'Arts & Humanities College', 'Women’s College'],
+      programLabel: 'Degrees / programs',
+      eligibilityLabel: 'Admission eligibility / merit',
     ),
     InstituteTypeOption(
       id: 'universities',
       label: 'Universities',
       iconKey: 'university',
       sortOrder: 30,
-      subcategories: ['General', 'Engineering', 'Medical', 'Business', 'Arts & Design', 'Agriculture'],
+      subcategories: ['General', 'Engineering & Technology', 'Medical & Health Sciences', 'Business & Management', 'Arts & Design', 'Agriculture & Veterinary', 'Women’s University', 'Open & Distance Learning', 'Islamic University'],
+      programLabel: 'Degrees / departments',
+      eligibilityLabel: 'Admission eligibility / merit',
     ),
     InstituteTypeOption(
       id: 'academies',
       label: 'Academies & Coaching',
       iconKey: 'academy',
       sortOrder: 40,
-      subcategories: ['Entry Test', 'MDCAT', 'ECAT', 'CSS / PMS', 'Tuition', 'Subject Coaching', 'Language Academy'],
+      subcategories: ['Entry Test', 'MDCAT', 'ECAT', 'CSS / PMS', 'Tuition', 'Subject Coaching', 'Language Academy', 'Competitive Exams'],
+      programLabel: 'Courses / preparation tracks',
+      eligibilityLabel: 'Entry requirements',
     ),
     InstituteTypeOption(
       id: 'technical_vocational',
       label: 'Technical & Vocational Institutes',
       iconKey: 'technical',
       sortOrder: 50,
-      subcategories: ['Technical Diploma', 'Vocational Training', 'Trade Skills', 'Polytechnic'],
+      subcategories: ['Technical Diploma', 'Vocational Training', 'Trade Skills', 'Polytechnic', 'Electrical', 'Mechanical / Auto', 'Civil Technology', 'IT & Computing'],
+      programLabel: 'Diplomas / skills / trades',
+      eligibilityLabel: 'Entry requirements',
     ),
     InstituteTypeOption(
       id: 'professional_training',
       label: 'Professional Training Centers',
       iconKey: 'training',
       sortOrder: 60,
-      subcategories: ['IT & Programming', 'Game Development', 'Freelancing', 'Professional Certification', 'Languages'],
+      subcategories: ['IT & Programming', 'Game Development', 'Freelancing', 'Professional Certification', 'Languages', 'Digital Marketing', 'Graphic Design', 'Business Skills'],
+      programLabel: 'Courses / certifications',
+      eligibilityLabel: 'Entry requirements',
     ),
     InstituteTypeOption(
       id: 'medical_allied_health',
       label: 'Medical & Allied Health Institutes',
       iconKey: 'medical',
       sortOrder: 70,
-      subcategories: ['Nursing', 'Pharmacy', 'Paramedical', 'Medical Lab', 'Allied Health'],
+      subcategories: ['Nursing', 'Pharmacy', 'Paramedical', 'Medical Lab', 'Allied Health', 'Dental Technology', 'Radiology', 'Physiotherapy'],
+      programLabel: 'Degrees / diplomas / courses',
+      eligibilityLabel: 'Admission eligibility / merit',
+    ),
+    InstituteTypeOption(
+      id: 'special_education',
+      label: 'Special Education & Learning Support',
+      iconKey: 'school',
+      sortOrder: 90,
+      subcategories: ['Special Education School', 'Learning Support Center', 'Speech & Language Support', 'Inclusive Education'],
+      programLabel: 'Learning programs / support services',
+      eligibilityLabel: 'Assessment / admission requirements',
+    ),
+    InstituteTypeOption(
+      id: 'research_institutes',
+      label: 'Research & Educational Institutes',
+      iconKey: 'university',
+      sortOrder: 100,
+      subcategories: ['Research Center', 'Educational Research', 'Science & Technology', 'Policy & Social Research'],
+      programLabel: 'Research areas / programs',
+      eligibilityLabel: 'Eligibility / participation requirements',
     ),
     InstituteTypeOption(
       id: 'madaris',
       label: 'Madaris & Religious Education',
       iconKey: 'religious',
       sortOrder: 80,
-      subcategories: ['Madrasa', 'Quran Education', 'Islamic Studies'],
+      subcategories: ['Hifz-ul-Quran', 'Nazra Quran', 'Tajweed & Qiraat', 'Dars-e-Nizami', 'Islamic Studies', 'Jamia / Dar-ul-Uloom', 'Girls’ Madrasa'],
+      programLabel: 'Deeni courses / levels',
+      eligibilityLabel: 'Admission requirements',
     ),
   ];
 
@@ -196,11 +236,29 @@ class InstituteCatalog extends ChangeNotifier {
       'label': type.label.trim(),
       'iconKey': type.iconKey,
       'subcategories': type.subcategories,
+      'programLabel': type.programLabel,
+      'eligibilityLabel': type.eligibilityLabel,
       'enabled': type.enabled,
       'sortOrder': type.sortOrder,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
     await load();
+  }
+
+  static String _defaultProgramLabel(String id) {
+    switch (id) {
+      case 'schools': return 'Classes / levels';
+      case 'colleges': return 'Degrees / programs';
+      case 'universities': return 'Degrees / departments';
+      case 'madaris': return 'Deeni courses / levels';
+      case 'academies': return 'Courses / preparation tracks';
+      case 'technical_vocational': return 'Diplomas / skills / trades';
+      case 'professional_training': return 'Courses / certifications';
+      case 'medical_allied_health': return 'Degrees / diplomas / courses';
+      case 'special_education': return 'Learning programs / support services';
+      case 'research_institutes': return 'Research areas / programs';
+      default: return 'Programs / courses';
+    }
   }
 
   static String _fallbackLabel(String value) => value
