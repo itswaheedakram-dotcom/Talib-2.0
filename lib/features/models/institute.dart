@@ -2,6 +2,9 @@ class Institute {
   final String id;
   final String name;
   final String type;
+  final String subcategory;
+  final String ownerId;
+  final String representativeId;
   final String campus;
   final String province;
   final String city;
@@ -28,6 +31,9 @@ class Institute {
     required this.id,
     required this.name,
     required this.type,
+    this.subcategory = '',
+    this.ownerId = '',
+    this.representativeId = '',
     this.campus = '',
     this.province = '',
     required this.city,
@@ -52,7 +58,7 @@ class Institute {
   });
 
   Map<String, dynamic> toMap() => {
-    'name': name, 'type': type, 'campus': campus, 'province': province,
+    'name': name, 'type': type, 'subcategory': subcategory, 'ownerId': ownerId, 'representativeId': representativeId, 'campus': campus, 'province': province,
     'city': city, 'town': town, 'sector': sector, 'address': address, 'description': description,
     'website': website, 'submissionMode': submissionMode, 'eligibility': eligibility,
     'programs': programs, 'contact': contact, 'status': status, 'minScore': minScore, 'nextProgram': nextProgram,
@@ -64,6 +70,9 @@ class Institute {
     id: id,
     name: (map['name'] ?? '').toString(),
     type: (map['type'] ?? 'universities').toString(),
+    subcategory: (map['subcategory'] ?? '').toString(),
+    ownerId: (map['ownerId'] ?? '').toString(),
+    representativeId: (map['representativeId'] ?? '').toString(),
     campus: (map['campus'] ?? '').toString(),
     province: (map['province'] ?? '').toString(),
     city: (map['city'] ?? '').toString(),
