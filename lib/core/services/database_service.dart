@@ -235,6 +235,32 @@ class DatabaseService {
   Future<void> addDemoReview(String target,String reviewer,String reviewerName,int rating,String text){DemoDataService.instance.addReview(target,reviewer,reviewerName,rating,text);return Future.value();}
   Stream<bool> demoInstituteBookmarkStream(String uid,String instituteId)=>_demoStream(DemoDataService.instance.instituteBookmarked(_uid(uid),instituteId),()=>DemoDataService.instance.instituteBookmarked(_uid(uid),instituteId));
   Future<void> toggleDemoInstituteBookmark(String uid,String instituteId,bool save){DemoDataService.instance.toggleInstituteBookmark(_uid(uid),instituteId,save);return Future.value();}
+
+  Stream<bool> instituteBookmarkStream(String uid, String instituteId) {
+    uid = _uid(uid);
+    if (_demo(uid)) return demoInstituteBookmarkStream(uid, instituteId);
+    return _db.collection('users').doc(uid)
+        .collection('instituteBookmarks').doc(instituteId)
+        .snapshots().map((snapshot) => snapshot.exists);
+  }
+
+  Future<void> toggleInstituteBookmark(String uid, String instituteId, bool save) async {
+    uid = _uid(uid);
+    if (_demo(uid)) {
+      DemoDataService.instance.toggleInstituteBookmark(uid, instituteId, save);
+      return;
+    }
+    final ref = _db.collection('users').doc(uid)
+        .collection('instituteBookmarks').doc(instituteId);
+    if (save) {
+      await ref.set({
+        'instituteId': instituteId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } else {
+      await ref.delete();
+    }
+  }
   Future<void> claimDemoInstitute(String uid,String instituteId){DemoDataService.instance.claimInstitute(_uid(uid),instituteId);return Future.value();}
 
   Stream<Set<String>> timelineInstitutesStream(String uid){
