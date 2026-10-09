@@ -50,10 +50,10 @@ class InstituteTypeOption {
       subcategories: List<String>.from(
         (data['subcategories'] as List? ?? const []).map((value) => value.toString()),
       ),
-      programLabel: (data['programLabel'] ?? _defaultProgramLabel(id)).toString(),
-      eligibilityLabel: (data['eligibilityLabel'] ?? _defaultEligibilityLabel(id)).toString(),
-      featuredProgramLabel: (data['featuredProgramLabel'] ?? _defaultFeaturedProgramLabel(id)).toString(),
-      showMinimumScore: data['showMinimumScore'] is bool ? data['showMinimumScore'] as bool : _defaultShowMinimumScore(id),
+      programLabel: (data['programLabel'] ?? InstituteCatalog._defaultProgramLabel(id)).toString(),
+      eligibilityLabel: (data['eligibilityLabel'] ?? InstituteCatalog._defaultEligibilityLabel(id)).toString(),
+      featuredProgramLabel: (data['featuredProgramLabel'] ?? InstituteCatalog._defaultFeaturedProgramLabel(id)).toString(),
+      showMinimumScore: data['showMinimumScore'] is bool ? data['showMinimumScore'] as bool : InstituteCatalog._defaultShowMinimumScore(id),
       enabled: data['enabled'] != false,
       sortOrder: int.tryParse((data['sortOrder'] ?? 100).toString()) ?? 100,
     );
