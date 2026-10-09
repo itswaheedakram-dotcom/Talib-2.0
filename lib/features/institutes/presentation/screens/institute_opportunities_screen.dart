@@ -21,6 +21,7 @@ class InstituteOpportunitiesScreen extends StatefulWidget {
 class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScreen> {
   final _repository = InstituteOpportunityRepository.instance;
   String _kind = 'admission';
+  String _yearFilter = 'All years';
 
   Institute? get _institute => InstituteRepository.instance.byId(widget.instituteId);
 
@@ -58,6 +59,12 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
     }
     final items = _repository.forInstitute(widget.instituteId)
         .where((item) => item.kind == _kind).toList();
+    final years = items.map((item) => item.academicYear).where((year) => year.isNotEmpty).toSet().toList()
+      ..sort((a, b) => b.compareTo(a));
+    final yearOptions = <String>['All years', ...years];
+    final visibleItems = _yearFilter == 'All years'
+        ? items
+        : items.where((item) => item.academicYear == _yearFilter).toList();
     final title = switch (_kind) {
       'course' => 'Programs & Courses',
       'scholarship' => 'Scholarships',
@@ -105,6 +112,23 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
               ],
             ),
           ),
+          if (years.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_list, size: 18, color: AppColors.darkGreen),
+                  const SizedBox(width: 8),
+                  const Text('Academic year:'),
+                  const SizedBox(width: 8),
+                  DropdownButton<String>(
+                    value: yearOptions.contains(_yearFilter) ? _yearFilter : 'All years',
+                    items: yearOptions.map((year) => DropdownMenuItem(value: year, child: Text(year))).toList(),
+                    onChanged: (value) => setState(() => _yearFilter = value ?? 'All years'),
+                  ),
+                ],
+              ),
+            ),
           if (_repository.loading)
             const LinearProgressIndicator(minHeight: 2),
           if (_repository.error != null)
@@ -116,7 +140,7 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
               ),
             ),
           Expanded(
-            child: items.isEmpty
+            child: visibleItems.isEmpty
                 ? ListView(
                     padding: const EdgeInsets.fromLTRB(24, 36, 24, 24),
                     children: [
@@ -157,10 +181,10 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    itemCount: items.length,
+                    itemCount: visibleItems.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) => _opportunityCard(
-                      context, institute, items[index],
+                      context, institute, visibleItems[index],
                     ),
                   ),
           ),
@@ -182,7 +206,7 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
     avatar: Icon(icon, size: 17),
     label: Text(label),
     selected: _kind == value,
-    onSelected: (_) => setState(() => _kind = value),
+    onSelected: (_) => setState(() { _kind = value; _yearFilter = 'All years'; }),
   );
 
   Widget _opportunityCard(
