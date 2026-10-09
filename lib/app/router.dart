@@ -15,6 +15,7 @@ import '../features/institutes/presentation/screens/admin_institute_types_screen
 import '../features/institutes/presentation/screens/add_institute_screen.dart';
 import '../features/institutes/presentation/screens/edit_institute_screen.dart';
 import '../features/institutes/presentation/screens/institute_opportunities_screen.dart';
+import '../features/institutes/presentation/screens/admin_location_catalog_screen.dart';
 import '../features/institutes/presentation/screens/discipline_info_screen.dart';
 import '../features/scholarships/presentation/screens/scholarships_screen.dart';
 import '../features/courses/presentation/screens/courses_screen.dart';
@@ -74,6 +75,7 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/admin/institute-claims',builder:(_,__)=>const AdminInstituteClaimsScreen()),
   GoRoute(path:'/admin/institute-submissions',builder:(_,__)=>const AdminInstituteSubmissionsScreen()),
   GoRoute(path:'/admin/institute-types',builder:(_,__)=>const AdminInstituteTypesScreen()),
+  GoRoute(path:'/admin/locations',builder:(_,__)=>const AdminLocationCatalogScreen()),
   GoRoute(path:'/admin/hostel-claims',builder:(_,__)=>const AdminHostelClaimsScreen()),
   GoRoute(path:'/admin/hostel-submissions',builder:(_,__)=>const AdminHostelSubmissionsScreen()),
   GoRoute(path:'/admin/reports',builder:(_,__)=>const AdminPlaceholderScreen(title:'Reports',description:'Community content moderation tools.')),
