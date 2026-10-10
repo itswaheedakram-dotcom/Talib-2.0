@@ -449,7 +449,7 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
                   applicationUrl: url.text.trim(),
                   description: description.text.trim(),
                   provider: provider.text.trim(),
-                  createdBy: existing?.createdBy ?? ActiveProfileController.instance.effectiveUid ?? '',
+                  createdBy: existing?.createdBy ?? InstituteAccess.uid ?? '',
                 );
                 final result = existing == null
                     ? await _repository.add(opportunity)

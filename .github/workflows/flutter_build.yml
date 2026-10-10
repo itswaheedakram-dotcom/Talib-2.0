@@ -20,8 +20,7 @@ jobs:
       - name: Verify institute notification function
         run: node --test functions/institute_notifications.test.js
       - name: Analyze Dart code
-        continue-on-error: true
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - name: Generate Android project
         run: flutter create --platforms=android --project-name talib_2 --org com.talib2 .
       - name: Configure Android compatibility
