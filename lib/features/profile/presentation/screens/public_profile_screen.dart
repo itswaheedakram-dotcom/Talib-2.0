@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/demo_data_service.dart';
+import '../widgets/student_affiliation_card.dart';
 
 class PublicProfileScreen extends StatefulWidget {
   final String id;
@@ -214,8 +215,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         ),
         const SizedBox(height:18),
         Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          const Text('Profile Information',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),const SizedBox(height:10),_InfoTile(Icons.school_outlined,'Education level',demo['level']!),if(demo['institute']!.isNotEmpty)_InfoTile(Icons.account_balance_outlined,'Institute',demo['institute']!),if(demo['program']!.isNotEmpty)_InfoTile(Icons.menu_book_outlined,'Program / Degree',demo['program']!)
+          const Text('Profile Information',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),const SizedBox(height:10),_InfoTile(Icons.school_outlined,'Education level',demo['level']!),if(demo['program']!.isNotEmpty)_InfoTile(Icons.menu_book_outlined,'Program / Degree',demo['program']!)
         ]))),
+        const SizedBox(height:12),
+        StudentAffiliationCard(uid: widget.id),
         const SizedBox(height:12),
         AnimatedBuilder(
           animation: Listenable.merge([ActiveProfileController.instance, DemoDataService.instance]),
@@ -261,7 +264,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         final rawName = (data['name'] ?? 'Student').toString().trim();
         final name = rawName.isEmpty ? 'Student' : rawName;
         final city = (data['city'] ?? '').toString();
-        final institute = (data['institute'] ?? '').toString();
         final program = (data['program'] ?? '').toString();
         final level = (data['educationLevel'] ?? '').toString();
         final verified = data['verified'] == true;
@@ -366,6 +368,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 ],
               ])),
               const SizedBox(height: 18),
+              StudentAffiliationCard(uid: widget.id, editable: isOwner),
+              const SizedBox(height: 12),
               Card(child: Padding(padding: const EdgeInsets.all(14), child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
                 _Stat(value: total == 0 ? '—' : average.toStringAsFixed(1), label: 'Rating'),
                 _Stat(value: total.toString(), label: 'Reviews'),
@@ -398,10 +402,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   ])));
                 },
               ),
-              if (institute.isNotEmpty || program.isNotEmpty || level.isNotEmpty) ...[
+              if (program.isNotEmpty || level.isNotEmpty) ...[
                 const SizedBox(height: 14), const Text('Education', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                 if (level.isNotEmpty) _InfoTile(Icons.school_outlined, 'Education level', level),
-                if (institute.isNotEmpty) _InfoTile(Icons.account_balance_outlined, 'Institute', institute),
                 if (program.isNotEmpty) _InfoTile(Icons.menu_book_outlined, 'Program / Degree', program),
               ],
               if (me != null && me!.uid != widget.id) ...[

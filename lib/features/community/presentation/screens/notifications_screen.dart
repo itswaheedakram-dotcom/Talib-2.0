@@ -127,10 +127,15 @@ class NotificationsScreen extends StatelessWidget {
     if (!context.mounted) return;
     final postId = (item['postId'] ?? '').toString();
     final instituteId = (item['instituteId'] ?? '').toString();
+    final type = (item['type'] ?? '').toString();
     if (postId.isNotEmpty) {
       context.push('/community/post/$postId');
     } else if (instituteId.isNotEmpty) {
-      context.push('/institute/$instituteId/opportunities');
+      context.push(type == 'student_affiliation'
+          ? '/institute/$instituteId/student-verifications'
+          : type == 'student_affiliation_result'
+              ? '/profile'
+              : '/institute/$instituteId/opportunities');
     }
   }
 }

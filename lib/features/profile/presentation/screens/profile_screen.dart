@@ -7,6 +7,7 @@ import '../../../../core/services/database_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/demo_data_service.dart';
 import '../../../../app/theme.dart';
+import '../widgets/student_affiliation_card.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -118,10 +119,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 14),
                 _section('Profile Information', Column(children: [
                   _demoInfo(Icons.school_outlined, 'Education Level', p.level),
-                  _demoInfo(Icons.account_balance_outlined, 'Institute', p.institute),
                   _demoInfo(Icons.menu_book_outlined, 'Program / Degree', p.program),
                   _demoInfo(Icons.location_on_outlined, 'City', p.city),
                 ])),
+                const SizedBox(height: 12),
+                StudentAffiliationCard(uid: p.id, editable: true),
                 const SizedBox(height: 12),
                 AnimatedBuilder(
                   animation: DemoDataService.instance,
@@ -247,7 +249,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             _field(name, 'Name', Icons.person_outline),
             _field(level, 'Education Level', Icons.school_outlined),
-            _field(institute, 'Institute', Icons.account_balance_outlined),
             _field(program, 'Program / Degree', Icons.menu_book_outlined),
             _field(city, 'City', Icons.location_on_outlined),
             const SizedBox(height: 5),
@@ -264,6 +265,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       const SizedBox(height: 12),
+      if (u != null) StudentAffiliationCard(uid: u.uid, editable: true),
+      if (u != null) const SizedBox(height: 12),
     ];
 
     if (u != null) {

@@ -10,6 +10,7 @@ import '../features/institutes/presentation/screens/find_institute_screen.dart';
 import '../features/institutes/presentation/screens/claim_institute_screen.dart';
 import '../features/institutes/presentation/screens/institute_dashboard_screen.dart';
 import '../features/institutes/presentation/screens/institute_admin_screen.dart';
+import '../features/institutes/presentation/screens/student_verifications_screen.dart';
 import '../features/institutes/presentation/screens/admin_institute_claims_screen.dart';
 import '../features/institutes/presentation/screens/admin_institute_submissions_screen.dart';
 import '../features/institutes/presentation/screens/admin_institute_types_screen.dart';
@@ -71,6 +72,7 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/institute/:id/programs',builder:(_,s)=>InstituteRecordScope(id:s.pathParameters['id']!,builder:()=>DisciplineInfoScreen(instituteId:s.pathParameters['id']!))),
   GoRoute(path:'/institute/:id/opportunities',builder:(_,s)=>InstituteRecordScope(id:s.pathParameters['id']!,builder:()=>InstituteOpportunitiesScreen(instituteId:s.pathParameters['id']!,initialKind:s.uri.queryParameters['kind'] ?? 'admission'))),
   GoRoute(path:'/institute-dashboard',builder:(_,__)=>InstituteModeScope(builder:()=>const InstituteDashboardScreen())),
+  GoRoute(path:'/institute/:id/student-verifications',builder:(_,s)=>InstituteRecordScope(id:s.pathParameters['id']!,builder:()=>StudentVerificationsScreen(instituteId:s.pathParameters['id']!))),
   GoRoute(path:'/institute-admin/:claimId',builder:(_,s)=>InstituteModeScope(builder:()=>InstituteAdminScreen(claimId:s.pathParameters['claimId']!))),
   GoRoute(path:'/admin',builder:(_,__)=>const AdminPanelScreen()),
   GoRoute(path:'/admin/institute-claims',builder:(_,__)=>InstituteModeScope(builder:()=>const AdminInstituteClaimsScreen())),

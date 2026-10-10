@@ -14,6 +14,7 @@ import '../widgets/institute_detail_components.dart';
 import '../widgets/institute_detail_listings.dart';
 import '../widgets/institute_reviews_section.dart';
 import '../widgets/institute_image_preview.dart';
+import '../../../profile/presentation/widgets/student_affiliation_card.dart';
 
 class InstituteDetailScreen extends StatefulWidget {
   final String id;
@@ -309,6 +310,18 @@ class _InstituteDetailScreenState extends State<InstituteDetailScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
+                      if (institute.type == 'universities') ...[
+                        VerifiedStudentCount(instituteId: institute.id),
+                        if (canManage) ...[
+                          const SizedBox(height: 6),
+                          Align(alignment: Alignment.centerLeft, child: TextButton.icon(
+                            onPressed: () => context.push('/institute/${institute.id}/student-verifications'),
+                            icon: const Icon(Icons.fact_check_outlined),
+                            label: const Text('Student verification requests'),
+                          )),
+                        ],
+                        const SizedBox(height: 8),
+                      ],
                       InstituteDetailSection(
                         title: 'About the institute',
                         icon: Icons.info_outline,

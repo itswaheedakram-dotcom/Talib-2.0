@@ -25,6 +25,10 @@ service cloud.firestore {
     function isParticipant(participants) {
       return signedIn() && participants.size() == 2 && participants.hasAny([request.auth.uid]);
     }
+    function canManageInstitute(instituteId) {
+      return signedIn() && (admin() || managerAdminPermission('manage_institutes')
+        || get(/databases/$(database)/documents/institutes/$(instituteId)).data.ownerId == request.auth.uid);
+    }
 
     function validInstituteScore(data) {
       return data.get('minScore', 0) is number && data.get('minScore', 0) >= 0
@@ -65,19 +69,30 @@ service cloud.firestore {
       // Authenticated users may view profiles, but may only change their own profile.
       // Admin tools may update only the representative fields needed after a verified claim.
       allow read: if signedIn();
-      allow create: if (signedIn() && request.auth.uid == userId)
+      allow create: if (signedIn() && request.auth.uid == userId
+          && request.resource.data.get('studentVerificationStatus', 'not_requested') != 'approved')
         || admin()
         || (managerAdminPermission('ownership_claim_review')
           && request.resource.data.keys().hasOnly([
             'role', 'instituteAdmin', 'instituteId', 'instituteName', 'designation'
           ]));
       allow delete: if signedIn() && request.auth.uid == userId || admin();
-      allow update: if (signedIn() && request.auth.uid == userId)
+      allow update: if (signedIn() && request.auth.uid == userId
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            'studentInstituteId', 'studentInstituteName', 'studentProgram', 'studentVerificationStatus'
+          ]) || resource.data.get('studentVerificationStatus', 'not_requested') != 'approved')
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['studentVerificationStatus'])
+            || request.resource.data.studentVerificationStatus in ['pending', 'not_requested']))
         || admin()
         || (managerAdminPermission('ownership_claim_review')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'role', 'instituteAdmin', 'instituteId', 'instituteName', 'designation'
-          ]));
+          ]))
+        || (signedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentVerificationStatus'])
+          && request.resource.data.studentVerificationStatus in ['approved', 'rejected']
+          && canManageInstitute(resource.data.studentInstituteId)
+          && getAfter(/databases/$(database)/documents/institutes/$(resource.data.studentInstituteId)/studentAffiliations/$(userId)).data.status == request.resource.data.studentVerificationStatus);
 
       match /bookmarks/{postId} {
         allow read, write: if signedIn() && request.auth.uid == userId;
@@ -296,6 +311,51 @@ service cloud.firestore {
         allow create, update: if signedIn() && validReview();
         allow delete: if (signedIn() && reviewId == request.auth.uid)
           || admin() || managerAdminPermission('manage_institutes');
+      }
+
+      match /studentAffiliations/{studentId} {
+        function approvedInstitute() {
+          return get(/databases/$(database)/documents/institutes/$(instituteId)).data.status in ['approved', 'verified'];
+        }
+        function selectedByStudentAfter(studentUid) {
+          return getAfter(/databases/$(database)/documents/users/$(studentUid)).data.studentInstituteId == instituteId
+            && getAfter(/databases/$(database)/documents/users/$(studentUid)).data.studentVerificationStatus == 'pending';
+        }
+        allow read: if signedIn() && (request.auth.uid == studentId || canManageInstitute(instituteId));
+        allow create: if signedIn() && request.auth.uid == studentId
+          && approvedInstitute()
+          && request.resource.data.studentId == studentId
+          && request.resource.data.instituteId == instituteId
+          && request.resource.data.program is string && request.resource.data.program.size() > 0
+          && request.resource.data.program.size() <= 160
+          && request.resource.data.studentName is string && request.resource.data.studentName.size() <= 100
+          && request.resource.data.status == 'pending'
+          && request.resource.data.updatedAt is timestamp
+          && selectedByStudentAfter(studentId)
+          && request.resource.data.keys().hasOnly(['studentId', 'studentName', 'instituteId', 'program', 'status', 'updatedAt']);
+        allow update: if (signedIn() && request.auth.uid == studentId
+          && resource.data.status in ['pending', 'rejected']
+          && request.resource.data.status == 'pending'
+          && request.resource.data.studentId == studentId
+          && request.resource.data.instituteId == instituteId
+          && request.resource.data.program is string && request.resource.data.program.size() > 0
+          && request.resource.data.program.size() <= 160
+          && request.resource.data.studentName is string && request.resource.data.studentName.size() <= 100
+          && request.resource.data.updatedAt is timestamp
+          && selectedByStudentAfter(studentId)
+          && request.resource.data.keys().hasOnly(['studentId', 'studentName', 'instituteId', 'program', 'status', 'updatedAt']))
+          || (canManageInstitute(instituteId)
+          && resource.data.status == 'pending'
+          && request.resource.data.studentId == resource.data.studentId
+          && request.resource.data.instituteId == resource.data.instituteId
+          && request.resource.data.program == resource.data.program
+          && request.resource.data.status in ['approved', 'rejected']
+          && request.resource.data.reviewedBy == request.auth.uid
+          && getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentInstituteId == instituteId
+          && getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentVerificationStatus == request.resource.data.status
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy']));
+        allow delete: if signedIn() && ((request.auth.uid == studentId && resource.data.status != 'approved')
+          || canManageInstitute(instituteId));
       }
 
       match /opportunities/{opportunityId} {
