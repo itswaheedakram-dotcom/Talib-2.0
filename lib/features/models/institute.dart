@@ -86,7 +86,7 @@ class Institute {
     if (value is Iterable) {
       values = value;
     } else if (value is String) {
-      values = value.split(RegExp(r'[,;\\n]'));
+      values = value.split(RegExp(r'[,;\n]'));
     } else {
       values = <dynamic>[value];
     }
