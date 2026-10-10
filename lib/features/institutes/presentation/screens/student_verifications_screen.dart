@@ -3,7 +3,7 @@ import '../../../../app/theme.dart';
 import '../../data/institute_access.dart';
 import '../../data/institute_repository.dart';
 import '../../data/student_affiliation_repository.dart';
-import '../../models/institute.dart';
+import '../../../models/institute.dart';
 
 class StudentVerificationsScreen extends StatefulWidget {
   final String instituteId;

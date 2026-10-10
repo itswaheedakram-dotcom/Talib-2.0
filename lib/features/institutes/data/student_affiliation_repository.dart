@@ -7,7 +7,6 @@ import '../../../core/services/active_profile_controller.dart';
 import '../../../core/services/demo_data_service.dart';
 import '../../models/institute.dart';
 import 'institute_access.dart';
-import 'institute_repository.dart';
 
 /// Student-selected institute is visible immediately; only the institute may
 /// approve the affiliation and award the institute-specific badge.
@@ -16,7 +15,6 @@ class StudentAffiliationRepository extends ChangeNotifier {
   static final instance = StudentAffiliationRepository._();
   final Map<String, Map<String, dynamic>> _demoProfiles = {};
   final Map<String, Map<String, Map<String, dynamic>>> _demoRequests = {};
-  int _demoSequence = 0;
 
   String? get _uid => InstituteAccess.uid;
 

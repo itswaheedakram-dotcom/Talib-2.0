@@ -52,6 +52,7 @@ class _StudentAffiliationCardState extends State<StudentAffiliationCard> {
             : selected!.programs.map((name) => MapEntry(name, name)).toList();
         final distinct = <String, String>{for (final item in programs) item.key: item.value}.entries.toList();
         final selectedProgram = distinct.any((item) => item.key == program) ? program : null;
+        final selectedInstitute = selected;
         return Padding(
           padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.viewInsetsOf(context).bottom + 20),
           child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -61,7 +62,7 @@ class _StudentAffiliationCardState extends State<StudentAffiliationCard> {
             const SizedBox(height: 18),
             DropdownButtonFormField<String>(
               key: ValueKey('student-university-${selected?.id ?? 'none'}'),
-              value: selected?.id,
+              initialValue: selected?.id,
               decoration: const InputDecoration(labelText: 'University', border: OutlineInputBorder()),
               isExpanded: true,
               items: universities.map((item) => DropdownMenuItem(value: item.id, child: Text(item.name, overflow: TextOverflow.ellipsis))).toList(),
@@ -70,19 +71,19 @@ class _StudentAffiliationCardState extends State<StudentAffiliationCard> {
             const SizedBox(height: 14),
             DropdownButtonFormField<String>(
               key: ValueKey('student-program-${selected?.id ?? 'none'}'),
-              value: selectedProgram,
+              initialValue: selectedProgram,
               decoration: const InputDecoration(labelText: 'Program / degree', border: OutlineInputBorder()),
               isExpanded: true,
               items: distinct.map((item) => DropdownMenuItem(value: item.key, child: Text(item.value, overflow: TextOverflow.ellipsis))).toList(),
-              onChanged: saving || selected == null ? null : (value) => setSheetState(() => program = value),
+              onChanged: saving || selectedInstitute == null ? null : (value) => setSheetState(() => program = value),
             ),
             if (distinct.isEmpty && selected != null) const Padding(padding: EdgeInsets.only(top: 8), child: Text('This university has not listed its programs yet.')),
             const SizedBox(height: 18),
             FilledButton(
-              onPressed: saving || selected == null || selectedProgram == null ? null : () async {
+            onPressed: saving || selectedInstitute == null || selectedProgram == null ? null : () async {
                 setSheetState(() => saving = true);
                 try {
-                  await _repository.select(selected!, selectedProgram!);
+                  await _repository.select(selectedInstitute, selectedProgram);
                   if (sheetContext.mounted) Navigator.pop(sheetContext, true);
                 } catch (error) {
                   setSheetState(() => saving = false);
