@@ -56,7 +56,7 @@ void main() {
   testWidgets('UID remains below the actor name at large text sizes', (tester) async {
     await tester.pumpWidget(MaterialApp(home: MediaQuery(data: const MediaQueryData(size: Size(320, 640), textScaler: TextScaler.linear(1.6)),
       child: const Scaffold(body: SizedBox(width: 280, child: UserIdentity(uid: 'immutable-long-user-id-123456789', name: 'A student with a long display name', resolveName: false))))));
-    expect(find.text('UID: immutable-long-user-id-123456789'), findsOneWidget);
+    expect(find.text('immutable-long-user-id-123456789'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
   testWidgets('central profile screen displays UID and edit entry without duplicate course', (tester) async {

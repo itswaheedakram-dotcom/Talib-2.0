@@ -20,7 +20,7 @@ class UserIdentity extends StatelessWidget {
       Flexible(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
       Text(display.isEmpty ? 'Student' : display, softWrap: true,
         style: TextStyle(fontWeight: FontWeight.w700, color: color)),
-      if (uid.isNotEmpty) UserIdLabel(uid: uid, color: color),
+      if (uid.isNotEmpty) UserIdLabel(uid: uid, color: color, showLabel: false),
     ])),
     ]);
     if (!resolveName || uid.isEmpty || (!FirebaseService.initialized && !temporaryProfiles.any((p) => p.id == uid))) return content(name);
@@ -32,13 +32,14 @@ class UserIdentity extends StatelessWidget {
 class UserIdLabel extends StatelessWidget {
   final String uid;
   final Color? color;
-  const UserIdLabel({super.key, required this.uid, this.color});
+  final bool showLabel;
+  const UserIdLabel({super.key, required this.uid, this.color, this.showLabel = true});
   @override Widget build(BuildContext context) => Semantics(label: 'User ID $uid. Tap to copy.',
     button: true, child: InkWell(onTap: () async {
       await Clipboard.setData(ClipboardData(text: uid));
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User ID copied')));
     }, child: Padding(padding: const EdgeInsets.only(top: 3, bottom: 3),
-      child: Text('UID: $uid', softWrap: true, style: TextStyle(fontSize: 12,
+      child: Text(showLabel ? 'UID: $uid' : uid, softWrap: true, style: TextStyle(fontSize: 12,
         color: color ?? Theme.of(context).colorScheme.onSurface.withOpacity(.75))))));
 }
 
