@@ -340,7 +340,7 @@ void main() {
     await tester.enterText(durationField, '4 years / 8 semesters');
     final durationLabel = find.text('Duration / semesters');
     expect(tester.getRect(durationLabel).bottom + 7, lessThanOrEqualTo(tester.getRect(durationField).top));
-    expect(tester.widget<TextFormField>(durationField).decoration?.labelText, isNull);
+    expect(tester.widget<TextField>(find.descendant(of: durationField, matching: find.byType(TextField))).decoration?.labelText, isNull);
     tester.view.viewInsets = const FakeViewPadding(bottom: 260);
     await tester.pumpAndSettle();
     expect(tester.getRect(find.widgetWithText(FilledButton, 'Next')).bottom, lessThanOrEqualTo(500));
