@@ -79,10 +79,11 @@ void main() {
     expect(data.resources(usman).length, resources.length);
 
     // 6) Reviews are attached to the target, not the active reviewer.
+    final ayeshaReviewsBefore = List<Map<String, dynamic>>.from(data.reviews(ayesha));
     data.addReview(usman, ayesha, 'Ayesha Khan', 5, 'Great guidance.');
-    expect(data.reviews(usman).single['reviewerId'], ayesha);
-    expect(data.reviews(usman).single['reviewerName'], 'Ayesha Khan');
-    expect(data.reviews(ayesha), isEmpty);
+    expect(data.reviews(usman).singleWhere((review) => review['reviewerId'] == ayesha)['reviewerId'], ayesha);
+    expect(data.reviews(usman).singleWhere((review) => review['reviewerId'] == ayesha)['reviewerName'], 'Ayesha Khan');
+    expect(data.reviews(ayesha), ayeshaReviewsBefore);
 
     // 7) Bookmarks and institute interactions are per identity.
     data.toggleBookmark(ayesha, postId, true);
@@ -110,7 +111,7 @@ void main() {
     expect(data.post(postId)?.authorId, ayesha);
     expect(data.bookmarked(usman, postId), isFalse);
     expect(data.bookmarked(ayesha, postId), isTrue);
-    expect(data.reviews(usman).single['reviewerId'], ayesha);
+    expect(data.reviews(usman).singleWhere((review) => review['reviewerId'] == ayesha)['reviewerId'], ayesha);
     expect(data.settings(ayesha)['privateProfile'], isTrue);
     expect(data.settings(usman)['privateProfile'], isFalse);
     expect(data.isGroupMember(ayesha, createdGroup['id']), isTrue);

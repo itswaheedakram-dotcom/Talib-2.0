@@ -163,7 +163,7 @@ abstract final class SmartSearchParser {
 
     String? program;
     for (final p in ['computer science', 'cs', 'software engineering', 'engineering', 'business administration', 'fsc', 'ics', 'bs', 'undergraduate', 'ms', 'phd']) {
-      if (RegExp('\b${RegExp.escape(p)}\b').hasMatch(normalized)) {
+      if (RegExp(r'\b' + RegExp.escape(p) + r'\b').hasMatch(normalized)) {
         program = p == 'cs' ? 'Computer Science' : p.toUpperCase() == 'BS' ? 'BS' : _titleCase(p);
         understood.add('Program/level: $program');
         break;
