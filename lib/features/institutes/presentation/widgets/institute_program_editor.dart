@@ -292,7 +292,8 @@ class _ProgramEditorState extends State<_ProgramEditor> {
   Widget _optional(String title, List<Widget> children) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: Card(margin: EdgeInsets.zero, child: ExpansionTile(
-      key: PageStorageKey('editor-section:$title'),
+      // A PageStorageKey here would mix expansion state with input scroll offsets.
+      key: ValueKey('editor-section:$title'),
       title: Text(title), subtitle: const Text('Optional — add only what applies'),
       childrenPadding: const EdgeInsets.fromLTRB(16, 12, 16, 4), children: children,
     )),
