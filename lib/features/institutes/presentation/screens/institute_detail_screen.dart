@@ -1,312 +1,681 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../../../../app/theme.dart';
-import '../../data/institute_catalog.dart';
-import '../widgets/institute_image_preview.dart';
-import '../widgets/institute_detail_listings.dart';
-import '../../../models/institute.dart';
-import '../../data/institute_repository.dart';
-import '../../data/institute_access.dart';
-import '../../data/institute_claim_repository.dart';
-import '../../data/institute_score.dart';
-import '../../../../core/services/firebase_service.dart';
+
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/database_service.dart';
+import '../../../models/institute.dart';
+import '../../data/institute_access.dart';
+import '../../data/institute_catalog.dart';
+import '../../data/institute_claim_repository.dart';
+import '../../data/institute_repository.dart';
+import '../../data/institute_score.dart';
+import '../widgets/institute_detail_components.dart';
+import '../widgets/institute_detail_listings.dart';
+import '../widgets/institute_image_preview.dart';
 
-class InstituteDetailScreen extends StatelessWidget {
+class InstituteDetailScreen extends StatefulWidget {
   final String id;
   const InstituteDetailScreen({super.key, required this.id});
 
-  static const green = AppColors.primaryGreen;
-  static const darkGreen = AppColors.darkGreen;
-  static const lightGreen = AppColors.softGreen;
+  @override
+  State<InstituteDetailScreen> createState() => _InstituteDetailScreenState();
+}
 
-  @override Widget build(BuildContext context) {
-    final institute = InstituteRepository.instance.byId(id);
-    if (institute == null) return const Scaffold(body: Center(child: Text('Institute not found')));
-    final typeLabel = InstituteCatalog.instance.labelFor(institute.type);
-    final image = institute.imageUrl.trim();
+class _InstituteDetailScreenState extends State<InstituteDetailScreen> {
+  static const _sections = [
+    'Overview',
+    'Programs',
+    'Admissions',
+    'Scholarships',
+    'Facilities',
+    'Contact',
+  ];
+  final _anchors = {for (final section in _sections) section: GlobalKey()};
+  final _navigationKey = GlobalKey();
+  final _tabAnchors = {for (final section in _sections) section: GlobalKey()};
+  final _scroll = ScrollController();
+  String _selected = 'Overview';
+  bool _aboutExpanded = false;
+  String? _streamIdentity;
+  Stream<bool>? _bookmarks;
+  Stream<List<Map<String, dynamic>>>? _claims;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_trackSection);
+    InstituteRepository.instance.addListener(_changed);
+    ActiveProfileController.instance.addListener(_changed);
+  }
+
+  @override
+  void didUpdateWidget(InstituteDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.id != widget.id) {
+      _selected = 'Overview';
+      _aboutExpanded = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _scroll.hasClients) _scroll.jumpTo(0);
+      });
+    }
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  void _trackSection() {
+    final navigation = _navigationKey.currentContext?.findRenderObject();
+    if (navigation is! RenderBox) return;
+    final top =
+        navigation.localToGlobal(Offset.zero).dy + navigation.size.height + 36;
+    var selected = 'Overview';
+    for (final section in _sections) {
+      final box = _anchors[section]?.currentContext?.findRenderObject();
+      if (box is RenderBox && box.localToGlobal(Offset.zero).dy <= top)
+        selected = section;
+    }
+    if (_selected != selected && mounted) {
+      setState(() => _selected = selected);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final tab = _tabAnchors[selected]?.currentContext;
+        if (mounted && tab != null) {
+          Scrollable.ensureVisible(
+            tab,
+            duration: const Duration(milliseconds: 180),
+          );
+        }
+      });
+    }
+  }
+
+  void _jumpTo(String section) {
+    final target = _anchors[section]?.currentContext;
+    if (target == null) return;
+    Scrollable.ensureVisible(
+      target,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
+      alignment: 0,
+    );
+  }
+
+  void _syncStreams(Institute institute) {
+    final uid = InstituteAccess.uid;
+    final identity = '${InstituteAccess.isDemo}:$uid:${institute.id}';
+    if (_streamIdentity == identity) return;
+    _streamIdentity = identity;
+    _bookmarks = uid == null
+        ? null
+        : DatabaseService().instituteBookmarkStream(uid, institute.id);
+    _claims = InstituteClaimRepository.instance.watch();
+  }
+
+  @override
+  void dispose() {
+    InstituteRepository.instance.removeListener(_changed);
+    ActiveProfileController.instance.removeListener(_changed);
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final institute = InstituteRepository.instance.byId(widget.id);
+    if (institute == null)
+      return const Scaffold(body: Center(child: Text('Institute not found')));
+    _syncStreams(institute);
+    final catalog = InstituteCatalog.instance;
+    final canManage = InstituteAccess.canManage(institute);
+    final location = [
+      institute.area,
+      institute.city,
+    ].where((value) => value.trim().isNotEmpty).join(', ');
+    final hasLocation =
+        institute.address.trim().isNotEmpty || institute.city.trim().isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), onPressed: () => context.pop()),
-        title: Text(typeLabel),
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text(
+          'Institute details',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
-          if (InstituteAccess.canManage(institute))
-            IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () => context.push('/institute/${institute.id}/edit')),
-          const SizedBox(width: 8),
+          _bookmarkAction(institute),
+          IconButton(
+            tooltip: 'Copy institute details',
+            icon: const Icon(Icons.copy_outlined),
+            onPressed: () async {
+              await Clipboard.setData(
+                ClipboardData(
+                  text: [
+                    institute.name,
+                    _address(institute),
+                    institute.website,
+                  ].where((value) => value.trim().isNotEmpty).join('\n'),
+                ),
+              );
+              if (context.mounted)
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Institute details copied.')),
+                );
+            },
+          ),
+          if (canManage)
+            IconButton(
+              tooltip: 'Edit institute',
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => context.push('/institute/${institute.id}/edit'),
+            ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 28),
+      body: Column(
         children: [
-          InstituteImagePreview(
-            source: image,
-            fallbackIcon: InstituteCatalog.instance.iconFor(institute.type),
-            label: typeLabel,
-            height: 185,
-          ),
-          const SizedBox(height: 12),
-          Row(children: [
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(institute.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 4),
-              Row(children: [
-                const Icon(Icons.location_on_outlined, size: 17, color: green),
-                const SizedBox(width: 3),
-                Expanded(child: Text(institute.address, style: const TextStyle(color: AppColors.mutedText))),
-              ]),
-            ])),
-            IconButton(
-              tooltip: 'Open location in Maps',
-              onPressed: () => _openExternal(
-                context,
-                'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent([institute.address, institute.area, institute.city, institute.district, institute.province, institute.country].where((part) => part.trim().isNotEmpty).join(', '))}',
-                missingMessage: 'Add an institute address before opening Maps.',
-              ),
-              icon: const Icon(Icons.location_on_outlined, color: green),
-            ),
-            if (ActiveProfileController.instance.isDemo &&
-                ActiveProfileController.instance.effectiveUid != null)
-              StreamBuilder<bool>(
-                stream: DatabaseService().instituteBookmarkStream(
-                  ActiveProfileController.instance.effectiveUid!,
-                  institute.id,
-                ),
-                builder: (context, snapshot) => IconButton(
-                  tooltip: snapshot.data == true ? 'Remove bookmark' : 'Save institute',
-                  onPressed: () => DatabaseService().toggleInstituteBookmark(
-                    ActiveProfileController.instance.effectiveUid!,
-                    institute.id,
-                    snapshot.data != true,
-                  ),
-                  icon: Icon(snapshot.data == true ? Icons.bookmark : Icons.bookmark_border, color: green),
-                ),
-              )
-            else if (FirebaseService.initialized && FirebaseAuth.instance.currentUser != null)
-              StreamBuilder<bool>(
-                stream: DatabaseService().instituteBookmarkStream(
-                  FirebaseAuth.instance.currentUser!.uid,
-                  institute.id,
-                ),
-                builder: (context, snapshot) => IconButton(
-                  tooltip: snapshot.data == true ? 'Remove bookmark' : 'Save institute',
-                  onPressed: () async {
-                    try {
-                      await DatabaseService().toggleInstituteBookmark(
-                        FirebaseAuth.instance.currentUser!.uid,
-                        institute.id,
-                        snapshot.data != true,
-                      );
-                    } catch (error) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Bookmark could not be updated: $error')),
-                        );
-                      }
-                    }
-                  },
-                  icon: Icon(snapshot.data == true ? Icons.bookmark : Icons.bookmark_border, color: green),
-                ),
-              )
-            else
-              IconButton(
-                tooltip: 'Sign in to save',
-                onPressed: () => context.push('/signin'),
-                icon: const Icon(Icons.bookmark_border, color: green),
-              ),
-          ]),
-          const SizedBox(height: 10),
-          Card(
-            color: lightGreen,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(children: [
-                const Icon(Icons.campaign_outlined, color: green),
-                const SizedBox(width: 8),
-                const Expanded(child: Text('Admissions', style: TextStyle(fontWeight: FontWeight.w700, color: darkGreen))),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(color: institute.admissionStatus.toLowerCase() == 'open' ? green : AppColors.statusWarning, borderRadius: BorderRadius.circular(14)),
-                  child: Text(institute.admissionStatus.toUpperCase(), style: const TextStyle(color: AppColors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-                ),
-              ]),
-            ),
-          ),
-          const SizedBox(height: 10),
-          _section('Institute Information', Column(children: [
-            _info(Icons.info_outline, 'About', institute.description),
-            _info(Icons.public_outlined, 'Country', institute.country.isEmpty ? 'Not provided' : institute.country),
-            _info(Icons.map_outlined, 'Province / State / Region', institute.province.isEmpty ? 'Not provided' : institute.province),
-            if (institute.district.isNotEmpty) _info(Icons.location_city_outlined, 'District / County', institute.district),
-            _info(Icons.location_on_outlined, 'City / Town', institute.city),
-            if (institute.area.isNotEmpty) _info(Icons.place_outlined, 'Area / Locality', institute.area),
-            if (institute.board.isNotEmpty) _info(Icons.account_balance_outlined, 'Education Board / Authority', institute.board),
-            _info(Icons.account_balance_outlined, 'Type', typeLabel),
-            if (institute.subcategory.isNotEmpty) _info(Icons.category_outlined, 'Subcategory', institute.subcategory),
-            _info(Icons.location_city_outlined, 'Campus', institute.campus.isEmpty ? 'Not provided' : institute.campus),
-            _info(Icons.business_outlined, 'Sector', institute.sector),
-            _info(Icons.phone_outlined, 'Contact', institute.contact.isEmpty ? 'Not provided' : institute.contact),
-            _info(Icons.language_outlined, 'Website', institute.website.isEmpty ? 'Not provided' : institute.website),
-            if (institute.applicationUrl.isNotEmpty) _info(Icons.open_in_new_outlined, 'Application URL', institute.applicationUrl),
-          ])),
-          if (institute.website.trim().isNotEmpty || institute.contact.trim().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Wrap(spacing: 8, runSpacing: 8, children: [
-                if (institute.website.trim().isNotEmpty)
-                  OutlinedButton.icon(
-                    onPressed: () => _openExternal(context, institute.website),
-                    icon: const Icon(Icons.language_outlined),
-                    label: const Text('Open Website'),
-                  ),
-                if (institute.contact.trim().isNotEmpty)
-                  OutlinedButton.icon(
-                    onPressed: () => _openExternal(
-                      context,
-                      institute.contact.contains('@')
-                          ? 'mailto:${institute.contact.trim()}'
-                          : 'tel:${institute.contact.trim()}',
+          SizedBox(
+            key: _navigationKey,
+            height: 54,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  for (final section in _sections)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 7),
+                      child: ChoiceChip(
+                        key: _tabAnchors[section],
+                        label: Text(section),
+                        selected: _selected == section,
+                        onSelected: (_) => _jumpTo(section),
+                      ),
                     ),
-                    icon: const Icon(Icons.call_outlined),
-                    label: Text(institute.contact.contains('@') ? 'Email Institute' : 'Call Institute'),
-                  ),
-              ]),
+                ],
+              ),
             ),
-          const SizedBox(height: 10),
-          _section('Admission Information', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              _admissionBadge('Status', institute.admissionStatus),
-              if (institute.admissionDeadline.isNotEmpty) _admissionBadge('Deadline', institute.admissionDeadline),
-              if (institute.feeRange.isNotEmpty) _admissionBadge('Fee', institute.feeRange),
-              _admissionBadge('Entry Test', institute.entryTestRequired ? 'Required' : 'Not required'),
-              _admissionBadge('Apply', institute.submissionMode),
-              if (institute.minScore > 0) _admissionBadge('Minimum Score', InstituteScore.display(institute.minScore, institute.scoreScale)),
-              if (institute.eligibility.isNotEmpty) _admissionBadge('Eligibility', institute.eligibility),
-            ]),
-            const SizedBox(height: 12),
-            SizedBox(width: double.infinity, child: FilledButton(
-                onPressed: () {
-                  final target = institute.applicationUrl.trim().isNotEmpty
-                      ? institute.applicationUrl.trim()
-                      : institute.website.trim();
-                  if (target.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('No official application link is available yet. Please contact the institute.')),
-                    );
-                  } else {
-                    _openExternal(context, target);
-                  }
-                },
-                style: FilledButton.styleFrom(backgroundColor: green),
-                child: Text(institute.applicationUrl.trim().isNotEmpty ? 'Apply Now' : 'Website / Details'),
-              )),
-            const SizedBox(height: 9),
-            SizedBox(width: double.infinity, child: OutlinedButton.icon(
-              onPressed: () => context.push('/institute/' + institute.id + '/community?name=' + Uri.encodeComponent(institute.name)),
-              icon: const Icon(Icons.forum_outlined),
-              label: const Text('Institute Community'),
-            )),
-          ])),
-          const SizedBox(height: 10),
-          InstituteDetailListings(institute: institute),
-          const SizedBox(height: 10),
-          _section('Facilities', institute.facilities.isEmpty
-              ? const Text('No facilities added yet.')
-              : Column(children: institute.facilities.map((f) => _Facility(Icons.check_circle_outline, f)).toList())),
-          const SizedBox(height: 10),
-          StreamBuilder<List<Map<String, dynamic>>>(
-            stream: InstituteClaimRepository.instance.watch(),
-            builder: (context, snapshot) {
-              final pending = (snapshot.data ?? const []).any((claim) => claim['instituteId'] == institute.id && claim['status'] == 'pending');
-              final owns = InstituteAccess.uid != null && InstituteAccess.uid == institute.ownerId;
-              final owned = institute.ownerId.isNotEmpty;
-              return Card(child: ListTile(
-                leading: Icon(pending ? Icons.hourglass_top : Icons.business_outlined, color: green),
-                title: Text(owns ? 'You manage this institute' : pending ? 'Claim under review' : owned ? 'Institute ownership verified' : 'Claim this institute'),
-                subtitle: Text(pending ? 'Waiting for admin verification.' : owns ? 'Manage your institute details and programs.' : owned ? 'This institute has a verified representative.' : 'Submit verification details for admin review.'),
-                trailing: pending || (owned && !owns) ? null : FilledButton(
-                  onPressed: InstituteAccess.uid == null
-                    ? () => context.push('/signin')
-                    : owns
-                      ? () => context.push('/institute/${institute.id}/edit')
-                      : () => context.push('/institute/${institute.id}/claim'),
-                  child: Text(InstituteAccess.uid == null ? 'Sign In' : owns ? 'Manage' : 'Claim'),
-                ),
-              ));
-            },
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              key: const ValueKey('institute-detail-scroll'),
+              controller: _scroll,
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Column(
+                    key: _anchors['Overview'],
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      InstituteImagePreview(
+                        source: institute.imageUrl,
+                        fallbackIcon: catalog.iconFor(institute.type),
+                        label: catalog.labelFor(institute.type),
+                        height: institute.imageUrl.trim().isEmpty ? 112 : 180,
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        institute.name,
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      if (location.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 5),
+                            Expanded(
+                              child: Text(
+                                location,
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 7,
+                        runSpacing: 7,
+                        children: [
+                          InstituteDetailBadge(
+                            label: catalog.labelFor(institute.type),
+                            icon: catalog.iconFor(institute.type),
+                          ),
+                          if (institute.sector.trim().isNotEmpty)
+                            InstituteDetailBadge(
+                              label: institute.sector,
+                              icon: Icons.business_outlined,
+                            ),
+                          if (institute.ownerId.isNotEmpty)
+                            const InstituteDetailBadge(
+                              label: 'Verified representative',
+                              icon: Icons.verified_outlined,
+                            ),
+                          if (InstituteAccess.isDemo)
+                            const InstituteDetailBadge(
+                              label: 'Demo',
+                              icon: Icons.science_outlined,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (institute.website.trim().isNotEmpty)
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  InstituteDetailActions.openExternal(
+                                    context,
+                                    institute.website,
+                                  ),
+                              icon: const Icon(Icons.language_outlined),
+                              label: const Text('Website'),
+                            ),
+                          if (institute.contact.trim().isNotEmpty)
+                            OutlinedButton.icon(
+                              onPressed: () => _contact(institute),
+                              icon: Icon(
+                                institute.contact.contains('@')
+                                    ? Icons.mail_outline
+                                    : Icons.call_outlined,
+                              ),
+                              label: Text(
+                                institute.contact.contains('@')
+                                    ? 'Email'
+                                    : 'Call',
+                              ),
+                            ),
+                          if (hasLocation)
+                            OutlinedButton.icon(
+                              onPressed: () => _directions(institute),
+                              icon: const Icon(Icons.directions_outlined),
+                              label: const Text('Directions'),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      InstituteDetailSection(
+                        title: 'About the institute',
+                        icon: Icons.info_outline,
+                        children: [
+                          _about(institute.description),
+                          if (institute.subcategory.trim().isNotEmpty)
+                            InstituteDetailFact(
+                              icon: Icons.category_outlined,
+                              label: 'Category',
+                              value: institute.subcategory,
+                            ),
+                          if (institute.campus.trim().isNotEmpty)
+                            InstituteDetailFact(
+                              icon: Icons.account_balance_outlined,
+                              label: 'Campus',
+                              value: institute.campus,
+                            ),
+                          if (institute.board.trim().isNotEmpty)
+                            InstituteDetailFact(
+                              icon: Icons.school_outlined,
+                              label: 'Education board / authority',
+                              value: institute.board,
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  InstituteDetailListings(
+                    institute: institute,
+                    sectionKeys: {
+                      'course': _anchors['Programs']!,
+                      'admission': _anchors['Admissions']!,
+                      'scholarship': _anchors['Scholarships']!,
+                    },
+                    admissionOverview: _admissionRequirements(institute),
+                  ),
+                  const SizedBox(height: 14),
+                  InstituteDetailSection(
+                    key: _anchors['Facilities'],
+                    title: 'Facilities',
+                    icon: Icons.apartment_outlined,
+                    children: [
+                      if (institute.facilities.isEmpty)
+                        const Text('Facilities have not been listed yet.')
+                      else
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: institute.facilities
+                              .map(
+                                (facility) => InstituteDetailBadge(
+                                  label: facility,
+                                  icon: Icons.check_circle_outline,
+                                ),
+                              )
+                              .toList(),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  InstituteDetailSection(
+                    key: _anchors['Contact'],
+                    title: 'Location & contact',
+                    icon: Icons.location_on_outlined,
+                    children: [
+                      if (_address(institute).isNotEmpty)
+                        InstituteDetailFact(
+                          icon: Icons.place_outlined,
+                          label: 'Address',
+                          value: _address(institute),
+                        ),
+                      if (institute.contact.trim().isNotEmpty)
+                        InstituteDetailFact(
+                          icon: Icons.call_outlined,
+                          label: institute.contact.contains('@')
+                              ? 'Email'
+                              : 'Phone',
+                          value: institute.contact,
+                        ),
+                      if (institute.website.trim().isNotEmpty)
+                        InstituteDetailFact(
+                          icon: Icons.language_outlined,
+                          label: 'Official website',
+                          value: institute.website,
+                        ),
+                      if (institute.contact.trim().isEmpty &&
+                          institute.website.trim().isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Direct contact details have not been added yet.',
+                          ),
+                        ),
+                      if (hasLocation)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: () => _directions(institute),
+                            icon: const Icon(Icons.directions_outlined),
+                            label: const Text('Open in Maps'),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  InstituteDetailSection(
+                    title: 'Institute community',
+                    icon: Icons.forum_outlined,
+                    children: [
+                      const Text(
+                        'Connect with students and discuss life at this institute.',
+                      ),
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: () => context.push(
+                            '/institute/${institute.id}/community?name=${Uri.encodeComponent(institute.name)}',
+                          ),
+                          icon: const Icon(Icons.forum_outlined),
+                          label: const Text('Open community'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _ownership(institute),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _openExternal(
-    BuildContext context,
-    String rawUrl, {
-    String? missingMessage,
-  }) async {
-    if (rawUrl.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(missingMessage ?? 'No link is available for this institute yet.')),
-      );
-      return;
-    }
-    var uri = Uri.tryParse(rawUrl.trim());
-    if (uri == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('This link is not valid.')),
-      );
-      return;
-    }
-    if (!uri.hasScheme) uri = Uri.tryParse('https://${rawUrl.trim()}');
-    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open this link on your device.')),
+  Widget _about(String description) {
+    if (description.trim().isEmpty)
+      return const Text('An introduction has not been added yet.');
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final style = Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(height: 1.45);
+        final painter = TextPainter(
+          text: TextSpan(text: description, style: style),
+          maxLines: 4,
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout(maxWidth: constraints.maxWidth);
+        final truncated = painter.didExceedMaxLines;
+        painter.dispose();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              description,
+              style: style,
+              maxLines: _aboutExpanded ? null : 4,
+              overflow: _aboutExpanded
+                  ? TextOverflow.visible
+                  : TextOverflow.ellipsis,
+            ),
+            if (truncated)
+              TextButton(
+                onPressed: () =>
+                    setState(() => _aboutExpanded = !_aboutExpanded),
+                child: Text(_aboutExpanded ? 'Read less' : 'Read more'),
+              ),
+          ],
         );
-      }
-    }
+      },
+    );
   }
 
-  static Widget _section(String title, Widget child) => Builder(builder: (context) => Card(
-    margin: EdgeInsets.zero,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-      const SizedBox(height: 9),
-      child,
-    ])),
-  ));
+  Widget _bookmarkAction(Institute institute) {
+    final uid = InstituteAccess.uid;
+    if (uid == null)
+      return IconButton(
+        tooltip: 'Sign in to save institute',
+        icon: const Icon(Icons.bookmark_border),
+        onPressed: () => context.push('/signin'),
+      );
+    return StreamBuilder<bool>(
+      stream: _bookmarks,
+      builder: (context, snapshot) => IconButton(
+        tooltip: snapshot.data == true ? 'Remove bookmark' : 'Save institute',
+        icon: Icon(
+          snapshot.data == true ? Icons.bookmark : Icons.bookmark_border,
+        ),
+        onPressed: () async {
+          try {
+            await DatabaseService().toggleInstituteBookmark(
+              uid,
+              institute.id,
+              snapshot.data != true,
+            );
+            if (context.mounted)
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    snapshot.data == true
+                        ? 'Institute removed from saved.'
+                        : 'Institute saved.',
+                  ),
+                ),
+              );
+          } catch (_) {
+            if (context.mounted)
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Could not update bookmark. Please retry.'),
+                ),
+              );
+          }
+        },
+      ),
+    );
+  }
 
-  static Widget _admissionBadge(String label, String value) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-    decoration: BoxDecoration(color: lightGreen, borderRadius: BorderRadius.circular(10)),
-    child: RichText(text: TextSpan(children: [
-      TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w700, color: darkGreen)),
-      TextSpan(text: value, style: const TextStyle(color: AppColors.darkGreen)),
-    ])),
+  Widget _admissionRequirements(Institute institute) => ExpansionTile(
+    key: PageStorageKey('requirements-${institute.id}'),
+    tilePadding: EdgeInsets.zero,
+    childrenPadding: const EdgeInsets.only(bottom: 12),
+    title: const Text(
+      'General admission requirements',
+      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+    ),
+    children: [
+      const Align(
+        alignment: Alignment.centerLeft,
+        child: Text('Check each intake below for its announcement and dates.'),
+      ),
+      const SizedBox(height: 10),
+      Wrap(
+        spacing: 7,
+        runSpacing: 7,
+        children: [
+          if (institute.admissionStatus.trim().isNotEmpty)
+            InstituteDetailBadge(
+              label: 'General status: ${institute.admissionStatus}',
+            ),
+          InstituteDetailBadge(
+            label:
+                'Entry test: ${institute.entryTestRequired ? 'Required' : 'Not required'}',
+          ),
+          if (institute.submissionMode.trim().isNotEmpty)
+            InstituteDetailBadge(label: 'Apply: ${institute.submissionMode}'),
+          if (institute.feeRange.trim().isNotEmpty)
+            InstituteDetailBadge(label: 'Fee: ${institute.feeRange}'),
+          if (institute.minScore > 0)
+            InstituteDetailBadge(
+              label:
+                  'Minimum score: ${InstituteScore.display(institute.minScore, institute.scoreScale)}',
+            ),
+        ],
+      ),
+      if (institute.eligibility.trim().isNotEmpty)
+        InstituteDetailFact(
+          icon: Icons.rule_outlined,
+          label: 'Eligibility',
+          value: institute.eligibility,
+        ),
+      if (institute.admissionDeadline.trim().isNotEmpty)
+        InstituteDetailFact(
+          icon: Icons.event_outlined,
+          label: 'General deadline',
+          value: institute.admissionDeadline,
+        ),
+      if (institute.applicationUrl.trim().isNotEmpty)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: () => InstituteDetailActions.openExternal(
+              context,
+              institute.applicationUrl,
+            ),
+            icon: const Icon(Icons.open_in_new),
+            label: const Text('Official admissions website'),
+          ),
+        ),
+    ],
   );
 
-  static Widget _info(IconData icon, String title, String value) => ListTile(
-    dense: true,
-    contentPadding: EdgeInsets.zero,
-    leading: Icon(icon, color: green),
-    title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-    subtitle: Text(value),
+  Widget _ownership(
+    Institute institute,
+  ) => StreamBuilder<List<Map<String, dynamic>>>(
+    stream: _claims,
+    builder: (context, snapshot) {
+      final pending = (snapshot.data ?? const []).any(
+        (claim) =>
+            claim['instituteId'] == institute.id &&
+            claim['status'] == 'pending',
+      );
+      final owns =
+          InstituteAccess.uid != null &&
+          InstituteAccess.uid == institute.ownerId;
+      final owned = institute.ownerId.isNotEmpty;
+      return InstituteDetailSection(
+        title: owns
+            ? 'Your institute'
+            : pending
+            ? 'Claim under review'
+            : owned
+            ? 'Verified representative'
+            : 'Represent this institute?',
+        icon: pending ? Icons.hourglass_top : Icons.verified_user_outlined,
+        children: [
+          Text(
+            owns
+                ? 'Manage your profile, programs and published updates.'
+                : pending
+                ? 'Your verification details are waiting for admin review.'
+                : owned
+                ? 'A verified representative manages this institute profile.'
+                : 'Submit verification details to manage this institute profile.',
+          ),
+          if (!pending && (!owned || owns)) ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push(
+                  InstituteAccess.uid == null
+                      ? '/signin'
+                      : owns
+                      ? '/institute/${institute.id}/edit'
+                      : '/institute/${institute.id}/claim',
+                ),
+                icon: Icon(
+                  owns ? Icons.edit_outlined : Icons.business_outlined,
+                ),
+                label: Text(
+                  InstituteAccess.uid == null
+                      ? 'Sign in to claim'
+                      : owns
+                      ? 'Manage institute'
+                      : 'Claim institute',
+                ),
+              ),
+            ),
+          ],
+        ],
+      );
+    },
   );
-}
 
-class _Facility extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  const _Facility(this.icon, this.title);
-  @override Widget build(BuildContext context) => ListTile(
-    dense: true,
-    contentPadding: EdgeInsets.zero,
-    leading: Icon(icon, color: InstituteDetailScreen.green),
-    title: Text(title),
+  String _address(Institute institute) =>
+      [
+            institute.address,
+            institute.area,
+            institute.city,
+            institute.district,
+            institute.province,
+            institute.country,
+          ]
+          .map((value) => value.trim())
+          .where((value) => value.isNotEmpty)
+          .toSet()
+          .join(', ');
+  void _directions(Institute institute) => InstituteDetailActions.openExternal(
+    context,
+    'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent('${institute.name}, ${_address(institute)}')}',
+  );
+  void _contact(Institute institute) => InstituteDetailActions.openExternal(
+    context,
+    institute.contact.contains('@')
+        ? 'mailto:${institute.contact.trim()}'
+        : 'tel:${institute.contact.trim()}',
   );
 }

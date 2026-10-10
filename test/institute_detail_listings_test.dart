@@ -99,7 +99,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.byType(InstituteDetailListings), 350);
+    await tester.ensureVisible(find.byType(InstituteDetailListings));
     await tester.pumpAndSettle();
 
     expect(find.text('Computer Science'), findsOneWidget);
@@ -113,7 +113,7 @@ void main() {
     expect(find.text('Old Closed Intake'), findsNothing);
     expect(find.text('Merit Support'), findsOneWidget);
     expect(find.text('Fee: PKR 20000'), findsOneWidget);
-    expect(find.text('Eligibility: BS students'), findsOneWidget);
+    expect(find.text('Eligibility: BS students'), findsNothing);
     expect(find.text('Coverage: Full tuition'), findsOneWidget);
     expect(find.text('Scholarship deadline: 2026-12-15'), findsOneWidget);
     expect(find.byType(InstituteOpportunityCard), findsNWidgets(4));
@@ -127,6 +127,37 @@ void main() {
     }
     await tester.ensureVisible(find.text('Merit Support'));
     await tester.pumpAndSettle();
+    final scholarship = find.ancestor(
+      of: find.text('Merit Support'),
+      matching: find.byType(InstituteOpportunityCard),
+    );
+    await tester.ensureVisible(
+      find.descendant(of: scholarship, matching: find.text('More details')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: scholarship, matching: find.text('More details')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Eligibility: BS students'), findsOneWidget);
+    expect(find.text('Not provided'), findsNothing);
+    // Section shortcuts scroll the same page and keep every listing mounted.
+    final admissionsTab = find.widgetWithText(ChoiceChip, 'Admissions');
+    await tester.ensureVisible(admissionsTab);
+    await tester.pumpAndSettle();
+    await tester.tap(admissionsTab);
+    await tester.pumpAndSettle();
+    expect(tester.widget<ChoiceChip>(admissionsTab).selected, isTrue);
+    expect(find.byType(InstituteDetailScreen), findsOneWidget);
+    final coursesTab = find.widgetWithText(ChoiceChip, 'Programs');
+    await tester.ensureVisible(coursesTab);
+    await tester.pumpAndSettle();
+    await tester.tap(coursesTab);
+    await tester.pumpAndSettle();
+    final save = find.byTooltip('Save institute');
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Remove bookmark'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -160,6 +191,61 @@ void main() {
     );
     expect(find.text('No scholarships listed yet.'), findsOneWidget);
     expect(find.byType(InstituteOpportunityCard), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('large text and dark theme preserve overview and owner controls', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    ActiveProfileController.instance.activate(temporaryProfiles[5]);
+    final repository = InstituteRepository.instance;
+    final institute = (await repository.add(
+      Institute(
+        id: 'accessible-ux-test',
+        name: 'A Long Institute Name for Accessible Mobile Browsing',
+        type: 'universities',
+        city: 'Lahore',
+        description: List.filled(
+          12,
+          'Students can explore this institute and its learning opportunities.',
+        ).join(' '),
+      ),
+    ))!;
+    await repository.setSubmissionStatus(institute.id, 'approved');
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildDarkTheme(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(1.6)),
+          child: child!,
+        ),
+        home: InstituteDetailScreen(id: institute.id),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Edit institute'), findsOneWidget);
+    expect(find.byTooltip('Manage Programs / Courses'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Website'), findsNothing);
+    expect(find.widgetWithText(OutlinedButton, 'Call'), findsNothing);
+    expect(find.text('Not provided'), findsNothing);
+    final readMore = find.text('Read more');
+    await tester.ensureVisible(readMore);
+    await tester.pumpAndSettle();
+    await tester.tap(readMore);
+    await tester.pumpAndSettle();
+    expect(find.text('Read less'), findsOneWidget);
+    await tester.ensureVisible(find.text('Read less'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Read less'));
+    await tester.pumpAndSettle();
+    expect(find.text('Read more'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });

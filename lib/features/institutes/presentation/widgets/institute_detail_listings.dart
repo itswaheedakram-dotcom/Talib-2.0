@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/theme.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../models/institute.dart';
 import '../../../models/institute_opportunity.dart';
 import '../../data/institute_access.dart';
 import '../../data/institute_opportunity_repository.dart';
 import 'institute_opportunity_card.dart';
+import 'institute_detail_components.dart';
 
 /// Displays all offerings in the institute's existing detail-page scroll.
 class InstituteDetailListings extends StatefulWidget {
   final Institute institute;
-  const InstituteDetailListings({super.key, required this.institute});
+  final Map<String, Key> sectionKeys;
+  final Widget? admissionOverview;
+  const InstituteDetailListings({
+    super.key,
+    required this.institute,
+    this.sectionKeys = const {},
+    this.admissionOverview,
+  });
 
   @override
   State<InstituteDetailListings> createState() =>
@@ -84,6 +91,14 @@ class _InstituteDetailListingsState extends State<InstituteDetailListings> {
               }.contains(item.status.trim().toLowerCase()),
         )
         .toList();
+    admissions.sort((a, b) {
+      final priority = (a.status.trim().toLowerCase() == 'open' ? 0 : 1)
+          .compareTo(b.status.trim().toLowerCase() == 'open' ? 0 : 1);
+      if (priority != 0) return priority;
+      final aDate = DateTime.tryParse(a.openingDate) ?? DateTime(9999);
+      final bDate = DateTime.tryParse(b.openingDate) ?? DateTime(9999);
+      return aDate.compareTo(bDate);
+    });
     final scholarships = items
         .where((item) => item.kind == 'scholarship')
         .toList();
@@ -118,7 +133,7 @@ class _InstituteDetailListingsState extends State<InstituteDetailListings> {
         const SizedBox(height: 10),
         _section(
           context,
-          title: 'Admissions — Open & Upcoming',
+          title: 'Admissions',
           kind: 'admission',
           items: admissions,
           emptyMessage: 'No open or upcoming admissions listed yet.',
@@ -142,67 +157,56 @@ class _InstituteDetailListingsState extends State<InstituteDetailListings> {
     required List<InstituteOpportunity> items,
     required String emptyMessage,
     List<String> programs = const [],
-  }) => Card(
-    margin: EdgeInsets.zero,
-    child: Padding(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              if (InstituteAccess.canManage(widget.institute))
-                IconButton(
-                  tooltip: 'Manage $title',
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () => context.push(
-                    '/institute/${widget.institute.id}/opportunities?kind=$kind',
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 9),
-          if (programs.isNotEmpty) ...[
-            Wrap(
-              spacing: 7,
-              runSpacing: 7,
-              children: programs
-                  .map(
-                    (program) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 11,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.softGreen,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Text(
-                        program,
-                        style: const TextStyle(
-                          color: AppColors.darkGreen,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
+  }) => InstituteDetailSection(
+    key: widget.sectionKeys[kind],
+    title: title,
+    icon: switch (kind) {
+      'course' => Icons.school_outlined,
+      'scholarship' => Icons.workspace_premium_outlined,
+      _ => Icons.calendar_month_outlined,
+    },
+    trailing: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InstituteDetailBadge(label: '${programs.length + items.length}'),
+        if (InstituteAccess.canManage(widget.institute))
+          IconButton(
+            tooltip: 'Manage $title',
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () => context.push(
+              '/institute/${widget.institute.id}/opportunities?kind=$kind',
             ),
-            if (items.isNotEmpty) const SizedBox(height: 8),
-          ],
-          for (final item in items) InstituteOpportunityCard(item: item),
-          if (items.isEmpty && programs.isEmpty && !_loading && _error == null)
-            Text(emptyMessage),
-        ],
-      ),
+          ),
+      ],
     ),
+    children: [
+      if (kind == 'admission') ...[
+        const Text('Open and upcoming intakes'),
+        const SizedBox(height: 8),
+        if (widget.admissionOverview != null) widget.admissionOverview!,
+      ],
+      if (programs.isNotEmpty) ...[
+        Wrap(
+          spacing: 7,
+          runSpacing: 7,
+          children: programs
+              .map(
+                (program) => InstituteDetailBadge(
+                  label: program,
+                  icon: Icons.menu_book_outlined,
+                ),
+              )
+              .toList(),
+        ),
+        if (items.isNotEmpty) const SizedBox(height: 12),
+      ],
+      for (final item in items)
+        InstituteOpportunityCard(
+          key: ValueKey('${item.kind}:${item.id}'),
+          item: item,
+        ),
+      if (items.isEmpty && programs.isEmpty && !_loading && _error == null)
+        Text(emptyMessage),
+    ],
   );
 }
