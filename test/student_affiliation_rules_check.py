@@ -90,10 +90,8 @@ check(200, call('POST', ROOT + ':commit', {'writes': [
         'studentName': 'Student', 'instituteId': 'affiliation-rules-university',
         'program': 'BS Computer Science', 'status': 'approved', 'reviewedBy': 'affiliation-owner'})},
      'updateTransforms': [{'fieldPath': 'reviewedAt', 'setToServerValue': 'REQUEST_TIME'}]},
-    {'update': {'name': student_path, 'fields': fields({'name': 'Student',
-        'studentInstituteId': 'affiliation-rules-university',
-        'studentInstituteName': 'Affiliation rules university', 'studentProgram': 'BS Computer Science',
-        'studentVerificationStatus': 'approved'})}},
+    {'update': {'name': student_path, 'fields': fields({'studentVerificationStatus': 'approved'})},
+     'updateMask': {'fieldPaths': ['studentVerificationStatus']}},
 ]}, uid='affiliation-owner'), 'university approves request and grants profile badge')
 check(403, call('DELETE', ROOT + '/institutes/affiliation-rules-university/studentAffiliations/affiliation-student', uid='affiliation-student'), 'student cannot remove verified affiliation to alter count')
 print('All student affiliation rules checks passed; no production services contacted.')
