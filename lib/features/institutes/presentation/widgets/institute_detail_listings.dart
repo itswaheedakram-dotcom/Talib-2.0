@@ -8,6 +8,7 @@ import '../../data/institute_access.dart';
 import '../../data/institute_opportunity_repository.dart';
 import 'institute_opportunity_card.dart';
 import 'institute_detail_components.dart';
+import 'institute_program_groups.dart';
 
 /// Displays all offerings in the institute's existing detail-page scroll.
 class InstituteDetailListings extends StatefulWidget {
@@ -128,7 +129,7 @@ class _InstituteDetailListingsState extends State<InstituteDetailListings> {
           kind: 'course',
           items: courses,
           emptyMessage: 'No programs or courses listed yet.',
-          programs: widget.institute.programs,
+          programs: widget.institute.programCategories,
         ),
         const SizedBox(height: 10),
         _section(
@@ -174,7 +175,9 @@ class _InstituteDetailListingsState extends State<InstituteDetailListings> {
             tooltip: 'Manage $title',
             icon: const Icon(Icons.edit_outlined),
             onPressed: () => context.push(
-              '/institute/${widget.institute.id}/opportunities?kind=$kind',
+              kind == 'course'
+                  ? '/institute/${widget.institute.id}/programs'
+                  : '/institute/${widget.institute.id}/opportunities?kind=$kind',
             ),
           ),
       ],
@@ -186,18 +189,7 @@ class _InstituteDetailListingsState extends State<InstituteDetailListings> {
         if (widget.admissionOverview != null) widget.admissionOverview!,
       ],
       if (programs.isNotEmpty) ...[
-        Wrap(
-          spacing: 7,
-          runSpacing: 7,
-          children: programs
-              .map(
-                (program) => InstituteDetailBadge(
-                  label: program,
-                  icon: Icons.menu_book_outlined,
-                ),
-              )
-              .toList(),
-        ),
+        InstituteProgramGroups(institute: widget.institute),
         if (items.isNotEmpty) const SizedBox(height: 12),
       ],
       for (final item in items)

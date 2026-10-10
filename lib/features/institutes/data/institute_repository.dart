@@ -102,6 +102,7 @@ class InstituteRepository extends ChangeNotifier {
       submissionMode: item.submissionMode,
       eligibility: item.eligibility,
       programs: programs,
+      programGroups: item.programGroups.isNotEmpty ? item.programGroups : _demoProgramGroups(programs),
       contact: item.contact,
       status: item.status,
       minScore: item.minScore,
@@ -114,6 +115,53 @@ class InstituteRepository extends ChangeNotifier {
       imageUrl: item.imageUrl,
       facilities: facilities,
     );
+  }
+
+  // Illustrative fixtures only. Real records never receive inferred offerings.
+  static Map<String, List<String>> _demoProgramGroups(List<String> categories) => {
+    for (final category in categories)
+      category: switch (category.toLowerCase()) {
+        'undergraduate' => const ['BS Computer Science (Demo)', 'BS Education (Demo)', 'BS English (Demo)'],
+        'graduate' || 'ms / mphil' => const ['MS Education (Demo)', 'MS Computer Science (Demo)'],
+        'phd' => const ['PhD Education (Demo)'],
+        'education' => const ['BS Education (Demo)', 'B.Ed (Demo)', 'MS Education (Demo)'],
+        _ => ['$category program (Demo)'],
+      },
+  };
+
+  Future<bool> addProgramToGroup(String instituteId, String group, String program) async {
+    final current = byId(instituteId);
+    group = group.trim();
+    program = program.trim();
+    if (current == null || group.isEmpty || program.isEmpty) {
+      error = 'Enter a category and program name.';
+      return false;
+    }
+    final canonicalGroup = current.programCategories.firstWhere(
+      (value) => value.toLowerCase() == group.toLowerCase(), orElse: () => group,
+    );
+    final names = current.programGroups[canonicalGroup] ?? const <String>[];
+    if (names.any((name) => name.toLowerCase() == program.toLowerCase())) {
+      error = 'This program is already listed in this category.';
+      return false;
+    }
+    return update(Institute.fromMap(current.id, {
+      ...current.toMap(),
+      'programs': {...current.programs, canonicalGroup}.toList(),
+      'programGroups': {...current.programGroups, canonicalGroup: [...names, program]},
+    }));
+  }
+
+  Future<bool> removeProgramFromGroup(String instituteId, String group, String program) async {
+    final current = byId(instituteId);
+    if (current == null) return false;
+    return update(Institute.fromMap(current.id, {
+      ...current.toMap(),
+      'programGroups': {
+        ...current.programGroups,
+        group: (current.programGroups[group] ?? const <String>[]).where((name) => name != program).toList(),
+      },
+    }));
   }
 
   final List<Institute> _demoItems;

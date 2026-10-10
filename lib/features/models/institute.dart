@@ -22,6 +22,7 @@ class Institute {
   final String submissionMode;
   final String eligibility;
   final List<String> programs;
+  final Map<String, List<String>> programGroups;
   final String contact;
   final String status;
   final double minScore;
@@ -58,6 +59,7 @@ class Institute {
     this.submissionMode = 'Online',
     this.eligibility = '',
     this.programs = const [],
+    this.programGroups = const {},
     this.contact = '',
     this.status = 'approved',
     this.minScore = 0,
@@ -75,7 +77,7 @@ class Institute {
     'name': name, 'type': type, 'subcategory': subcategory, 'ownerId': ownerId, 'representativeId': representativeId, 'createdBy': createdBy, 'campus': campus, 'country': country, 'province': province,
     'district': district, 'city': city, 'area': area, 'board': board, 'town': town, 'sector': sector, 'address': address, 'description': description,
     'website': website, 'applicationUrl': applicationUrl, 'submissionMode': submissionMode, 'eligibility': eligibility,
-    'programs': programs, 'contact': contact, 'status': status, 'minScore': minScore, 'scoreScale': scoreScale, 'nextProgram': nextProgram,
+    'programs': programs, 'programGroups': programGroups, 'contact': contact, 'status': status, 'minScore': minScore, 'scoreScale': scoreScale, 'nextProgram': nextProgram,
     'admissionStatus': admissionStatus, 'admissionDeadline': admissionDeadline, 'feeRange': feeRange, 'entryTestRequired': entryTestRequired,
     'imageUrl': imageUrl, 'facilities': facilities,
   };
@@ -97,6 +99,18 @@ class Institute {
         .where((item) => item.isNotEmpty)
         .toSet()
         .toList(growable: false);
+  }
+
+  List<String> get programCategories =>
+      {...programs, ...programGroups.keys}.toList(growable: false);
+
+  static Map<String, List<String>> _readProgramGroups(dynamic value) {
+    if (value is! Map) return const {};
+    return {
+      for (final entry in value.entries)
+        if (entry.key.toString().trim().isNotEmpty)
+          entry.key.toString().trim(): _readStringList(entry.value),
+    };
   }
 
   factory Institute.fromMap(String id, Map<String, dynamic> map) => Institute(
@@ -123,6 +137,7 @@ class Institute {
     submissionMode: (map['submissionMode'] ?? 'Online').toString(),
     eligibility: (map['eligibility'] ?? '').toString(),
     programs: _readStringList(map['programs']),
+    programGroups: _readProgramGroups(map['programGroups']),
     contact: (map['contact'] ?? '').toString(),
     status: (map['status'] ?? 'approved').toString(),
     scoreScale: (map['scoreScale'] ?? 'unspecified').toString(),

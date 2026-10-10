@@ -267,7 +267,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'type', 'subcategory', 'campus', 'country', 'province', 'district', 'city', 'area', 'board', 'town',
             'sector', 'address', 'description', 'website', 'applicationUrl',
-            'submissionMode', 'eligibility', 'programs', 'contact', 'minScore', 'scoreScale',
+            'submissionMode', 'eligibility', 'programs', 'programGroups', 'contact', 'minScore', 'scoreScale',
             'nextProgram', 'admissionStatus', 'admissionDeadline', 'feeRange',
             'entryTestRequired', 'imageUrl', 'facilities', 'updatedAt'
           ]));

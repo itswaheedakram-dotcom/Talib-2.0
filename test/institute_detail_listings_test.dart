@@ -249,4 +249,150 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets(
+    'category chips expand their own programs and collapse the previous group',
+    (tester) async {
+      ActiveProfileController.instance.activate(temporaryProfiles[0]);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildTheme(),
+          home: const Scaffold(
+            body: SingleChildScrollView(
+              child: InstituteDetailListings(
+                institute: Institute(
+                  id: 'group-choice-test',
+                  name: 'Grouped Institute',
+                  type: 'universities',
+                  city: 'Lahore',
+                  programs: ['Education', 'Undergraduate', 'Graduate'],
+                  programGroups: {
+                    'Education': ['B.Ed'],
+                    'Undergraduate': ['BS Computer Science', 'BS Education'],
+                    'Graduate': ['MS Education'],
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('BS Computer Science'), findsNothing);
+      final undergraduate = find.widgetWithText(ChoiceChip, 'Undergraduate');
+      await tester.tap(undergraduate);
+      await tester.pumpAndSettle();
+      expect(tester.widget<ChoiceChip>(undergraduate).selected, isTrue);
+      expect(find.text('BS Computer Science'), findsOneWidget);
+      expect(find.text('BS Education'), findsOneWidget);
+      expect(find.text('MS Education'), findsNothing);
+      final graduate = find.widgetWithText(ChoiceChip, 'Graduate');
+      await tester.tap(graduate);
+      await tester.pumpAndSettle();
+      expect(tester.widget<ChoiceChip>(undergraduate).selected, isFalse);
+      expect(find.text('BS Computer Science'), findsNothing);
+      expect(find.text('MS Education'), findsOneWidget);
+      await tester.tap(graduate);
+      await tester.pumpAndSettle();
+      expect(find.text('MS Education'), findsNothing);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Education'));
+      await tester.pumpAndSettle();
+      expect(find.text('B.Ed'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  test(
+    'program groups survive serialization without guessing legacy offerings',
+    () {
+      final grouped = Institute.fromMap('grouped', {
+        'name': 'Grouped Institute',
+        'city': 'Lahore',
+        'programs': ['Undergraduate'],
+        'programGroups': {
+          'Undergraduate': ['BS Computer Science', 'BS Computer Science'],
+          'Graduate': 'MS Education, MS English',
+        },
+      });
+      expect(grouped.programCategories, ['Undergraduate', 'Graduate']);
+      final restored = Institute.fromMap(grouped.id, grouped.toMap());
+      expect(restored.programGroups['Undergraduate'], ['BS Computer Science']);
+      expect(restored.programGroups['Graduate'], [
+        'MS Education',
+        'MS English',
+      ]);
+      final legacy = Institute.fromMap('legacy', {
+        'programs': ['Undergraduate', 'Graduate'],
+      });
+      expect(legacy.programGroups, isEmpty);
+    },
+  );
+
+  test(
+    'group management uses the shared repository and enforces permissions',
+    () async {
+      final profiles = ActiveProfileController.instance;
+      profiles.activate(temporaryProfiles[5]);
+      final repository = InstituteRepository.instance;
+      final institute = (await repository.add(
+        const Institute(
+          id: 'group-management-test',
+          name: 'Managed Groups Institute',
+          type: 'universities',
+          city: 'Lahore',
+          programs: ['Undergraduate'],
+          programGroups: {
+            'Undergraduate': ['BS Computer Science'],
+          },
+        ),
+      ))!;
+      await repository.setSubmissionStatus(institute.id, 'approved');
+      expect(
+        await repository.addProgramToGroup(
+          institute.id,
+          'undergraduate',
+          'BS Education',
+        ),
+        isTrue,
+      );
+      expect(
+        await repository.addProgramToGroup(
+          institute.id,
+          'Undergraduate',
+          'bs education',
+        ),
+        isFalse,
+      );
+      expect(
+        await repository.addProgramToGroup(
+          institute.id,
+          'Graduate',
+          'MS Education',
+        ),
+        isTrue,
+      );
+      expect(
+        await repository.removeProgramFromGroup(
+          institute.id,
+          'Undergraduate',
+          'BS Computer Science',
+        ),
+        isTrue,
+      );
+      final saved = (await repository.loadById(institute.id))!;
+      expect(saved.programGroups['Undergraduate'], ['BS Education']);
+      expect(saved.programGroups['Graduate'], ['MS Education']);
+      profiles.activate(temporaryProfiles[0]);
+      expect(
+        await repository.addProgramToGroup(
+          institute.id,
+          'Graduate',
+          'Unauthorized program',
+        ),
+        isFalse,
+      );
+      expect(repository.byId(institute.id)!.programGroups, saved.programGroups);
+    },
+  );
 }
