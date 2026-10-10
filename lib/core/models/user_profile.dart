@@ -41,8 +41,7 @@ class UserProfile {
   }
   Map<String, dynamic> get editableFields => {
     ProfileFields.name: name, ProfileFields.city: city, ProfileFields.bio: bio,
-    ProfileFields.photoUrl: photoUrl, ProfileFields.educationLevel: educationLevel,
-    ProfileFields.semester: semester, ProfileFields.graduationYear: graduationYear,
+    ProfileFields.photoUrl: photoUrl,
     ProfileFields.skills: skills, ProfileFields.portfolioUrl: portfolioUrl,
   };
   String get roleLabel => role == 'student' ? 'Student' : 'Community Member';

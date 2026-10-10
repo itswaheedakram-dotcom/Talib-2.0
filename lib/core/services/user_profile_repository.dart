@@ -54,8 +54,8 @@ class UserProfileRepository extends ChangeNotifier {
     if (profile.name.trim().isEmpty || profile.name.length > 80) throw ArgumentError('Enter a name of 1–80 characters.');
     if (profile.bio.length > 300) throw ArgumentError('Keep your bio within 300 characters.');
     if (isDemo(profile.uid)) {
-      _demo[profile.uid] = profile.editableFields;
-      ActiveProfileController.instance.updateProfile(name: profile.name, city: profile.city, level: profile.educationLevel);
+      _demo[profile.uid] = {...?_demo[profile.uid], ...profile.editableFields};
+      ActiveProfileController.instance.updateProfile(name: profile.name, city: profile.city);
       notifyListeners(); return;
     }
     // Only personal fields are editable here. University/course use the affiliation transaction.

@@ -18,10 +18,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
     fields = {
       ProfileFields.name: TextEditingController(text: p.name),
       ProfileFields.city: TextEditingController(text: p.city),
-      ProfileFields.educationLevel: TextEditingController(text: p.educationLevel),
       ProfileFields.bio: TextEditingController(text: p.bio),
-      ProfileFields.semester: TextEditingController(text: p.semester),
-      ProfileFields.graduationYear: TextEditingController(text: p.graduationYear),
       ProfileFields.skills: TextEditingController(text: p.skills.join(', ')),
       ProfileFields.portfolioUrl: TextEditingController(text: p.portfolioUrl),
     };
@@ -43,8 +40,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
     try {
       await UserProfileRepository.instance.save(UserProfile(uid: widget.profile.uid,
         name: value(ProfileFields.name), city: value(ProfileFields.city),
-        educationLevel: value(ProfileFields.educationLevel), bio: value(ProfileFields.bio),
-        semester: value(ProfileFields.semester), graduationYear: value(ProfileFields.graduationYear),
+        bio: value(ProfileFields.bio),
         portfolioUrl: value(ProfileFields.portfolioUrl), photoUrl: photoUrl,
         skills: value(ProfileFields.skills).split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toSet().take(12).toList()));
       if (mounted) Navigator.pop(context, true);
@@ -68,14 +64,6 @@ class _ProfileEditorState extends State<ProfileEditor> {
       _field(ProfileFields.name, 'Name', maxLength: 80, validate: (value) => value == null || value.trim().isEmpty ? 'Enter your name.' : null),
       _field(ProfileFields.bio, 'About me', lines: 3, maxLength: 300),
       _field(ProfileFields.city, 'City', maxLength: 100),
-      _field(ProfileFields.educationLevel, 'Education level', maxLength: 100),
-      const Padding(padding: EdgeInsets.only(bottom: 16), child: Text('University and course are edited together in My university.')),
-      _field(ProfileFields.semester, 'Semester / study year', maxLength: 40),
-      _field(ProfileFields.graduationYear, 'Graduation year (optional)', validate: (value) {
-        if (value == null || value.trim().isEmpty) return null;
-        final year = int.tryParse(value.trim());
-        return year == null || year < 1950 || year > DateTime.now().year + 15 ? 'Enter a valid year.' : null;
-      }),
       _field(ProfileFields.skills, 'Skills / interests (comma separated)', maxLength: 240),
       _field(ProfileFields.portfolioUrl, 'Portfolio / project link (optional)', validate: (value) {
         if (value == null || value.trim().isEmpty) return null;
