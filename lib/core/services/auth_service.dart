@@ -1,6 +1,12 @@
 import '../models/user_profile.dart';
+import 'active_profile_controller.dart';
+import 'auth_form_rules.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+class AccountSetupIncomplete implements Exception {
+  const AccountSetupIncomplete();
+}
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -9,11 +15,29 @@ class AuthService {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
 
-  Future<UserCredential> signIn(String email, String password) =>
-      _auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
+  Future<UserCredential> signIn(String email, String password) async {
+    final result = await _auth.signInWithEmailAndPassword(email: email.trim(), password: password);
+    try { await _ensureProfile(result.user!); }
+    catch (_) { await _auth.signOut(); throw const AccountSetupIncomplete(); }
+    ActiveProfileController.instance.clear();
+    return result;
+  }
+
+  Future<void> _ensureProfile(User user, {String? name, String role = 'student'}) async {
+    final ref = _db.collection('users').doc(user.uid);
+    await _db.runTransaction((transaction) async {
+      final existing = await transaction.get(ref);
+      if (!existing.exists) {
+        transaction.set(ref, {
+          ProfileFields.uid: user.uid, ProfileFields.name: name ?? user.displayName ?? 'Student',
+          ProfileFields.role: role, 'createdAt': FieldValue.serverTimestamp(),
+          ProfileFields.updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+      transaction.set(ref, {ProfileFields.uid: user.uid, 'email': FieldValue.delete()}, SetOptions(merge: true));
+      transaction.set(ref.collection('private').doc('account'), {'email': user.email ?? ''}, SetOptions(merge: true));
+    });
+  }
 
   Future<UserCredential> register(
     String email,
@@ -21,6 +45,10 @@ class AuthService {
     required String name,
     String role = 'student',
   }) async {
+    if (AuthFormRules.name(name) != null || AuthFormRules.email(email) != null || AuthFormRules.password(password, registering: true) != null) {
+      throw ArgumentError('Invalid registration details.');
+    }
+    if (!['student', 'institute'].contains(role)) throw ArgumentError('Invalid account type.');
     final result = await _auth.createUserWithEmailAndPassword(
       email: email.trim(),
       password: password,
@@ -33,19 +61,14 @@ class AuthService {
       );
     }
 
-    await user.updateDisplayName(name.trim());
-    await _db.collection('users').doc(user.uid).set({
-      ProfileFields.uid: user.uid,
-      ProfileFields.name: name.trim(),
-      'role': role,
-      'isVerified': false,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-
-    await _db.collection('users').doc(user.uid).collection('private').doc('account').set({
-      'email': user.email ?? email.trim(),
-    }, SetOptions(merge: true));
+    try {
+      await user.updateDisplayName(name.trim());
+      await _ensureProfile(user, name: name.trim(), role: role);
+    } catch (_) {
+      await _auth.signOut();
+      throw const AccountSetupIncomplete();
+    }
+    ActiveProfileController.instance.clear();
     return result;
   }
 
@@ -81,5 +104,8 @@ class AuthService {
     await user.updatePassword(newPassword);
   }
 
-  Future<void> signOut() => _auth.signOut();
+  Future<void> signOut() async {
+    await _auth.signOut();
+    ActiveProfileController.instance.clear();
+  }
 }
