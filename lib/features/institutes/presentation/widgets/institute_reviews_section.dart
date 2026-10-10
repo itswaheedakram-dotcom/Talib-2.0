@@ -91,7 +91,7 @@ class _InstituteReviewsSectionState extends State<InstituteReviewsSection> {
           const SizedBox(height: 8),
           const Text('Compared with reviewed institutes of the same category in this app. This is community feedback, not an official academic ranking.', style: TextStyle(fontSize: 12)),
           ExpansionTile(tilePadding: EdgeInsets.zero, title: const Text('How is the rank calculated?'), children: const [
-            Padding(padding: EdgeInsets.only(bottom: 12), child: Text('Each person has one rating. Ranking uses (total stars + 15) ÷ (number of ratings + 5). The extra weight is equivalent to five neutral 3-star ratings, so a very small number of reviews has less influence. Equal scores share the same rank.')),
+            Padding(padding: EdgeInsets.only(bottom: 12), child: Text('Each signed-in account has one rating. Ranking uses (total stars + 15) ÷ (number of ratings + 5). The extra weight is equivalent to five neutral 3-star ratings, so a very small number of reviews has less influence. Equal scores share the same rank.')),
           ]),
           if (uid == null || uid.isEmpty) const Text('Sign in to share your rating and review.')
           else Align(alignment: Alignment.centerLeft, child: FilledButton.icon(

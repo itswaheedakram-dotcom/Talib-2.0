@@ -69,7 +69,8 @@ class InstituteReviewRepository extends ChangeNotifier {
     final grouped = <String, List<InstituteReview>>{};
     for (final doc in docs.docs) {
       final review = InstituteReview.read(doc.data());
-      if (review == null || review.userId != doc.id || review.instituteId != doc.reference.parent.parent?.id) continue;
+      if (review == null || review.userId != doc.id || review.instituteId != doc.reference.parent.parent?.id
+          || doc.reference.parent.parent?.parent.path != 'institutes') continue;
       (grouped[review.instituteId] ??= []).add(review);
     }
     _real..clear()..addAll(grouped);
