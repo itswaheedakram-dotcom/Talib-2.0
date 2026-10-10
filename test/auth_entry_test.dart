@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:talib_2/app/theme.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:talib_2/core/services/auth_form_rules.dart';
 import 'package:talib_2/core/models/username_rules.dart';
@@ -61,6 +62,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+  for (final dark in [false, true]) {
+    for (final registering in [false, true]) {
+      testWidgets('auth colors follow the shared ${dark ? "dark" : "light"} theme for ${registering ? "signup" : "signin"}', (tester) async {
+        final theme = dark ? buildDarkTheme() : buildTheme();
+        await tester.pumpWidget(MaterialApp(theme: buildTheme(), darkTheme: buildDarkTheme(),
+          themeMode: dark ? ThemeMode.dark : ThemeMode.light, home: AuthEntryScreen(registering: registering)));
+        expect(tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor, theme.scaffoldBackgroundColor);
+        final emailInput = tester.widget<TextField>(field('Email'));
+        expect(emailInput.decoration!.fillColor, theme.colorScheme.surface);
+        final title = tester.widget<Text>(find.text(registering ? 'Sign Up' : 'Sign in').first);
+        expect(title.style!.color, theme.colorScheme.primary);
+        final button = tester.widget<FilledButton>(find.byType(FilledButton));
+        expect(button.style!.backgroundColor!.resolve({}), theme.colorScheme.primary);
+        expect(button.style!.foregroundColor!.resolve({}), theme.colorScheme.onPrimary);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
   testWidgets('reset validates email without Firebase and ignores empty password', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: AuthEntryScreen(registering: false)));
     await tester.enterText(field('Email'), 'bad-email');

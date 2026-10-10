@@ -74,14 +74,19 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> {
     } catch (_) { if (mounted) message('Could not open this photo. Please try another image.'); }
     finally { if (mounted) setState(() => pickingPhoto = false); }
   }
-  static const green = Color(0xFF009B70), ink = Color(0xFF155B49), cream = Color(0xFFFAFBF5);
+  ColorScheme get colors => Theme.of(context).colorScheme;
+  Color get green => colors.primary;
+  Color get ink => colors.onSurface;
+  Color get muted => colors.onSurface.withOpacity(.65);
+  Color get panel => Theme.of(context).inputDecorationTheme.fillColor ?? colors.surface;
+  Color get divider => Theme.of(context).dividerTheme.color ?? colors.onSurface.withOpacity(.2);
   InputDecoration decoration(String label, IconData icon, {Widget? suffix, String? helper}) => InputDecoration(
-    labelText: label, helperText: helper, prefixIcon: Icon(icon, color: const Color(0xFF85CAB6)), suffixIcon: suffix,
-    filled: true, fillColor: Colors.white, contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
-    labelStyle: const TextStyle(color: Color(0xFF71837D)),
+    labelText: label, helperText: helper, prefixIcon: Icon(icon, color: green.withOpacity(.65)), suffixIcon: suffix,
+    filled: true, fillColor: colors.surface, contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+    labelStyle: TextStyle(color: muted),
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
-    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: Color(0xFFF0F3ED))),
-    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: green, width: 1.5)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: divider.withOpacity(.5))),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: green, width: 1.5)),
     errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: Theme.of(context).colorScheme.error)),
     errorMaxLines: 3, helperMaxLines: 2,
   );
@@ -90,38 +95,38 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> {
     icon: Icon(obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: green));
   Widget header() => Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(registering ? 'Sign Up' : 'Sign in', style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w800, color: green, letterSpacing: -.8)),
+      Text(registering ? 'Sign Up' : 'Sign in', style: TextStyle(fontSize: 38, fontWeight: FontWeight.w800, color: green, letterSpacing: -.8)),
       const SizedBox(height: 8),
-      Text(registering ? 'Your next chapter\nstarts here.' : 'Welcome back!', style: const TextStyle(fontSize: 17, color: Color(0xFF7A8680), height: 1.5)),
+      Text(registering ? 'Your next chapter\nstarts here.' : 'Welcome back!', style: TextStyle(fontSize: 17, color: muted, height: 1.5)),
     ])),
     const SizedBox(width: 8),
     if (registering) SizedBox(width: 104, height: 116, child: Stack(alignment: Alignment.center, children: [
-      CircleAvatar(radius: 49, backgroundColor: const Color(0xFFC9EADD), foregroundImage: photo == null ? null : MemoryImage(photo!),
-        child: const Icon(Icons.person_rounded, size: 78, color: green)),
-      Positioned(right: 0, bottom: 5, child: Material(color: Colors.white, shape: const CircleBorder(), elevation: 3,
+      CircleAvatar(radius: 49, backgroundColor: panel, foregroundImage: photo == null ? null : MemoryImage(photo!),
+        child: Icon(Icons.person_rounded, size: 78, color: green)),
+      Positioned(right: 0, bottom: 5, child: Material(color: colors.surface, shape: const CircleBorder(), elevation: 3,
         child: IconButton(tooltip: 'Add profile photo', onPressed: busy || pickingPhoto ? null : pickPhoto,
           icon: Icon(pickingPhoto ? Icons.hourglass_top : Icons.add_a_photo_outlined, color: green)))),
     ])) else const SizedBox(width: 122, height: 148, child: AuthArtwork()),
   ]);
   @override Widget build(BuildContext context) => PopScope(canPop: !busy, child: Scaffold(
-    backgroundColor: cream,
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     body: SafeArea(child: Align(alignment: Alignment.topCenter, child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520),
       child: AutofillGroup(child: Form(key: form, child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Align(alignment: Alignment.centerLeft, child: IconButton(onPressed: busy ? null : back, tooltip: 'Back', icon: const Icon(Icons.arrow_back, color: ink))),
+      Align(alignment: Alignment.centerLeft, child: IconButton(onPressed: busy ? null : back, tooltip: 'Back', icon: Icon(Icons.arrow_back, color: ink))),
       const SizedBox(height: 12), header(),
       if (registering && photo != null) Align(alignment: Alignment.centerRight, child: TextButton(
         onPressed: busy ? null : () => setState(() => photo = null), child: const Text('Remove photo'))),
       SizedBox(height: registering ? 28 : 38),
       if (registering) ...[
-        Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: const Color(0xFFE1F1E9), borderRadius: BorderRadius.circular(28)),
+        Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(28)),
           child: Row(children: ['student', 'institute'].map((value) => Expanded(child: Semantics(selected: role == value,
             child: InkWell(borderRadius: BorderRadius.circular(24), onTap: busy ? null : () => setState(() => role = value),
               child: AnimatedContainer(duration: const Duration(milliseconds: 180), padding: const EdgeInsets.symmetric(vertical: 13),
-                decoration: BoxDecoration(color: role == value ? green : Colors.transparent, borderRadius: BorderRadius.circular(24)),
+                decoration: BoxDecoration(color: role == value ? green : panel, borderRadius: BorderRadius.circular(24)),
                 child: Text(value == 'student' ? 'Student' : 'Institute', textAlign: TextAlign.center,
-                  style: TextStyle(color: role == value ? Colors.white : green, fontWeight: FontWeight.w600))))))).toList())),
-        if (role == 'institute') const Padding(padding: EdgeInsets.only(top: 10), child: Text('Institute access requires an approved ownership claim.', style: TextStyle(color: ink, fontSize: 12))),
+                  style: TextStyle(color: role == value ? colors.onPrimary : ink, fontWeight: FontWeight.w600))))))).toList())),
+        if (role == 'institute') Padding(padding: const EdgeInsets.only(top: 10), child: Text('Institute access requires an approved ownership claim.', style: TextStyle(color: ink, fontSize: 12))),
         const SizedBox(height: 24),
         TextFormField(controller: name, enabled: !busy, validator: AuthFormRules.name, maxLength: 80,
           textInputAction: TextInputAction.next, autofillHints: const [AutofillHints.name],
@@ -149,23 +154,23 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> {
           validator: (value) => value == null || value.isEmpty ? 'Confirm your password.' : value != password.text ? 'Passwords do not match.' : null,
           decoration: decoration('Confirm password', Icons.lock_outline)),
       ] else Padding(padding: const EdgeInsets.only(top: 8), child: Align(alignment: Alignment.centerRight,
-        child: TextButton(onPressed: busy ? null : resetPassword, child: const Text('Forgot password?', style: TextStyle(color: green))))),
+        child: TextButton(onPressed: busy ? null : resetPassword, child: Text('Forgot password?', style: TextStyle(color: green))))),
       const SizedBox(height: 24),
       FilledButton(onPressed: busy || pickingPhoto ? null : submit,
-        style: FilledButton.styleFrom(backgroundColor: green, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 20),
+        style: FilledButton.styleFrom(backgroundColor: green, foregroundColor: colors.onPrimary, padding: const EdgeInsets.symmetric(vertical: 20),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), elevation: 2),
         child: Text(busy ? action : registering ? 'Sign up' : 'Sign in', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))),
       const SizedBox(height: 20),
-      Row(children: [const Expanded(child: Divider(color: Color(0xFFE1E8DF))), Padding(padding: const EdgeInsets.symmetric(horizontal: 14),
-        child: Text('or', style: TextStyle(color: Colors.grey.shade500))), const Expanded(child: Divider(color: Color(0xFFE1E8DF)))]),
+      Row(children: [Expanded(child: Divider(color: divider)), Padding(padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Text('or', style: TextStyle(color: muted))), Expanded(child: Divider(color: divider))]),
       const SizedBox(height: 16),
       OutlinedButton.icon(onPressed: busy ? null : () { ActiveProfileController.instance.clear(); context.go('/'); },
-        style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF7A8680), backgroundColor: const Color(0xFFF0F2EB), side: BorderSide.none,
+        style: OutlinedButton.styleFrom(foregroundColor: ink, backgroundColor: panel, side: BorderSide.none,
           padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
         icon: const Icon(Icons.person_outline), label: const Text('Continue browsing')),
       const SizedBox(height: 24),
       TextButton(onPressed: busy ? null : () => context.go(registering ? '/signin' : '/register'),
         child: Text(registering ? 'Already have an account? Sign in' : 'Don’t have an account? Sign up', textAlign: TextAlign.center,
-          style: const TextStyle(color: green, fontWeight: FontWeight.w600))),
+          style: TextStyle(color: green, fontWeight: FontWeight.w600))),
     ])))))))));
 }
