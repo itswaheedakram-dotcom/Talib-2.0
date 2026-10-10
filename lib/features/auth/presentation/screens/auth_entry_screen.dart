@@ -119,7 +119,7 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> {
               child: AnimatedContainer(duration: const Duration(milliseconds: 180), padding: const EdgeInsets.symmetric(vertical: 13),
                 decoration: BoxDecoration(color: role == value ? green : Colors.transparent, borderRadius: BorderRadius.circular(24)),
                 child: Text(value == 'student' ? 'Student' : 'Institute', textAlign: TextAlign.center,
-                  style: TextStyle(color: role == value ? Colors.white : green, fontWeight: FontWeight.w600)))))).toList())),
+                  style: TextStyle(color: role == value ? Colors.white : green, fontWeight: FontWeight.w600))))))).toList())),
         if (role == 'institute') const Padding(padding: EdgeInsets.only(top: 10), child: Text('Institute access requires an approved ownership claim.', style: TextStyle(color: ink, fontSize: 12))),
         const SizedBox(height: 24),
         TextFormField(controller: name, enabled: !busy, validator: AuthFormRules.name, maxLength: 80,
