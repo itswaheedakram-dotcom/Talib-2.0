@@ -11,15 +11,41 @@ import 'institute_access.dart';
 /// Student-selected institute is visible immediately; only the institute may
 /// approve the affiliation and award the institute-specific badge.
 class StudentAffiliationRepository extends ChangeNotifier {
-  StudentAffiliationRepository._();
-  static final instance = StudentAffiliationRepository._();
+  StudentAffiliationRepository._() { _seedDemoAffiliations(); }
+  static final instance = StudentAffiliationRepository._() { _seedDemoAffiliations(); }
   final Map<String, Map<String, dynamic>> _demoProfiles = {};
   final Map<String, Map<String, Map<String, dynamic>>> _demoRequests = {};
+
+  void _seedDemoAffiliations() {
+    // In-memory fixtures only; university approvals never write to Firebase.
+    const fixtures = [
+      ('demo-user-1', 'university-1', 'University of the Punjab', 'BS Computer Science (Demo)', 'approved'),
+      ('demo-user-2', 'university-18', 'Bahauddin Zakariya University', 'BS Software Engineering (Demo)', 'approved'),
+      ('demo-user-5', 'university-1', 'University of the Punjab', 'BS Business Administration (Demo)', 'approved'),
+      ('demo-user-4', 'university-14', 'University of Agriculture Faisalabad', 'Agriculture program (Demo)', 'pending'),
+    ];
+    for (final (uid, instituteId, instituteName, program, status) in fixtures) {
+      final student = temporaryProfiles.firstWhere((profile) => profile.id == uid);
+      _demoProfiles[uid] = {
+        'studentInstituteId': instituteId, 'studentInstituteName': instituteName,
+        'studentProgram': program, 'studentVerificationStatus': status,
+      };
+      (_demoRequests[instituteId] ??= {})[uid] = {
+        'id': uid, 'studentId': uid, 'studentName': student.name,
+        'instituteId': instituteId, 'program': program, 'status': status,
+      };
+    }
+    DemoDataService.instance.addNotification('demo-user-6', {
+      'type': 'student_affiliation', 'instituteId': 'university-14',
+      'text': 'Usman Malik asked to verify student status.',
+      'createdAt': DateTime.now(), 'read': false,
+    });
+  }
 
   String? get _uid => InstituteAccess.uid;
 
   Future<Map<String, dynamic>> profile(String uid) async {
-    if (InstituteAccess.isDemo) {
+    if (uid.startsWith('demo-user-') || InstituteAccess.isDemo) {
       return Map<String, dynamic>.from(_demoProfiles[uid] ?? const {});
     }
     final data = (await FirebaseFirestore.instance.collection('users').doc(uid).get()).data();
@@ -40,7 +66,7 @@ class StudentAffiliationRepository extends ChangeNotifier {
   }
 
   Stream<Map<String, dynamic>> watchProfile(String uid) {
-    if (InstituteAccess.isDemo) {
+    if (uid.startsWith('demo-user-') || InstituteAccess.isDemo) {
       Map<String, dynamic> current() => Map<String, dynamic>.from(_demoProfiles[uid] ?? const {});
       return Stream.multi((controller) {
         controller.add(current());
@@ -248,5 +274,9 @@ class StudentAffiliationRepository extends ChangeNotifier {
   }
 
   @visibleForTesting
-  void resetDemoForTest() { _demoProfiles.clear(); _demoRequests.clear(); notifyListeners(); }
+  void resetDemoForTest({bool seed = false}) {
+    _demoProfiles.clear(); _demoRequests.clear();
+    if (seed) _seedDemoAffiliations();
+    notifyListeners();
+  }
 }

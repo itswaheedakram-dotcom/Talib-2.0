@@ -103,7 +103,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Row(children: [
                         Expanded(child: Text(p.name, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: darkGreen))),
-                        const Icon(Icons.verified, color: green),
                       ]),
                       if (p.username.isNotEmpty) ...[
                         const SizedBox(height: 4),
@@ -112,18 +111,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 4),
                       Text(p.city, style: const TextStyle(color: Colors.black54)),
                       const SizedBox(height: 7),
-                      const Text('Active temporary test profile', style: TextStyle(color: green, fontWeight: FontWeight.w600)),
+                      Text(p.id == 'demo-user-6' ? 'Community Member' : 'Student', style: const TextStyle(color: green, fontWeight: FontWeight.w600)),
                     ])),
                   ]),
                 ),
                 const SizedBox(height: 14),
+                StudentAffiliationCard(uid: p.id, editable: true),
+                const SizedBox(height: 12),
                 _section('Profile Information', Column(children: [
                   _demoInfo(Icons.school_outlined, 'Education Level', p.level),
                   _demoInfo(Icons.menu_book_outlined, 'Program / Degree', p.program),
                   _demoInfo(Icons.location_on_outlined, 'City', p.city),
                 ])),
-                const SizedBox(height: 12),
-                StudentAffiliationCard(uid: p.id, editable: true),
                 const SizedBox(height: 12),
                 AnimatedBuilder(
                   animation: DemoDataService.instance,
@@ -243,6 +242,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       const SizedBox(height: 14),
+      if (u != null) StudentAffiliationCard(uid: u.uid, editable: true),
+      if (u != null) const SizedBox(height: 12),
       _section(
         'Profile Information',
         Column(
@@ -265,8 +266,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       const SizedBox(height: 12),
-      if (u != null) StudentAffiliationCard(uid: u.uid, editable: true),
-      if (u != null) const SizedBox(height: 12),
     ];
 
     if (u != null) {

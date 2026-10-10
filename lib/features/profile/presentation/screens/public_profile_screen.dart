@@ -102,11 +102,15 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
   @override Widget build(BuildContext context) {
     if (!FirebaseService.initialized || widget.id.startsWith('demo-user-')) {
-      final demo={'demo-user-1':{'name':'Ayesha Khan','city':'Lahore, Punjab','level':'BS Computer Science','institute':'University of the Punjab','program':'Computer Science'},'demo-user-2':{'name':'Ali Raza','city':'Multan, Punjab','level':'BS Software Engineering','institute':'BZU Multan','program':'Software Engineering'},'demo-user-3':{'name':'Hira Ahmed','city':'Islamabad','level':'MS Education','institute':'NUST Islamabad','program':'Education'},'demo-user-4':{'name':'Usman Malik','city':'Faisalabad, Punjab','level':'BS Business Administration','institute':'University of Agriculture Faisalabad','program':'Business Administration'},'demo-user-5':{'name':'Ahtasham Malik','username':'','city':'Lahore, Punjab','level':'BS Business Administration','institute':'University of the Punjab','program':'Business Administration'},'demo-user-6':{'name':'Waheed Akram','username':'waheed','city':'Pakistan','level':'Community Member','institute':'','program':''}}[widget.id]??{'name':'Student','city':'Pakistan','level':'Community Member','institute':'','program':''};
+      final demo={'demo-user-1':{'name':'Ayesha Khan','city':'Lahore, Punjab','level':'BS Computer Science','institute':'University of the Punjab','program':'Computer Science'},'demo-user-2':{'name':'Ali Raza','city':'Multan, Punjab','level':'BS Software Engineering','institute':'BZU Multan','program':'Software Engineering'},'demo-user-3':{'name':'Hira Ahmed','city':'Islamabad','level':'MS Education','institute':'NUST Islamabad','program':'Education'},'demo-user-4':{'name':'Usman Malik','city':'Faisalabad, Punjab','level':'BS Agriculture','institute':'University of Agriculture Faisalabad','program':'Agriculture'},'demo-user-5':{'name':'Ahtasham Malik','username':'','city':'Lahore, Punjab','level':'BS Business Administration','institute':'University of the Punjab','program':'Business Administration'},'demo-user-6':{'name':'Waheed Akram','username':'waheed','city':'Pakistan','level':'Community Member','institute':'','program':''}}[widget.id]??{'name':'Student','city':'Pakistan','level':'Community Member','institute':'','program':''};
       final name=demo['name']!;
       return Scaffold(appBar:AppBar(title:const Text('Profile')),body:ListView(padding:const EdgeInsets.all(16),children:[
         Center(child:CircleAvatar(radius:44,backgroundColor:const Color(0xFFE8F5E9),child:Text(name[0],style:const TextStyle(fontSize:32,color:Color(0xFF2E7D32))))),
-        const SizedBox(height:10),Row(mainAxisAlignment:MainAxisAlignment.center,children:[Text(name,style:const TextStyle(fontSize:22,fontWeight:FontWeight.w600)),const SizedBox(width:6),const Icon(Icons.verified,size:20,color:AppColors.primaryGreen)]),if((demo['username']??'').toString().isNotEmpty)Center(child:Text('@${demo['username']}',style:const TextStyle(color:AppColors.primaryGreen,fontWeight:FontWeight.w600))),Center(child:Text(demo['city']!,style:const TextStyle(color:Colors.grey))),
+        const SizedBox(height:10),Row(mainAxisAlignment:MainAxisAlignment.center,children:[Text(name,style:const TextStyle(fontSize:22,fontWeight:FontWeight.w600))]),if((demo['username']??'').toString().isNotEmpty)Center(child:Text('@${demo['username']}',style:const TextStyle(color:AppColors.primaryGreen,fontWeight:FontWeight.w600))),Center(child:Text(demo['city']!,style:const TextStyle(color:Colors.grey))),
+        const SizedBox(height:6),
+        Center(child: Text(widget.id == 'demo-user-6' ? 'Community Member' : 'Student', style: const TextStyle(color: AppColors.primaryGreen, fontWeight: FontWeight.w600))),
+        const SizedBox(height:12),
+        StudentAffiliationCard(uid: widget.id),
         const SizedBox(height:12),
         AnimatedBuilder(
           animation: Listenable.merge([
@@ -217,8 +221,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           const Text('Profile Information',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),const SizedBox(height:10),_InfoTile(Icons.school_outlined,'Education level',demo['level']!),if(demo['program']!.isNotEmpty)_InfoTile(Icons.menu_book_outlined,'Program / Degree',demo['program']!)
         ]))),
-        const SizedBox(height:12),
-        StudentAffiliationCard(uid: widget.id),
         const SizedBox(height:12),
         AnimatedBuilder(
           animation: Listenable.merge([ActiveProfileController.instance, DemoDataService.instance]),

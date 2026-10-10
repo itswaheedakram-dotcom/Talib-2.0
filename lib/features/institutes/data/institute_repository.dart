@@ -121,7 +121,7 @@ class InstituteRepository extends ChangeNotifier {
   static Map<String, List<String>> _demoProgramGroups(List<String> categories) => {
     for (final category in categories)
       category: switch (category.toLowerCase()) {
-        'undergraduate' => const ['BS Computer Science (Demo)', 'BS Education (Demo)', 'BS English (Demo)'],
+        'undergraduate' => const ['BS Computer Science (Demo)', 'BS Software Engineering (Demo)', 'BS Business Administration (Demo)', 'BS Education (Demo)', 'BS English (Demo)'],
         'graduate' || 'ms / mphil' => const ['MS Education (Demo)', 'MS Computer Science (Demo)'],
         'phd' => const ['PhD Education (Demo)'],
         'education' => const ['BS Education (Demo)', 'B.Ed (Demo)', 'MS Education (Demo)'],

@@ -105,14 +105,16 @@ class _StudentAffiliationCardState extends State<StudentAffiliationCard> {
     final program = (_profile['studentProgram'] ?? '').toString();
     final status = (_profile['studentVerificationStatus'] ?? 'not_requested').toString();
     final selected = institute.isNotEmpty;
+    if (!selected && !widget.editable) return const SizedBox.shrink();
     return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, runSpacing: 4, children: [Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.account_balance_outlined, color: AppColors.primaryGreen), const SizedBox(width: 9), Text('My university', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.darkGreen))]), if (status == 'approved') const Tooltip(message: 'Student status verified by this university', child: Chip(avatar: Icon(Icons.verified, size: 17, color: AppColors.primaryGreen), label: Text('University verified')))]),
+      Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, runSpacing: 4, children: [Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.account_balance_outlined, color: AppColors.primaryGreen), const SizedBox(width: 9), Text(widget.editable ? 'My university' : 'University', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.darkGreen))]), ]),
       if (selected) ...[
         const SizedBox(height: 7),
         Text(institute, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+        if (status == 'approved') const Padding(padding: EdgeInsets.only(top: 6), child: Tooltip(message: 'Student affiliation verified by this university', child: Chip(backgroundColor: AppColors.softGreen, avatar: Icon(Icons.verified, size: 17, color: AppColors.primaryGreen), label: Text('University verified')))),
         if (program.isNotEmpty) Text(program, style: Theme.of(context).textTheme.bodyMedium),
         const SizedBox(height: 5),
-        Text(switch (status) { 'approved' => 'This university confirmed your student affiliation.', 'pending' => 'Verification request sent. Waiting for the university.', 'rejected' => 'The university could not verify this request. You can update your details and send it again.', _ => 'University selected; verification has not been requested.' }, style: Theme.of(context).textTheme.bodySmall),
+        if (widget.editable) Text(switch (status) { 'approved' => 'This university confirmed your student affiliation.', 'pending' => 'Verification request sent. Waiting for the university.', 'rejected' => 'The university could not verify this request. You can update your details and send it again.', _ => 'University selected; verification has not been requested.' }, style: Theme.of(context).textTheme.bodySmall),
       ] else ...[
         const SizedBox(height: 5),
         const Text('Choose your university and program. The university name will show on your profile immediately.'),

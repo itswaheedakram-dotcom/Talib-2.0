@@ -10,10 +10,36 @@ import 'package:talib_2/features/profile/presentation/widgets/student_affiliatio
 
 void main() {
   final affiliations = StudentAffiliationRepository.instance;
+  setUp(() => affiliations.resetDemoForTest());
   tearDown(() {
     affiliations.resetDemoForTest();
     ActiveProfileController.instance.clear();
     FirebaseService.initialized = false;
+  });
+
+  testWidgets('seeded demo approvals show university badge and correct counts', (tester) async {
+    affiliations.resetDemoForTest(seed: true);
+    expect(await affiliations.verifiedStudentCount('university-1'), 2);
+    expect(await affiliations.verifiedStudentCount('university-18'), 1);
+    expect(await affiliations.verifiedStudentCount('university-14'), 0);
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: const Scaffold(body: StudentAffiliationCard(uid: 'demo-user-1'))));
+    await tester.pumpAndSettle();
+    expect(find.text('University of the Punjab'), findsOneWidget);
+    expect(find.text('University verified'), findsOneWidget);
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: const Scaffold(body: StudentAffiliationCard(uid: 'demo-user-4'))));
+    await tester.pumpAndSettle();
+    expect(find.text('University of Agriculture Faisalabad'), findsOneWidget);
+    expect(find.text('University verified'), findsNothing);
+    expect(find.text('Verification request sent. Waiting for the university.'), findsNothing);
+    ActiveProfileController.instance.activate(temporaryProfiles[5]);
+    final university = InstituteRepository.instance.byId('university-14')!;
+    expect((await affiliations.requests(university).first).single['studentId'], 'demo-user-4');
+    await affiliations.review(university, 'demo-user-4', 'approved');
+    await tester.pumpAndSettle();
+    expect(find.text('University verified'), findsOneWidget);
+    expect(await affiliations.verifiedStudentCount('university-14'), 1);
+    expect(FirebaseService.initialized, isFalse);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets('selected university shows before approval; approval adds badge and verified count only', (tester) async {
@@ -28,7 +54,7 @@ void main() {
     expect(await affiliations.verifiedStudentCount(university.id), 0);
     expect(DemoDataService.instance.notifications('demo-user-6').any((n) => n['type'] == 'student_affiliation'), isTrue);
 
-    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: Scaffold(body: StudentAffiliationCard(uid: 'demo-user-1'))));
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: Scaffold(body: StudentAffiliationCard(uid: 'demo-user-1', editable: true))));
     await tester.pumpAndSettle();
     expect(find.text(university.name), findsOneWidget);
     expect(find.text('Verification request sent. Waiting for the university.'), findsOneWidget);
