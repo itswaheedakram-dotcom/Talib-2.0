@@ -224,13 +224,26 @@ class InstituteDetailScreen extends StatelessWidget {
             )),
           ])),
           const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => context.push('/institute/${institute.id}/opportunities'),
-              icon: const Icon(Icons.event_available_outlined),
-              label: const Text('Programs, Admissions & Scholarships'),
-            ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => context.push('/institute/${institute.id}/opportunities?kind=course'),
+                icon: const Icon(Icons.school_outlined),
+                label: const Text('Programs / Courses'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => context.push('/institute/${institute.id}/opportunities?kind=admission'),
+                icon: const Icon(Icons.calendar_month_outlined),
+                label: const Text('Admissions'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => context.push('/institute/${institute.id}/opportunities?kind=scholarship'),
+                icon: const Icon(Icons.workspace_premium_outlined),
+                label: const Text('Scholarships'),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           _section('Facilities', institute.facilities.isEmpty

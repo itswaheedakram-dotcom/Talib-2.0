@@ -69,7 +69,7 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/find',builder:(_,__)=>InstituteModeScope(builder:()=>const FindInstituteScreen())),
   GoRoute(path:'/add-institute/:type',builder:(_,s)=>InstituteModeScope(builder:()=>AddInstituteScreen(type:s.pathParameters['type']!))),
   GoRoute(path:'/institute/:id/programs',builder:(_,s)=>InstituteRecordScope(id:s.pathParameters['id']!,builder:()=>DisciplineInfoScreen(instituteId:s.pathParameters['id']!))),
-  GoRoute(path:'/institute/:id/opportunities',builder:(_,s)=>InstituteRecordScope(id:s.pathParameters['id']!,builder:()=>InstituteOpportunitiesScreen(instituteId:s.pathParameters['id']!))),
+  GoRoute(path:'/institute/:id/opportunities',builder:(_,s)=>InstituteRecordScope(id:s.pathParameters['id']!,builder:()=>InstituteOpportunitiesScreen(instituteId:s.pathParameters['id']!,initialKind:s.uri.queryParameters['kind'] ?? 'admission'))),
   GoRoute(path:'/institute-dashboard',builder:(_,__)=>InstituteModeScope(builder:()=>const InstituteDashboardScreen())),
   GoRoute(path:'/institute-admin/:claimId',builder:(_,s)=>InstituteModeScope(builder:()=>InstituteAdminScreen(claimId:s.pathParameters['claimId']!))),
   GoRoute(path:'/admin',builder:(_,__)=>const AdminPanelScreen()),

@@ -11,7 +11,12 @@ import '../../data/institute_access.dart';
 
 class InstituteOpportunitiesScreen extends StatefulWidget {
   final String instituteId;
-  const InstituteOpportunitiesScreen({super.key, required this.instituteId});
+  final String initialKind;
+  const InstituteOpportunitiesScreen({
+    super.key,
+    required this.instituteId,
+    this.initialKind = 'admission',
+  });
 
   @override
   State<InstituteOpportunitiesScreen> createState() => _InstituteOpportunitiesScreenState();
@@ -29,8 +34,27 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
   @override
   void initState() {
     super.initState();
+    _kind = _validKind(widget.initialKind);
     _repository.addListener(_refresh);
     _repository.load(widget.instituteId);
+  }
+
+  static String _validKind(String kind) =>
+      const {'course', 'admission', 'scholarship'}.contains(kind)
+          ? kind
+          : 'admission';
+
+  @override
+  void didUpdateWidget(InstituteOpportunitiesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialKind != widget.initialKind ||
+        oldWidget.instituteId != widget.instituteId) {
+      _kind = _validKind(widget.initialKind);
+      _yearFilter = 'All years';
+      if (oldWidget.instituteId != widget.instituteId) {
+        _repository.load(widget.instituteId);
+      }
+    }
   }
 
   @override
