@@ -270,9 +270,7 @@ class _PostCard extends StatelessWidget{
     final liked=post.likedByUser(ActiveProfileController.instance.resolveUid(user?.uid??''));
     return Card(child:Padding(padding:const EdgeInsets.fromLTRB(13,12,9,8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[
-        InkWell(onTap:onAuthor,child:CircleAvatar(backgroundColor:AppColors.softGreen,child:Text(post.authorName.isEmpty?'?':post.authorName[0].toUpperCase(),
-          style:const TextStyle(color:AppColors.primaryGreen,fontWeight:FontWeight.bold)))),
-        const SizedBox(width:10),Expanded(child:InkWell(onTap:onAuthor,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Expanded(child:InkWell(onTap:onAuthor,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           UserIdentity(uid: post.authorId, name: post.authorName),
           const SizedBox(height:3),
           if(post.tags.isNotEmpty || post.instituteIds.isNotEmpty || post.instituteId!=null)

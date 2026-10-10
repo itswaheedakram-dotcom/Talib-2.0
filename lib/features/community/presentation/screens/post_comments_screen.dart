@@ -65,13 +65,6 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
         InkWell(
           onTap: () => context.push('/profile/${post.authorId}'),
           child: Row(children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: AppColors.softGreen,
-              child: Text(post.authorName.isEmpty ? '?' : post.authorName[0].toUpperCase(),
-                style: const TextStyle(color: AppColors.primaryGreen, fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               UserIdentity(uid: post.authorId, name: post.authorName),
               const Text('View profile', style: TextStyle(color: AppColors.homeMutedText, fontSize: 12)),
@@ -178,7 +171,6 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
         if (docs.isEmpty) return const Text('No comments yet.');
         return Column(children: docs.map((x) => ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: const CircleAvatar(backgroundColor: AppColors.softGreen, child: Icon(Icons.person, color: AppColors.primaryGreen)),
           title: Row(children:[
             Expanded(child:UserIdentity(uid: (x[ProfileFields.authorId] ?? '').toString(), name: (x[ProfileFields.authorName] ?? 'Student').toString())),
             if(widget.id.isNotEmpty && DemoDataService.instance.post(widget.id)?.bestAnswerId==x['id'])
@@ -212,8 +204,7 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
           final accepted = commentId == post.bestAnswerId;
           return ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const CircleAvatar(backgroundColor: AppColors.softGreen, child: Icon(Icons.person, color: AppColors.primaryGreen)),
-            title: Row(children: [
+              title: Row(children: [
               Expanded(child: UserIdentity(uid: (data[ProfileFields.authorId] ?? '').toString(), name: (data[ProfileFields.authorName] ?? 'Student').toString())),
               if (accepted) const Text('BEST ANSWER', style: TextStyle(color: AppColors.primaryGreen, fontSize: 10, fontWeight: FontWeight.bold)),
             ]),
