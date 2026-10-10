@@ -241,10 +241,10 @@ void main() {
       );
       await tester.tap(find.text('Open editor'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Save'));
+      await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
       final missingSelection = find.text(
-        'Select at least one program. Add programs in Program categories first.',
+        'Choose at least one program to continue.',
       );
       expect(missingSelection, findsOneWidget);
       expect(tester.getRect(missingSelection).top, lessThan(900));
@@ -258,24 +258,28 @@ void main() {
       await tester.tap(find.text('Select / clear all Undergraduate programs'));
       await tester.pumpAndSettle();
       expect(find.text('2 programs selected'), findsOneWidget);
-      final title = find.widgetWithText(TextFormField, 'Intake title');
+      final title = find.descendant(of: find.byKey(const ValueKey('editor-field-title')), matching: find.byType(TextFormField));
       await tester.ensureVisible(title);
       await tester.enterText(title, 'Shared Fall Intake');
-      final scale = find.widgetWithText(
-        DropdownButtonFormField<String>,
-        'Academic score scale',
-      );
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      final scale = find.byType(DropdownButtonFormField<String>);
       await tester.ensureVisible(scale);
       await tester.tap(scale);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Percentage').last);
       await tester.pumpAndSettle();
-      final commonScore = find.widgetWithText(
-        TextFormField,
-        'Minimum marks / CGPA',
-      );
+      final commonScore = find.descendant(of: find.byKey(const ValueKey('editor-field-minScore')), matching: find.byType(TextFormField));
       await tester.ensureVisible(commonScore);
       await tester.enterText(commonScore, '50');
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      final different = find.text('Different details for a program');
+      await tester.ensureVisible(different);
+      await tester.tap(different);
+      await tester.pumpAndSettle();
       final exception = find.text('BS Computer Science').last;
       await tester.ensureVisible(exception);
       await tester.tap(exception);
@@ -287,11 +291,12 @@ void main() {
       await tester.ensureVisible(customizeScore);
       await tester.tap(customizeScore);
       await tester.pumpAndSettle();
-      final specificScore = find
-          .widgetWithText(TextFormField, 'Minimum marks / CGPA')
-          .last;
+      final specificScore = find.descendant(of: find.byKey(const ValueKey('editor-field-minScore')), matching: find.byType(TextFormField));
       await tester.ensureVisible(specificScore);
       await tester.enterText(specificScore, '60');
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      expect(find.text('Check before saving'), findsOneWidget);
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
       final saved = InstituteOpportunityRepository.instance
@@ -306,6 +311,72 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
+
+  testWidgets('program wizard separates labels, keeps navigation above keyboard and preserves edits', (tester) async {
+    tester.view.physicalSize = const Size(320, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    final institute = await fixture('Accessible program editor test');
+    final repository = InstituteOpportunityRepository.instance;
+    final existing = (await repository.add(InstituteOpportunity(
+      id: '', instituteId: institute.id, kind: 'course', title: 'BS Computer Science',
+      programKeys: [cs], programDetails: const {'duration': '4 years', 'campus': 'Main campus'},
+      requirements: const {'qualification': 'Intermediate or equivalent qualification in the required subjects',
+        'scoreScale': 'Percentage', 'minScore': '50', 'documents': 'CNIC and certificates', 'research': 'Existing research notes'},
+    )))!;
+    await tester.pumpWidget(MaterialApp(theme: buildDarkTheme(),
+      builder: (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.5)), child: child!),
+      home: Scaffold(body: Builder(builder: (context) => TextButton(
+        onPressed: () => showInstituteProgramEditor(context, institute, 'course', existing: existing, programKey: cs),
+        child: const Text('Edit program'))))));
+    await tester.tap(find.text('Edit program'));
+    await tester.pumpAndSettle();
+    expect(find.text('Graduate'), findsNothing);
+    expect(find.text('Step 1 of 4 · Program basics'), findsOneWidget);
+    final durationField = find.descendant(of: find.byKey(const ValueKey('editor-field-duration')), matching: find.byType(TextFormField));
+    await tester.ensureVisible(durationField);
+    await tester.enterText(durationField, '4 years / 8 semesters');
+    final durationLabel = find.text('Duration / semesters');
+    expect(tester.getRect(durationLabel).bottom + 7, lessThanOrEqualTo(tester.getRect(durationField).top));
+    expect(tester.widget<TextFormField>(durationField).decoration?.labelText, isNull);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 260);
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.widgetWithText(FilledButton, 'Next')).bottom, lessThanOrEqualTo(500));
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    tester.view.resetViewInsets();
+    await tester.pumpAndSettle();
+    final scoreField = find.descendant(of: find.byKey(const ValueKey('editor-field-minScore')), matching: find.byType(TextFormField));
+    await tester.ensureVisible(scoreField);
+    await tester.enterText(scoreField, '101');
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('Step 2 of 4 · Who can apply?'), findsOneWidget);
+    expect(find.textContaining('Minimum score must be between'), findsOneWidget);
+    await tester.enterText(scoreField, '55');
+    await tester.tap(find.text('Back'));
+    await tester.pumpAndSettle();
+    expect(find.text('4 years / 8 semesters'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('55'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('CNIC and certificates'), findsNothing);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    final saved = repository.forInstitute(institute.id).single;
+    expect(saved.programDetails['duration'], '4 years / 8 semesters');
+    expect(saved.requirements['minScore'], '55');
+    expect(saved.requirements['documents'], 'CNIC and certificates');
+    expect(saved.requirements['research'], 'Existing research notes');
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets(
     'program expansion and admissions show linked criteria and customized deadline',
