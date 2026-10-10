@@ -128,3 +128,23 @@ check(403, call('PATCH', ROOT + '/users/affiliation-student',
                                  'studentProgram': 'Unmatched course', 'studentVerificationStatus': 'pending'})},
                uid='affiliation-student'), 'profile cannot switch to an unmatched verification request')
 print('Student affiliation edit checks passed.')
+
+# A listed university can be saved without inventing a course/approval.
+check(200, call('POST', ROOT + ':commit', {'writes': [
+    {'update': {'name': student_path, 'fields': fields({
+        'name': 'Student', 'studentInstituteId': 'affiliation-rules-other',
+        'studentInstituteName': 'Other university', 'studentProgram': '',
+        'studentVerificationStatus': 'not_requested'})}},
+    {'delete': new_request},
+]}, uid='affiliation-student'), 'student saves university without a course or approval request')
+check(403, call('PATCH', ROOT + '/users/affiliation-student?updateMask.fieldPaths=uid',
+               {'fields': fields({'uid': 'forged-other-id'})}, uid='affiliation-student'),
+      'student cannot change their immutable UID')
+check(200, call('PATCH', ROOT + '/users/affiliation-student?updateMask.fieldPaths=privateProfile',
+               {'fields': fields({'privateProfile': True})}, uid='affiliation-student'), 'owner enables private profile')
+check(403, call('GET', ROOT + '/users/affiliation-student', uid='unrelated-user'), 'private profile blocked by backend')
+check(200, call('GET', ROOT + '/users/affiliation-student', uid='affiliation-student'), 'owner can read private profile')
+check(200, call('PATCH', ROOT + '/users/affiliation-student/private/account',
+               {'fields': fields({'email': 'owner@example.test'})}, uid='affiliation-student'), 'owner saves private account details')
+check(403, call('GET', ROOT + '/users/affiliation-student/private/account', uid='unrelated-user'), 'other user cannot read account email')
+print('Central profile privacy and UID checks passed.')

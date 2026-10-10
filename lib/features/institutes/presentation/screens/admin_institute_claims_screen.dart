@@ -1,3 +1,4 @@
+import '../../../../core/widgets/user_identity.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
 import '../../data/institute_access.dart';
@@ -28,7 +29,7 @@ class AdminInstituteClaimsScreen extends StatelessWidget {
         Text((data['instituteName'] ?? 'Institute').toString(),
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
         const SizedBox(height: 6),
-        Text('Representative: ${data['representativeName'] ?? ''}'),
+        UserIdentity(uid: (data['representativeId'] ?? '').toString(), name: (data['representativeName'] ?? 'Representative').toString()),
         if ((data['designation'] ?? '').toString().isNotEmpty)
           Text('Designation: ${data['designation']}'),
         if ((data['representativeEmail'] ?? '').toString().isNotEmpty)

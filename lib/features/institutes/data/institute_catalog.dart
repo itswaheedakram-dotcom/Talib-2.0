@@ -1,3 +1,4 @@
+import '../../../core/models/user_profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -49,7 +50,7 @@ class InstituteTypeOption {
   factory InstituteTypeOption.fromMap(String id, Map<String, dynamic> data) {
     return InstituteTypeOption(
       id: id,
-      label: (data['label'] ?? data['name'] ?? id).toString(),
+      label: (data['label'] ?? data[ProfileFields.name] ?? id).toString(),
       iconKey: (data['iconKey'] ?? 'school').toString(),
       subcategories: List<String>.from(
         (data['subcategories'] as List? ?? const []).map((value) => value.toString()),

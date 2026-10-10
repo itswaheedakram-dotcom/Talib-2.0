@@ -1,3 +1,4 @@
+import '../../../core/models/user_profile.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -27,8 +28,8 @@ class StudentAffiliationRepository extends ChangeNotifier {
     for (final (uid, instituteId, instituteName, program, status) in fixtures) {
       final student = temporaryProfiles.firstWhere((profile) => profile.id == uid);
       _demoProfiles[uid] = {
-        'studentInstituteId': instituteId, 'studentInstituteName': instituteName,
-        'studentProgram': program, 'studentVerificationStatus': status,
+        ProfileFields.instituteId: instituteId, ProfileFields.instituteName: instituteName,
+        ProfileFields.course: program, ProfileFields.affiliationStatus: status,
       };
       (_demoRequests[instituteId] ??= {})[uid] = {
         'id': uid, 'studentId': uid, 'studentName': student.name,
@@ -50,17 +51,17 @@ class StudentAffiliationRepository extends ChangeNotifier {
     }
     final data = (await FirebaseFirestore.instance.collection('users').doc(uid).get()).data();
     final result = {
-      'studentInstituteId': data?['studentInstituteId'] ?? '',
-      'studentInstituteName': data?['studentInstituteName'] ?? '',
-      'studentProgram': data?['studentProgram'] ?? '',
-      'studentVerificationStatus': data?['studentVerificationStatus'] ?? 'not_requested',
+      ProfileFields.instituteId: data?[ProfileFields.instituteId] ?? '',
+      ProfileFields.instituteName: data?[ProfileFields.instituteName] ?? '',
+      ProfileFields.course: data?[ProfileFields.course] ?? '',
+      ProfileFields.affiliationStatus: data?[ProfileFields.affiliationStatus] ?? 'not_requested',
     };
-    final instituteId = result['studentInstituteId'].toString();
+    final instituteId = result[ProfileFields.instituteId].toString();
     if (instituteId.isNotEmpty) {
       final institute = FirebaseFirestore.instance.collection('institutes').doc(instituteId);
       final request = await institute.collection('studentAffiliations').doc(uid).get();
       final status = request.data()?['status'];
-      if (status == 'approved' || status == 'pending' || status == 'rejected') result['studentVerificationStatus'] = status;
+      if (status == 'approved' || status == 'pending' || status == 'rejected') result[ProfileFields.affiliationStatus] = status;
     }
     return result;
   }
@@ -80,23 +81,26 @@ class StudentAffiliationRepository extends ChangeNotifier {
       String instituteId = '';
       String requestStatus = 'not_requested';
       bool verified = false;
+      dynamic requestUpdatedAt;
       StreamSubscription? profileSubscription;
       StreamSubscription? requestSubscription;
       void emit() {
         controller.add({
-          'studentInstituteId': data['studentInstituteId'] ?? '',
-          'studentInstituteName': data['studentInstituteName'] ?? '',
-          'studentProgram': data['studentProgram'] ?? '',
-          'studentVerificationStatus': verified ? 'approved' : requestStatus,
+          ProfileFields.instituteId: data[ProfileFields.instituteId] ?? '',
+          ProfileFields.instituteName: data[ProfileFields.instituteName] ?? '',
+          ProfileFields.course: data[ProfileFields.course] ?? '',
+          ProfileFields.affiliationStatus: verified ? 'approved' : requestStatus,
+          ProfileFields.affiliationRequestedAt: requestUpdatedAt ?? data[ProfileFields.affiliationRequestedAt],
         });
       }
       void watchAffiliation(String id) {
         requestSubscription?.cancel();
-        requestStatus = (data['studentVerificationStatus'] ?? 'not_requested').toString();
+        requestStatus = (data[ProfileFields.affiliationStatus] ?? 'not_requested').toString();
         verified = false;
         if (id.isEmpty) { emit(); return; }
         requestSubscription = db.collection('institutes').doc(id).collection('studentAffiliations').doc(uid)
             .snapshots().listen((snapshot) {
+              requestUpdatedAt = snapshot.data()?['updatedAt'];
               final status = snapshot.data()?['status'];
               if (status == 'pending' || status == 'rejected' || status == 'approved') requestStatus = status.toString();
               verified = status == 'approved';
@@ -105,7 +109,7 @@ class StudentAffiliationRepository extends ChangeNotifier {
       }
       profileSubscription = db.collection('users').doc(uid).snapshots().listen((snapshot) {
         data = snapshot.data() ?? const {};
-        final nextInstituteId = (data['studentInstituteId'] ?? '').toString();
+        final nextInstituteId = (data[ProfileFields.instituteId] ?? '').toString();
         if (nextInstituteId != instituteId) {
           instituteId = nextInstituteId;
           watchAffiliation(instituteId);
@@ -123,17 +127,19 @@ class StudentAffiliationRepository extends ChangeNotifier {
     final uid = _uid;
     if (uid == null || uid.isEmpty) throw StateError('Sign in to add your university.');
     if (institute.type != 'universities') throw ArgumentError('Choose a university.');
-    if (program.trim().isEmpty) throw ArgumentError('Choose your program.');
+
     final availablePrograms = institute.programGroups.values.expand((items) => items).toSet();
     final validPrograms = availablePrograms.isNotEmpty ? availablePrograms : institute.programs.toSet();
-    if (!validPrograms.contains(program.trim())) throw ArgumentError('Choose a program listed by this university.');
+    if (program.trim().isNotEmpty && !validPrograms.contains(program.trim())) throw ArgumentError('Choose a program listed by this university.');
     final current = await profile(uid);
-    final previousInstituteId = (current['studentInstituteId'] ?? '').toString();
+    if (current[ProfileFields.instituteId] == institute.id && (current[ProfileFields.course] ?? '') == program.trim()) return;
+    final previousInstituteId = (current[ProfileFields.instituteId] ?? '').toString();
     final next = {
-      'studentInstituteId': institute.id,
-      'studentInstituteName': institute.name,
-      'studentProgram': program.trim(),
-      'studentVerificationStatus': 'pending',
+      ProfileFields.instituteId: institute.id,
+      ProfileFields.instituteName: institute.name,
+      ProfileFields.course: program.trim(),
+      ProfileFields.affiliationStatus: program.trim().isEmpty ? 'not_requested' : 'pending',
+      ProfileFields.affiliationRequestedAt: InstituteAccess.isDemo ? DateTime.now() : FieldValue.serverTimestamp(),
     };
     if (InstituteAccess.isDemo) {
       final request = {
@@ -147,10 +153,14 @@ class StudentAffiliationRepository extends ChangeNotifier {
       if (previousInstituteId.isNotEmpty && previousInstituteId != institute.id) {
         _demoRequests[previousInstituteId]?.remove(uid);
       }
-      (_demoRequests[institute.id] ??= {})[uid] = request;
-      DemoDataService.instance.addNotification('demo-user-6', {
+      if (program.trim().isEmpty) {
+        _demoRequests[institute.id]?.remove(uid);
+      } else {
+        (_demoRequests[institute.id] ??= {})[uid] = request;
+      }
+      if (program.trim().isNotEmpty) DemoDataService.instance.addNotification('demo-user-6', {
         'type': 'student_affiliation', 'text': '${request['studentName']} asked to verify student status at ${institute.name}.',
-        'instituteId': institute.id, 'createdAt': DateTime.now(), 'read': false,
+        'instituteId': institute.id, ProfileFields.fromId: uid, 'createdAt': DateTime.now(), 'read': false,
       });
       notifyListeners();
       return;
@@ -162,22 +172,27 @@ class StudentAffiliationRepository extends ChangeNotifier {
     final ownerId = institute.ownerId;
     final name = FirebaseAuth.instance.currentUser?.displayName?.trim();
     await db.runTransaction((tx) async {
+      final existing = program.trim().isEmpty ? await tx.get(request) : null;
       if (previousInstituteId.isNotEmpty && previousInstituteId != institute.id) {
         final previous = db.collection('institutes').doc(previousInstituteId).collection('studentAffiliations').doc(uid);
         final oldRequest = await tx.get(previous);
         if (oldRequest.exists) tx.delete(previous);
       }
+      if (program.trim().isEmpty) {
+        if (existing?.exists == true) tx.delete(request);
+      } else {
       tx.set(request, {
         'studentId': uid, 'studentName': name?.isNotEmpty == true ? name : 'Student',
         'instituteId': institute.id, 'program': program.trim(), 'status': 'pending',
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      }
       tx.set(user, next, SetOptions(merge: true));
-      if (ownerId.isNotEmpty) {
+      if (ownerId.isNotEmpty && program.trim().isNotEmpty) {
         final notification = db.collection('users').doc(ownerId).collection('notifications').doc();
         tx.set(notification, {
           'type': 'student_affiliation', 'text': '${name?.isNotEmpty == true ? name : 'A student'} asked to verify student status.',
-          'instituteId': institute.id, 'fromId': uid,
+          'instituteId': institute.id, ProfileFields.fromId: uid,
           'createdAt': FieldValue.serverTimestamp(), 'read': false,
         });
       }
@@ -215,11 +230,11 @@ class StudentAffiliationRepository extends ChangeNotifier {
       request['status'] = status;
       request['updatedAt'] = DateTime.now();
       final profile = _demoProfiles[studentId];
-      if (profile?['studentInstituteId'] == institute.id) profile?['studentVerificationStatus'] = status;
+      if (profile?[ProfileFields.instituteId] == institute.id) profile?[ProfileFields.affiliationStatus] = status;
       DemoDataService.instance.addNotification(studentId, {
         'type': 'student_affiliation_result',
         'text': status == 'approved' ? '${institute.name} verified your student affiliation.' : '${institute.name} could not verify your student affiliation.',
-        'instituteId': institute.id, 'createdAt': DateTime.now(), 'read': false,
+        'instituteId': institute.id, ProfileFields.fromId: InstituteAccess.uid, 'createdAt': DateTime.now(), 'read': false,
       });
       notifyListeners();
       return;
@@ -232,7 +247,7 @@ class StudentAffiliationRepository extends ChangeNotifier {
       final data = snapshot.data();
       if (data == null || data['status'] != 'pending') throw StateError('This request has already been reviewed.');
       final profile = await tx.get(user);
-      if (profile.data()?['studentInstituteId'] != institute.id || profile.data()?['studentVerificationStatus'] != 'pending') {
+      if (profile.data()?[ProfileFields.instituteId] != institute.id || profile.data()?[ProfileFields.affiliationStatus] != 'pending') {
         throw StateError('The student changed their selected university before review. Ask them to submit the request again.');
       }
       if (status == 'approved') {
@@ -247,7 +262,7 @@ class StudentAffiliationRepository extends ChangeNotifier {
       tx.set(notification, {
         'type': 'student_affiliation_result',
         'text': status == 'approved' ? '${institute.name} verified your student affiliation.' : '${institute.name} could not verify your student affiliation.',
-        'instituteId': institute.id, 'fromId': InstituteAccess.uid,
+        'instituteId': institute.id, ProfileFields.fromId: InstituteAccess.uid,
         'createdAt': FieldValue.serverTimestamp(), 'read': false,
       });
     });
@@ -263,6 +278,8 @@ class StudentAffiliationRepository extends ChangeNotifier {
         .collection('studentAffiliations').where('status', isEqualTo: 'approved').count().get();
     return result.count ?? 0;
   }
+
+  Map<String, dynamic> demoProfileData(String uid) => Map<String, dynamic>.from(_demoProfiles[uid] ?? const {});
 
   @visibleForTesting
   void resetDemoForTest({bool seed = false}) {

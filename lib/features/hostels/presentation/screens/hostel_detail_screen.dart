@@ -1,3 +1,4 @@
+import '../../../../core/widgets/user_identity.dart';
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -403,7 +404,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
           if (hostel.ownerName.isNotEmpty && !hostel.isDemo) ...[
             _sectionTitle('Listed By'),
             _infoCard([
-              _infoRow(Icons.person_outline, 'Owner', hostel.ownerName),
+              UserIdentity(uid: hostel.ownerId, name: hostel.ownerName),
             ]),
           ],
           _sectionTitle('Reviews'),
@@ -614,13 +615,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            review.userName,
-                            style: const TextStyle(
-                              color: AppColors.darkGreen,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                          child: UserIdentity(uid: review.userId, name: review.userName),
                         ),
                         _stars(review.rating),
                       ],

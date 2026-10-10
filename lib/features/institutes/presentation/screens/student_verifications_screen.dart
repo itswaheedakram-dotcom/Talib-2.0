@@ -1,3 +1,4 @@
+import '../../../../core/widgets/user_identity.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
 import '../../data/institute_access.dart';
@@ -31,15 +32,15 @@ class _StudentVerificationsScreenState extends State<StudentVerificationsScreen>
           return ListView(padding: const EdgeInsets.all(16), children: [
             Text(institute.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 5),
-            const Text('Approve only students whose enrollment you have confirmed. Their profile will show a university verification badge.'),
+            const Text('Approve only students whose enrollment you have confirmed. Their profile will show the graduation student badge.'),
             const SizedBox(height: 12),
             for (final request in requests) Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text((request['studentName'] ?? 'Student').toString(), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              UserIdentity(uid: (request['studentId'] ?? request['id'] ?? '').toString(), name: (request['studentName'] ?? 'Student').toString()),
               Text((request['program'] ?? 'Program not provided').toString()),
               const SizedBox(height: 10),
               Wrap(spacing: 8, children: [
                 OutlinedButton(onPressed: () => _review(institute, request, 'rejected'), child: const Text('Decline')),
-                FilledButton.icon(onPressed: () => _review(institute, request, 'approved'), icon: const Icon(Icons.verified_outlined), label: const Text('Approve & verify')),
+                FilledButton.icon(onPressed: () => _review(institute, request, 'approved'), icon: const Icon(Icons.school_outlined), label: const Text('Approve student')),
               ]),
             ]))),
           ]);

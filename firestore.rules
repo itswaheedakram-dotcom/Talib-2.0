@@ -65,11 +65,26 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    function selectedAffiliationValid(data, userId) {
+      let instituteId = data.get('studentInstituteId', '');
+      let course = data.get('studentProgram', '');
+      return instituteId != '' && (
+        (data.get('studentVerificationStatus', '') == 'pending'
+          && getAfter(/databases/$(database)/documents/institutes/$(instituteId)/studentAffiliations/$(userId)).data.status == 'pending'
+          && getAfter(/databases/$(database)/documents/institutes/$(instituteId)/studentAffiliations/$(userId)).data.program == course)
+        || (course == '' && data.get('studentVerificationStatus', '') == 'not_requested'
+          && !existsAfter(/databases/$(database)/documents/institutes/$(instituteId)/studentAffiliations/$(userId)))
+      );
+    }
+
     match /users/{userId} {
       // Authenticated users may view profiles, but may only change their own profile.
       // Admin tools may update only the representative fields needed after a verified claim.
-      allow read: if signedIn();
+      allow read: if signedIn() && (request.auth.uid == userId || admin()
+        || resource.data.get('privateProfile', false) != true
+        || (resource.data.get('studentInstituteId', '') != '' && canManageInstitute(resource.data.studentInstituteId)));
       allow create: if (signedIn() && request.auth.uid == userId
+          && request.resource.data.get('uid', userId) == userId
           && request.resource.data.get('studentVerificationStatus', 'not_requested') != 'approved')
         || admin()
         || (managerAdminPermission('ownership_claim_review')
@@ -78,12 +93,11 @@ service cloud.firestore {
           ]));
       allow delete: if signedIn() && request.auth.uid == userId || admin();
       allow update: if (signedIn() && request.auth.uid == userId
+          && request.resource.data.get('uid', userId) == userId
           && (!request.resource.data.diff(resource.data).affectedKeys().hasAny([
             'studentInstituteId', 'studentInstituteName', 'studentProgram', 'studentVerificationStatus'
           ]) || (
-            request.resource.data.get('studentVerificationStatus', 'not_requested') == 'pending'
-            && getAfter(/databases/$(database)/documents/institutes/$(request.resource.data.studentInstituteId)/studentAffiliations/$(userId)).data.status == 'pending'
-            && getAfter(/databases/$(database)/documents/institutes/$(request.resource.data.studentInstituteId)/studentAffiliations/$(userId)).data.program == request.resource.data.studentProgram
+            selectedAffiliationValid(request.resource.data, userId)
             && (resource.data.get('studentInstituteId', '') == request.resource.data.studentInstituteId
               || resource.data.get('studentInstituteId', '') == ''
               || !existsAfter(/databases/$(database)/documents/institutes/$(resource.data.studentInstituteId)/studentAffiliations/$(userId)))
@@ -96,6 +110,9 @@ service cloud.firestore {
             'role', 'instituteAdmin', 'instituteId', 'instituteName', 'designation'
           ]));
 
+      match /private/{documentId} {
+        allow read, write: if signedIn() && request.auth.uid == userId;
+      }
       match /bookmarks/{postId} {
         allow read, write: if signedIn() && request.auth.uid == userId;
       }
@@ -363,9 +380,9 @@ service cloud.firestore {
           );
         allow delete: if signedIn() && ((request.auth.uid == studentId
             && (resource.data.status != 'approved'
-              || (getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentInstituteId != instituteId
-                && getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentVerificationStatus == 'pending'
-                && getAfter(/databases/$(database)/documents/institutes/$(getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentInstituteId)/studentAffiliations/$(studentId)).data.status == 'pending')))
+              || (selectedAffiliationValid(getAfter(/databases/$(database)/documents/users/$(studentId)).data, studentId)
+                && (getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentInstituteId != instituteId
+                  || getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentProgram == ''))))
           || canManageInstitute(instituteId));
       }
 

@@ -1,3 +1,4 @@
+import '../../../../core/models/user_profile.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -157,9 +158,9 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
             final docs=await FirebaseFirestore.instance.collection('users').limit(100).get();
             for(final doc in docs.docs) {
               final data=doc.data();
-              final name=(data['name']??data['displayName']??data['fullName']??'Student').toString();
-              final score=_score(q,name,['people','student','profile',(data['username']??'').toString(),(data['city']??'').toString(),(data['institute']??'').toString(),(data['program']??'').toString(),(data['bio']??'').toString()]);
-              if(score>0)hits.add(_Hit(name,'Profile',[(data['program']??'').toString(),(data['institute']??'').toString()].where((v)=>v.isNotEmpty).join(' • '),(data['city']??'').toString(),'/profile/${doc.id}',Icons.person_outline,score));
+              final name=(data[ProfileFields.name]??data['displayName']??data['fullName']??'Student').toString();
+              final score=_score(q,name,['people','student','profile',(data['username']??'').toString(),(data[ProfileFields.city]??'').toString(),(data['institute']??'').toString(),(data['program']??'').toString(),(data[ProfileFields.bio]??'').toString()]);
+              if(score>0)hits.add(_Hit(name,'Profile',[(data['program']??'').toString(),(data['institute']??'').toString()].where((v)=>v.isNotEmpty).join(' • '),(data[ProfileFields.city]??'').toString(),'/profile/${doc.id}',Icons.person_outline,score));
             }
           } catch (_) {}
         }

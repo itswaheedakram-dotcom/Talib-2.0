@@ -1,3 +1,4 @@
+import '../../../../core/widgets/user_identity.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
@@ -136,7 +137,7 @@ class _HostelManagersScreenState extends State<HostelManagersScreen> {
             const Text('Add a manager',style:TextStyle(color:AppColors.darkGreen,fontSize:18,fontWeight:FontWeight.w800)),
             const SizedBox(height:6),const Text('Demo user ke liye naam par tap karein; real user ke liye Firebase UID use karein.',style:TextStyle(color:AppColors.mutedText)),
             const SizedBox(height:10),
-            Wrap(spacing:8,runSpacing:8,children:temporaryProfiles.where((p)=>p.id!=currentUid).map((p)=>ActionChip(avatar:const Icon(Icons.person_outline,size:18),label:Text(p.name),onPressed:()=>_pick(p))).toList()),
+            Wrap(spacing:8,runSpacing:8,children:temporaryProfiles.where((p)=>p.id!=currentUid).map((p)=>ActionChip(avatar:const Icon(Icons.person_outline,size:18),label:UserIdentity(uid:p.id,name:p.name),onPressed:()=>_pick(p))).toList()),
             const SizedBox(height:12),
             TextField(controller:_name,decoration:const InputDecoration(labelText:'Manager name',prefixIcon:Icon(Icons.badge_outlined))),
             const SizedBox(height:10),TextField(controller:_uid,decoration:const InputDecoration(labelText:'User ID',hintText:'Demo ID ya Firebase UID',prefixIcon:Icon(Icons.fingerprint))),
@@ -148,7 +149,7 @@ class _HostelManagersScreenState extends State<HostelManagersScreen> {
           if(list.isEmpty)Card(color:AppColors.white,elevation:0,child:const Padding(padding:EdgeInsets.all(20),child:Column(children:[Icon(Icons.manage_accounts_outlined,size:42,color:AppColors.mutedText),SizedBox(height:8),Text('Abhi koi manager nahi hai.',style:TextStyle(fontWeight:FontWeight.w700)),SizedBox(height:4),Text('Upar se pehla manager add karein.',style:TextStyle(color:AppColors.mutedText))])))
           else ...list.map((m)=>Card(color:AppColors.white,elevation:0,margin:const EdgeInsets.only(bottom:10),child:ListTile(
             leading:CircleAvatar(backgroundColor:AppColors.softGreen,child:const Icon(Icons.person_outline,color:AppColors.darkGreen)),
-            title:Text(m.userName,style:const TextStyle(fontWeight:FontWeight.w700)),
+            title:UserIdentity(uid:m.userId,name:m.userName),
             subtitle:Text('${m.userId}\n${m.permissions.values.where((v)=>v).length} permissions enabled'),isThreeLine:true,
             trailing:PopupMenuButton<String>(onSelected:(v){if(v=='edit')_edit(m);if(v=='remove')_remove(m.userId);},itemBuilder:(_)=>const[
               PopupMenuItem(value:'edit',child:Text('Edit permissions')),PopupMenuItem(value:'remove',child:Text('Remove access'))])))),

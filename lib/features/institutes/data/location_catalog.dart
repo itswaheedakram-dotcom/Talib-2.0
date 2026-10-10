@@ -1,3 +1,4 @@
+import '../../../core/models/user_profile.dart';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -80,12 +81,12 @@ class LocationCatalog extends ChangeNotifier {
         final data = doc.data();
         return <String, String>{
           'id': doc.id,
-          'name': (data['name'] ?? '').toString().trim(),
+          ProfileFields.name: (data[ProfileFields.name] ?? '').toString().trim(),
           'type': (data['type'] ?? '').toString().trim().toLowerCase(),
           'parentName': (data['parentName'] ?? '').toString().trim(),
           'country': (data['country'] ?? '').toString().trim(),
         };
-      }).where((entry) => entry['name']!.isNotEmpty && entry['type']!.isNotEmpty).toList();
+      }).where((entry) => entry[ProfileFields.name]!.isNotEmpty && entry['type']!.isNotEmpty).toList();
       _loaded = true;
     } catch (e) {
       error = e.toString();
@@ -114,7 +115,7 @@ class LocationCatalog extends ChangeNotifier {
       if (normalizedCountry.isNotEmpty &&
           entry['country']!.toLowerCase() != normalizedCountry) return false;
       return true;
-    }).map((entry) => entry['name']!).toSet().toList()
+    }).map((entry) => entry[ProfileFields.name]!).toSet().toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return List.unmodifiable(values);
   }
@@ -133,12 +134,12 @@ class LocationCatalog extends ChangeNotifier {
       return false;
     }
     final normalizedType = type.trim().toLowerCase();
-    if (!const {'country', 'region', 'district', 'city', 'area'}.contains(normalizedType)) {
+    if (!const {'country', 'region', 'district', ProfileFields.city, 'area'}.contains(normalizedType)) {
       error = 'Unsupported location level.';
       return false;
     }
     final entry = <String, String>{
-      'name': cleanName,
+      ProfileFields.name: cleanName,
       'type': normalizedType,
       'parentName': parentName.trim(),
       'country': normalizedType == 'country' ? cleanName : country.trim(),

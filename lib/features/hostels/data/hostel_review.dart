@@ -1,3 +1,4 @@
+import '../../../core/models/user_profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HostelReview {
@@ -22,7 +23,7 @@ class HostelReview {
     final timestamp = data['createdAt'];
     return HostelReview(
       id: doc.id,
-      userId: (data['userId'] ?? '').toString(),
+      userId: (data[ProfileFields.userId] ?? '').toString(),
       userName: (data['userName'] ?? 'Member').toString(),
       rating: (data['rating'] as num?)?.toDouble() ?? 0,
       comment: (data['comment'] ?? '').toString(),

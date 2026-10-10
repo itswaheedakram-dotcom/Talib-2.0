@@ -1,3 +1,4 @@
+import '../../../../core/models/user_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme.dart';
@@ -40,7 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (ActiveProfileController.instance.isDemo) {
         final data=DemoDataService.instance.settings(ActiveProfileController.instance.effectiveUid!);
         if(!mounted)return;
-        setState((){_notifications=data['notificationsEnabled'] as bool? ?? true;_privateProfile=data['privateProfile'] as bool? ?? false;final a=data['appearanceMode']?.toString();ThemeController.instance.setMode(a=='light'?ThemeMode.light:a=='dark'?ThemeMode.dark:ThemeMode.system);_loadingPreferences=false;});
+        setState((){_notifications=data['notificationsEnabled'] as bool? ?? true;_privateProfile=data[ProfileFields.privateProfile] as bool? ?? false;final a=data['appearanceMode']?.toString();ThemeController.instance.setMode(a=='light'?ThemeMode.light:a=='dark'?ThemeMode.dark:ThemeMode.system);_loadingPreferences=false;});
         return;
       }
       final data = (await FirebaseFirestore.instance
@@ -52,7 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       setState(() {
         _notifications = data?['notificationsEnabled'] as bool? ?? true;
-        _privateProfile = data?['privateProfile'] as bool? ?? false;
+        _privateProfile = data?[ProfileFields.privateProfile] as bool? ?? false;
         final savedAppearance = data?['appearanceMode']?.toString();
         if (savedAppearance == 'light') {
           ThemeController.instance.setMode(ThemeMode.light);
@@ -73,7 +74,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (user == null) return;
 
     final savingNotifications = field == 'notificationsEnabled';
-    final savingPrivateProfile = field == 'privateProfile';
+    final savingPrivateProfile = field == ProfileFields.privateProfile;
     if ((savingNotifications && _savingNotifications) ||
         (savingPrivateProfile && _savingPrivateProfile)) {
       return;
@@ -115,7 +116,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       setState(() {
         if (field == 'notificationsEnabled') _notifications = !value;
-        if (field == 'privateProfile') _privateProfile = !value;
+        if (field == ProfileFields.privateProfile) _privateProfile = !value;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not save this setting. Please try again.')),
@@ -346,7 +347,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _setPrivateProfile(bool value) async {
     setState(() => _privateProfile = value);
-    await _savePreference('privateProfile', value);
+    await _savePreference(ProfileFields.privateProfile, value);
   }
 
   Future<void> _setNotifications(bool value) async {

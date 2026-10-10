@@ -1,3 +1,4 @@
+import '../../../../core/models/user_profile.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -52,7 +53,7 @@ class _AdminLocationCatalogScreenState extends State<AdminLocationCatalogScreen>
           _filter == 'all' || entry['type'] == _filter).toList()
           ..sort((a, b) {
             final typeCompare = (a['type'] ?? '').compareTo(b['type'] ?? '');
-            return typeCompare != 0 ? typeCompare : (a['name'] ?? '').compareTo(b['name'] ?? '');
+            return typeCompare != 0 ? typeCompare : (a[ProfileFields.name] ?? '').compareTo(b[ProfileFields.name] ?? '');
           });
         return Scaffold(
           appBar: AppBar(
@@ -76,7 +77,7 @@ class _AdminLocationCatalogScreenState extends State<AdminLocationCatalogScreen>
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(children: [
-                      for (final value in const ['all', 'country', 'region', 'district', 'city', 'area'])
+                      for (final value in const ['all', 'country', 'region', 'district', ProfileFields.city, 'area'])
                         Padding(
                           padding: const EdgeInsets.only(right: 6),
                           child: ChoiceChip(
@@ -109,7 +110,7 @@ class _AdminLocationCatalogScreenState extends State<AdminLocationCatalogScreen>
                               backgroundColor: AppColors.softGreen,
                               child: Icon(_icon(entry['type'] ?? ''), color: AppColors.darkGreen),
                             ),
-                            title: Text(entry['name'] ?? ''),
+                            title: Text(entry[ProfileFields.name] ?? ''),
                             subtitle: Text([
                               _label(entry['type'] ?? ''),
                               if ((entry['parentName'] ?? '').isNotEmpty) 'Parent: ${entry['parentName']}',
@@ -157,7 +158,7 @@ class _AdminLocationCatalogScreenState extends State<AdminLocationCatalogScreen>
                 DropdownButtonFormField<String>(
                   value: type,
                   decoration: const InputDecoration(labelText: 'Location level'),
-                  items: const ['country', 'region', 'district', 'city', 'area']
+                  items: const ['country', 'region', 'district', ProfileFields.city, 'area']
                       .map((value) => DropdownMenuItem(value: value, child: Text(_label(value)))).toList(),
                   onChanged: (value) => setDialogState(() {
                     type = value ?? 'region';
@@ -185,7 +186,7 @@ class _AdminLocationCatalogScreenState extends State<AdminLocationCatalogScreen>
                     decoration: InputDecoration(labelText: switch (type) {
                       'region' => 'Parent country name',
                       'district' => 'Parent province / region name',
-                      'city' => 'Parent district or region name',
+                      ProfileFields.city => 'Parent district or region name',
                       'area' => 'Parent city / town name',
                       _ => 'Parent location',
                     }),
@@ -231,7 +232,7 @@ class _AdminLocationCatalogScreenState extends State<AdminLocationCatalogScreen>
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Remove location?'),
-        content: Text('Remove "${entry['name']}" from suggestions? Existing institute records will not be changed.'),
+        content: Text('Remove "${entry[ProfileFields.name]}" from suggestions? Existing institute records will not be changed.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
           FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Remove')),
@@ -287,7 +288,7 @@ class _AdminLocationCatalogScreenState extends State<AdminLocationCatalogScreen>
     'country' => 'Country',
     'region' => 'Province / State / Region',
     'district' => 'District / County',
-    'city' => 'City / Town',
+    ProfileFields.city => 'City / Town',
     'area' => 'Area / Locality',
     _ => type,
   };
@@ -296,7 +297,7 @@ class _AdminLocationCatalogScreenState extends State<AdminLocationCatalogScreen>
     'country' => Icons.public_outlined,
     'region' => Icons.map_outlined,
     'district' => Icons.account_balance_outlined,
-    'city' => Icons.location_city_outlined,
+    ProfileFields.city => Icons.location_city_outlined,
     'area' => Icons.place_outlined,
     _ => Icons.place_outlined,
   };

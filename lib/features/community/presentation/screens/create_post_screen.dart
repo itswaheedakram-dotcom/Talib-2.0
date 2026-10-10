@@ -1,3 +1,4 @@
+import '../../../../core/models/user_profile.dart';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -93,12 +94,12 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
       if(user!=null){
         try{
           final url=await _db.uploadCommunityAttachment(bytes:bytes,fileName:fileName,type:type);
-          if(mounted)setState(()=>_attachments.add({'type':type,'name':fileName,'url':url}));
+          if(mounted)setState(()=>_attachments.add({'type':type,ProfileFields.name:fileName,'url':url}));
           return;
         }catch(error){_showError(error);return;}
       }
     }
-    if(mounted)setState(()=>_attachments.add({'type':type,'name':fileName,'url':localPath??''}));
+    if(mounted)setState(()=>_attachments.add({'type':type,ProfileFields.name:fileName,'url':localPath??''}));
   }
   Future<void> _addLink()async{
     final c=TextEditingController();
@@ -108,7 +109,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
     ));
     c.dispose();if(url==null||url.isEmpty)return;
     final normalized=url.startsWith('http://')||url.startsWith('https://')?url:'https://$url';
-    setState(()=>_attachments.add({'type':'link','name':normalized,'url':normalized}));
+    setState(()=>_attachments.add({'type':'link',ProfileFields.name:normalized,'url':normalized}));
   }
   void _enablePoll(){
     setState(()=>_isPoll=true);
@@ -390,7 +391,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
     if(_attachments.isEmpty)return const SizedBox.shrink();
     return Padding(padding:const EdgeInsets.only(bottom:10),child:Wrap(spacing:8,runSpacing:8,children:List.generate(_attachments.length,(i){
       final a=_attachments[i];final type=a['type']??'file';final icon=type=='photo'?Icons.image_outlined:type=='link'?Icons.link:Icons.insert_drive_file_outlined;
-      return InputChip(avatar:Icon(icon,size:18,color:AppColors.primaryGreen),label:SizedBox(width:150,child:Text(a['name']??'Attachment',overflow:TextOverflow.ellipsis)),onDeleted:_saving?null:()=>setState(()=>_attachments.removeAt(i)));
+      return InputChip(avatar:Icon(icon,size:18,color:AppColors.primaryGreen),label:SizedBox(width:150,child:Text(a[ProfileFields.name]??'Attachment',overflow:TextOverflow.ellipsis)),onDeleted:_saving?null:()=>setState(()=>_attachments.removeAt(i)));
     })));
   }
   Widget _pollEditor(){

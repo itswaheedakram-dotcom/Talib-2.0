@@ -1,3 +1,4 @@
+import '../models/user_profile.dart';
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -119,7 +120,7 @@ class AdminAccessService extends ChangeNotifier {
     final cleanUid = uid.trim();
     if (cleanUid.isEmpty) throw ArgumentError('Enter the manager user UID.');
     await FirebaseFirestore.instance.collection('adminRoles').doc(cleanUid).set({
-      'uid': cleanUid,
+      ProfileFields.uid: cleanUid,
       'role': 'manager_admin',
       'status': 'active',
       'permissions': permissions,

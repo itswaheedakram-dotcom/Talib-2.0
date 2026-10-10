@@ -1,3 +1,4 @@
+import '../../../../core/models/user_profile.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
@@ -69,7 +70,7 @@ class _InstituteAdminScreenState extends State<InstituteAdminScreen> {
 
       if (save) {
         final ok = await InstituteRepository.instance.update(Institute.fromMap(institute.id, {
-          ...institute.toMap(), 'name': _name.text.trim(), 'address': _address.text.trim(),
+          ...institute.toMap(), ProfileFields.name: _name.text.trim(), 'address': _address.text.trim(),
           'contact': _contact.text.trim(), 'description': _description.text.trim(),
         }));
         if (!ok) throw StateError(InstituteRepository.instance.error ?? 'Could not save institute.');

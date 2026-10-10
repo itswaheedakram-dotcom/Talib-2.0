@@ -1,3 +1,4 @@
+import '../../../core/models/user_profile.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/hostel.dart';
@@ -325,7 +326,7 @@ class HostelRepository {
     await ref.set({
       'hostelId': hostelId,
       'hostelName': hostelName,
-      'userId': userId,
+      ProfileFields.userId: userId,
       'userName': userName,
       'contact': contact,
       'note': note,
@@ -516,7 +517,7 @@ class HostelRepository {
         _demoClaims.values.where((claim) => claim.userId == userId).toList(),
       );
     }
-    return _db.collection('hostelClaims').where('userId', isEqualTo: userId).snapshots().map(
+    return _db.collection('hostelClaims').where(ProfileFields.userId, isEqualTo: userId).snapshots().map(
       (s) => s.docs.map(HostelClaim.fromDoc).toList(),
     );
   }
@@ -545,8 +546,8 @@ class HostelRepository {
     }
 
     final allowedByPermission = <String, Set<String>>{
-      HostelManagerPermissions.basicInfo: {'name', 'type', 'gender', 'description'},
-      HostelManagerPermissions.location: {'city', 'area', 'distance', 'address'},
+      HostelManagerPermissions.basicInfo: {ProfileFields.name, 'type', 'gender', 'description'},
+      HostelManagerPermissions.location: {ProfileFields.city, 'area', 'distance', 'address'},
       HostelManagerPermissions.pricing: {'price', 'securityFee', 'roomType'},
       HostelManagerPermissions.rooms: {'rooms'},
       HostelManagerPermissions.photos: {'imageUrl', 'imageUrls'},
@@ -584,8 +585,8 @@ class HostelRepository {
   static Hostel _applyDemoChanges(Hostel hostel, Map<String, dynamic> changes) {
     return Hostel(
       id: hostel.id,
-      name: (changes['name'] ?? hostel.name).toString(),
-      city: (changes['city'] ?? hostel.city).toString(),
+      name: (changes[ProfileFields.name] ?? hostel.name).toString(),
+      city: (changes[ProfileFields.city] ?? hostel.city).toString(),
       area: (changes['area'] ?? hostel.area).toString(),
       type: (changes['type'] ?? hostel.type).toString(),
       gender: (changes['gender'] ?? hostel.gender).toString(),
@@ -675,7 +676,7 @@ class HostelRepository {
       final oldRating = old.exists ? ((old.data()?['rating'] as num?)?.toDouble() ?? 0) : 0;
       final count = old.exists ? currentCount : currentCount + 1;
       final total = currentTotal - oldRating + rating;
-      tx.set(ref, {'userId': userId, 'userName': userName.isEmpty ? 'Member' : userName, 'rating': rating, 'comment': comment.trim(), 'createdAt': FieldValue.serverTimestamp(), 'updatedAt': FieldValue.serverTimestamp()});
+      tx.set(ref, {ProfileFields.userId: userId, 'userName': userName.isEmpty ? 'Member' : userName, 'rating': rating, 'comment': comment.trim(), 'createdAt': FieldValue.serverTimestamp(), 'updatedAt': FieldValue.serverTimestamp()});
       tx.update(hostelRef, {'reviewCount': count, 'ratingTotal': total, 'rating': count == 0 ? 0 : total / count, 'updatedAt': FieldValue.serverTimestamp()});
     });
   }

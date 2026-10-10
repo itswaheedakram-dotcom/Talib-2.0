@@ -1,3 +1,4 @@
+import '../../../core/models/user_profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HostelManagerPermissions {
@@ -58,7 +59,7 @@ class HostelManager {
     return HostelManager(
       id: doc.id,
       hostelId: (data['hostelId'] ?? '').toString(),
-      userId: (data['userId'] ?? '').toString(),
+      userId: (data[ProfileFields.userId] ?? '').toString(),
       userName: (data['userName'] ?? 'Manager').toString(),
       status: (data['status'] ?? 'active').toString(),
       permissions: permissions,
@@ -68,7 +69,7 @@ class HostelManager {
 
   Map<String, dynamic> toMap() => {
     'hostelId': hostelId,
-    'userId': userId,
+    ProfileFields.userId: userId,
     'userName': userName,
     'status': status,
     'permissions': permissions,

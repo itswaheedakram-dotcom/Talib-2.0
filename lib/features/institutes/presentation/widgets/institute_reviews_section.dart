@@ -1,3 +1,4 @@
+import '../../../../core/widgets/user_identity.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/services/active_profile_controller.dart';
@@ -101,7 +102,7 @@ class _InstituteReviewsSectionState extends State<InstituteReviewsSection> {
           if (items.isEmpty && !_loading) const Text('Be the first to share your experience.'),
           for (final review in items.take(_visible)) Card(margin: const EdgeInsets.only(bottom: 10), child: Padding(padding: const EdgeInsets.all(12),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Text('${review.authorName}${review.userId == uid ? ' · You' : ''}', style: const TextStyle(fontWeight: FontWeight.w600)),
+              UserIdentity(uid: review.userId, name: review.authorName),
               const SizedBox(height: 6), Text('${review.rating} / 5 stars · ${review.updatedAt.toLocal().toIso8601String().split('T').first}'),
               if (review.text.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(review.text)),
             ]))),

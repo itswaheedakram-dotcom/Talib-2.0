@@ -1,3 +1,4 @@
+import '../../core/models/user_profile.dart';
 class Institute {
   final String id;
   final String name;
@@ -74,8 +75,8 @@ class Institute {
   });
 
   Map<String, dynamic> toMap() => {
-    'name': name, 'type': type, 'subcategory': subcategory, 'ownerId': ownerId, 'representativeId': representativeId, 'createdBy': createdBy, 'campus': campus, 'country': country, 'province': province,
-    'district': district, 'city': city, 'area': area, 'board': board, 'town': town, 'sector': sector, 'address': address, 'description': description,
+    ProfileFields.name: name, 'type': type, 'subcategory': subcategory, 'ownerId': ownerId, 'representativeId': representativeId, 'createdBy': createdBy, 'campus': campus, 'country': country, 'province': province,
+    'district': district, ProfileFields.city: city, 'area': area, 'board': board, 'town': town, 'sector': sector, 'address': address, 'description': description,
     'website': website, 'applicationUrl': applicationUrl, 'submissionMode': submissionMode, 'eligibility': eligibility,
     'programs': programs, 'programGroups': programGroups, 'contact': contact, 'status': status, 'minScore': minScore, 'scoreScale': scoreScale, 'nextProgram': nextProgram,
     'admissionStatus': admissionStatus, 'admissionDeadline': admissionDeadline, 'feeRange': feeRange, 'entryTestRequired': entryTestRequired,
@@ -115,7 +116,7 @@ class Institute {
 
   factory Institute.fromMap(String id, Map<String, dynamic> map) => Institute(
     id: id,
-    name: (map['name'] ?? '').toString(),
+    name: (map[ProfileFields.name] ?? '').toString(),
     type: (map['type'] ?? 'universities').toString(),
     subcategory: (map['subcategory'] ?? '').toString(),
     ownerId: (map['ownerId'] ?? '').toString(),
@@ -125,7 +126,7 @@ class Institute {
     country: (map['country'] ?? 'Pakistan').toString(),
     province: (map['province'] ?? map['region'] ?? '').toString(),
     district: (map['district'] ?? '').toString(),
-    city: (map['city'] ?? '').toString(),
+    city: (map[ProfileFields.city] ?? '').toString(),
     area: (map['area'] ?? map['locality'] ?? '').toString(),
     board: (map['board'] ?? map['educationBoard'] ?? '').toString(),
     town: (map['town'] ?? '').toString(),

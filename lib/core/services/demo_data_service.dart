@@ -1,3 +1,4 @@
+import '../models/user_profile.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../features/models/post.dart';
@@ -33,7 +34,7 @@ class DemoDataService extends ChangeNotifier {
   final Map<String,Map<String,dynamic>> _settings={};
   int _seq=0;
 
-  Map<String,dynamic> settings(String uid)=>_settings.putIfAbsent(uid,()=>{'notificationsEnabled':true,'privateProfile':false,'appearanceMode':'system'});
+  Map<String,dynamic> settings(String uid)=>_settings.putIfAbsent(uid,()=>{'notificationsEnabled':true,ProfileFields.privateProfile:false,'appearanceMode':'system'});
   void setSetting(String uid,String field,dynamic value){settings(uid)[field]=value;_emit();}
 
   void _seedData(){
@@ -48,33 +49,33 @@ class DemoDataService extends ChangeNotifier {
     // Seed visible demo ratings/reviews so the public profile has real
     // review content before a test user submits their own review.
     _reviews['demo-user-1']=[
-      {'id':'demo-user-2','reviewerId':'demo-user-2','reviewerName':'Ali Raza','rating':5,'text':'Helpful and supportive in the community.','createdAt':now.subtract(const Duration(days:2))},
-      {'id':'demo-user-3','reviewerId':'demo-user-3','reviewerName':'Hira Ahmed','rating':4,'text':'Good guidance and useful information.','createdAt':now.subtract(const Duration(days:1))},
+      {'id':'demo-user-2',ProfileFields.reviewerId:'demo-user-2','reviewerName':'Ali Raza','rating':5,'text':'Helpful and supportive in the community.','createdAt':now.subtract(const Duration(days:2))},
+      {'id':'demo-user-3',ProfileFields.reviewerId:'demo-user-3','reviewerName':'Hira Ahmed','rating':4,'text':'Good guidance and useful information.','createdAt':now.subtract(const Duration(days:1))},
     ];
     _reviews['demo-user-2']=[
-      {'id':'demo-user-1','reviewerId':'demo-user-1','reviewerName':'Ayesha Khan','rating':5,'text':'Very helpful for admission and study guidance.','createdAt':now.subtract(const Duration(days:3))},
-      {'id':'demo-user-4','reviewerId':'demo-user-4','reviewerName':'Usman Malik','rating':4,'text':'Good community member and responsive.','createdAt':now.subtract(const Duration(days:1))},
+      {'id':'demo-user-1',ProfileFields.reviewerId:'demo-user-1','reviewerName':'Ayesha Khan','rating':5,'text':'Very helpful for admission and study guidance.','createdAt':now.subtract(const Duration(days:3))},
+      {'id':'demo-user-4',ProfileFields.reviewerId:'demo-user-4','reviewerName':'Usman Malik','rating':4,'text':'Good community member and responsive.','createdAt':now.subtract(const Duration(days:1))},
     ];
     _reviews['demo-user-3']=[
-      {'id':'demo-user-1','reviewerId':'demo-user-1','reviewerName':'Ayesha Khan','rating':5,'text':'Shares useful education guidance.','createdAt':now.subtract(const Duration(days:2))},
-      {'id':'demo-user-2','reviewerId':'demo-user-2','reviewerName':'Ali Raza','rating':5,'text':'Helpful and informative.','createdAt':now.subtract(const Duration(days:1))},
+      {'id':'demo-user-1',ProfileFields.reviewerId:'demo-user-1','reviewerName':'Ayesha Khan','rating':5,'text':'Shares useful education guidance.','createdAt':now.subtract(const Duration(days:2))},
+      {'id':'demo-user-2',ProfileFields.reviewerId:'demo-user-2','reviewerName':'Ali Raza','rating':5,'text':'Helpful and informative.','createdAt':now.subtract(const Duration(days:1))},
     ];
     _reviews['demo-user-4']=[
-      {'id':'demo-user-1','reviewerId':'demo-user-1','reviewerName':'Ayesha Khan','rating':4,'text':'Helpful in the community.','createdAt':now.subtract(const Duration(days:2))},
-      {'id':'demo-user-3','reviewerId':'demo-user-3','reviewerName':'Hira Ahmed','rating':5,'text':'Good guidance and discussion.','createdAt':now.subtract(const Duration(days:1))},
+      {'id':'demo-user-1',ProfileFields.reviewerId:'demo-user-1','reviewerName':'Ayesha Khan','rating':4,'text':'Helpful in the community.','createdAt':now.subtract(const Duration(days:2))},
+      {'id':'demo-user-3',ProfileFields.reviewerId:'demo-user-3','reviewerName':'Hira Ahmed','rating':5,'text':'Good guidance and discussion.','createdAt':now.subtract(const Duration(days:1))},
     ];
     _posts['demo-post-1']=Post(id:'demo-post-1',text:'Welcome to Talib Community! Ask questions, share guidance and help other students.',authorId:'demo-user-1',authorName:'Ayesha Khan',createdAt:now.subtract(const Duration(minutes:15)),category:'General',likesCount:2,likedBy:['demo-user-2','demo-user-3'],commentsCount:1);
     _posts['demo-post-2']=Post(id:'demo-post-2',text:'Which institute is best for your next education program? Share your experience.',authorId:'demo-user-2',authorName:'Ali Raza',createdAt:now.subtract(const Duration(hours:2)),category:'Institute Reviews',likesCount:1,likedBy:['demo-user-1'],commentsCount:1);
     _comments['demo-post-1']=[DemoComment(id:'c1',authorId:'demo-user-2',authorName:'Ali Raza',text:'This is helpful. Thanks!',createdAt:now.subtract(const Duration(minutes:8)))];
     _comments['demo-post-2']=[DemoComment(id:'c2',authorId:'demo-user-1',authorName:'Ayesha Khan',text:'I would compare programs and admission requirements.',createdAt:now.subtract(const Duration(hours:1)) )];
 
-    _groups.add({'id':'demo-group-1','name':'Computer Science Students','description':'Discuss CS subjects, assignments and guidance.','memberCount':4});
-    _groups.add({'id':'demo-group-2','name':'Admission Help 2026','description':'Share admission updates and institute guidance.','memberCount':4});
+    _groups.add({'id':'demo-group-1',ProfileFields.name:'Computer Science Students','description':'Discuss CS subjects, assignments and guidance.','memberCount':4});
+    _groups.add({'id':'demo-group-2',ProfileFields.name:'Admission Help 2026','description':'Share admission updates and institute guidance.','memberCount':4});
     _groupMembers['demo-group-1']={'demo-user-1','demo-user-2','demo-user-3','demo-user-4'};
     _groupMembers['demo-group-2']={'demo-user-1','demo-user-2','demo-user-3','demo-user-4'};
 
     for(final id in names.keys){
-      _resources.add({'id':'resource-$id','title':'Study guidance','url':'https://example.com','description':'Temporary test resource shared by $id','authorId':id,'createdAt':now});
+      _resources.add({'id':'resource-$id','title':'Study guidance','url':'https://example.com','description':'Temporary test resource shared by $id',ProfileFields.authorId:id,'createdAt':now});
     }
   }
 
@@ -136,9 +137,9 @@ class DemoDataService extends ChangeNotifier {
     _emit();
   }
 
-  void toggleLike(String postId,String uid){final p=_posts[postId];if(p==null)return;final liked=[...p.likedBy];if(liked.contains(uid)){liked.remove(uid);}else{liked.add(uid);if(p.authorId!=uid)_addNotification(p.authorId,{'type':'like','text':'liked your post','postId':postId,'fromId':uid,'createdAt':DateTime.now(),'read':false});}_posts[postId]=Post(id:p.id,text:p.text,authorId:p.authorId,authorName:p.authorName,createdAt:p.createdAt,category:p.category,likesCount:liked.length,likedBy:liked,commentsCount:p.commentsCount,isQuestion:p.isQuestion,bestAnswerId:p.bestAnswerId,instituteId:p.instituteId,instituteIds:p.instituteIds,tags:p.tags,pollOptions:p.pollOptions,pollVotes:p.pollVotes,attachments:p.attachments);_emit();}
+  void toggleLike(String postId,String uid){final p=_posts[postId];if(p==null)return;final liked=[...p.likedBy];if(liked.contains(uid)){liked.remove(uid);}else{liked.add(uid);if(p.authorId!=uid)_addNotification(p.authorId,{'type':'like','text':'liked your post','postId':postId,ProfileFields.fromId:uid,'createdAt':DateTime.now(),'read':false});}_posts[postId]=Post(id:p.id,text:p.text,authorId:p.authorId,authorName:p.authorName,createdAt:p.createdAt,category:p.category,likesCount:liked.length,likedBy:liked,commentsCount:p.commentsCount,isQuestion:p.isQuestion,bestAnswerId:p.bestAnswerId,instituteId:p.instituteId,instituteIds:p.instituteIds,tags:p.tags,pollOptions:p.pollOptions,pollVotes:p.pollVotes,attachments:p.attachments);_emit();}
   List<DemoComment> comments(String postId)=>List.unmodifiable(_comments[postId]??const []);
-  void addComment({required String postId,required String uid,required String name,required String text}){final p=_posts[postId];if(p==null)return;(_comments[postId]??=[]).add(DemoComment(id:'demo-comment-${++_seq}',authorId:uid,authorName:name,text:text,createdAt:DateTime.now()));_posts[postId]=Post(id:p.id,text:p.text,authorId:p.authorId,authorName:p.authorName,createdAt:p.createdAt,category:p.category,likesCount:p.likesCount,likedBy:p.likedBy,commentsCount:(_comments[postId]??[]).length,isQuestion:p.isQuestion,bestAnswerId:p.bestAnswerId,instituteId:p.instituteId,tags:p.tags,pollOptions:p.pollOptions,pollVotes:p.pollVotes,attachments:p.attachments);if(p.authorId!=uid)_addNotification(p.authorId,{'type':'comment','text':'commented on your post','postId':postId,'fromId':uid,'createdAt':DateTime.now(),'read':false});_emit();}
+  void addComment({required String postId,required String uid,required String name,required String text}){final p=_posts[postId];if(p==null)return;(_comments[postId]??=[]).add(DemoComment(id:'demo-comment-${++_seq}',authorId:uid,authorName:name,text:text,createdAt:DateTime.now()));_posts[postId]=Post(id:p.id,text:p.text,authorId:p.authorId,authorName:p.authorName,createdAt:p.createdAt,category:p.category,likesCount:p.likesCount,likedBy:p.likedBy,commentsCount:(_comments[postId]??[]).length,isQuestion:p.isQuestion,bestAnswerId:p.bestAnswerId,instituteId:p.instituteId,tags:p.tags,pollOptions:p.pollOptions,pollVotes:p.pollVotes,attachments:p.attachments);if(p.authorId!=uid)_addNotification(p.authorId,{'type':'comment','text':'commented on your post','postId':postId,ProfileFields.fromId:uid,'createdAt':DateTime.now(),'read':false});_emit();}
 
   final Map<String,Set<String>> _timelineTopics={};
   final Map<String,Set<String>> _timelineInstitutes={};
@@ -151,7 +152,7 @@ class DemoDataService extends ChangeNotifier {
 
   bool isFollowing(String uid,String target)=>_following[uid]?.contains(target)==true;
   bool isMutual(String a,String b)=>a!=b&&isFollowing(a,b)&&isFollowing(b,a);
-  void toggleFollow(String uid,String target,bool follow){(_following[uid]??={});if(follow){_following[uid]!.add(target);_addNotification(target,{'type':'follow','text':'started following you','fromId':uid,'createdAt':DateTime.now(),'read':false});}else{_following[uid]!.remove(target);}_emit();}
+  void toggleFollow(String uid,String target,bool follow){(_following[uid]??={});if(follow){_following[uid]!.add(target);_addNotification(target,{'type':'follow','text':'started following you',ProfileFields.fromId:uid,'createdAt':DateTime.now(),'read':false});}else{_following[uid]!.remove(target);}_emit();}
   int followerCount(String uid)=>_following.values.where((s)=>s.contains(uid)).length;
 
   List<Map<String,dynamic>> notifications(String uid)=>List.unmodifiable(_notifications[uid]??const []);
@@ -167,16 +168,16 @@ class DemoDataService extends ChangeNotifier {
   String _name(String id)=>{'demo-user-1':'Ayesha Khan','demo-user-2':'Ali Raza','demo-user-3':'Hira Ahmed','demo-user-4':'Usman Malik','demo-user-5':'Ahtasham Malik','demo-user-6':'Waheed Akram'}[id]??'Student';
   List<Map<String,dynamic>> conversations(String uid){final result=<Map<String,dynamic>>[];for(final e in _messages.entries){final parts=e.key.split('|');if(parts.contains(uid)){final other=parts.firstWhere((x)=>x!=uid,orElse:()=>uid);final list=e.value;final last=list.isEmpty?null:list.last;result.add({'id':e.key,'otherUid':other,'otherName':_name(other),'lastMessage':last?['text']??'','updatedAt':last?['createdAt']??DateTime.now()});}}return result..sort((a,b)=>(b['updatedAt'] as DateTime).compareTo(a['updatedAt'] as DateTime));}
   List<Map<String,dynamic>> messages(String a,String b)=>List.unmodifiable(_messages[_conversation(a,b)]??const []);
-  void sendMessage(String from,String to,String text){if(!isMutual(from,to))return;final key=_conversation(from,to);(_messages[key]??=[]).add({'id':'demo-message-${++_seq}','senderId':from,'receiverId':to,'text':text,'createdAt':DateTime.now(),'read':false});_addNotification(to,{'type':'message','text':'sent you a message','fromId':from,'createdAt':DateTime.now(),'read':false});_emit();}
+  void sendMessage(String from,String to,String text){if(!isMutual(from,to))return;final key=_conversation(from,to);(_messages[key]??=[]).add({'id':'demo-message-${++_seq}',ProfileFields.senderId:from,'receiverId':to,'text':text,'createdAt':DateTime.now(),'read':false});_addNotification(to,{'type':'message','text':'sent you a message',ProfileFields.fromId:from,'createdAt':DateTime.now(),'read':false});_emit();}
 
   List<Map<String,dynamic>> groups()=>List.unmodifiable(_groups);
   bool isGroupMember(String uid,String groupId)=>_groupMembers[groupId]?.contains(uid)==true;
   List<String> groupMemberIds(String groupId)=>List.unmodifiable(_groupMembers[groupId]??const <String>[]);
-  void createGroup(String uid,String name,String description){final id='demo-group-${++_seq}';_groups.insert(0,{'id':id,'name':name,'description':description,'memberCount':1,'ownerId':uid});_groupMembers[id]={uid};_emit();}
+  void createGroup(String uid,String name,String description){final id='demo-group-${++_seq}';_groups.insert(0,{'id':id,ProfileFields.name:name,'description':description,'memberCount':1,'ownerId':uid});_groupMembers[id]={uid};_emit();}
   void joinGroup(String uid,String id){final g=_groups.cast<Map<String,dynamic>>().firstWhere((x)=>x['id']==id,orElse:()=>{});if(g.isEmpty)return;final members=_groupMembers.putIfAbsent(id,()=>{});if(members.add(uid)){g['memberCount']=members.length;_emit();}}
   
   List<Map<String,dynamic>> resources(String uid)=>List.unmodifiable(_resources);
-  void addResource(String uid,String title,String url,String description){_resources.insert(0,{'id':'demo-resource-${++_seq}','title':title,'url':url,'description':description,'authorId':uid,'createdAt':DateTime.now()});_emit();}
+  void addResource(String uid,String title,String url,String description){_resources.insert(0,{'id':'demo-resource-${++_seq}','title':title,'url':url,'description':description,ProfileFields.authorId:uid,'createdAt':DateTime.now()});_emit();}
 
   Map<String,dynamic> reputation(String uid) {
     final authoredPosts = _posts.values.where((p) => p.authorId == uid).toList();
@@ -228,7 +229,7 @@ class DemoDataService extends ChangeNotifier {
   }
 
   List<Map<String,dynamic>> reviews(String uid)=>List.unmodifiable(_reviews[uid]??const []);
-  void addReview(String target,String reviewer,String reviewerName,int rating,String text){final reviews=_reviews[target]??= <Map<String,dynamic>>[];final index=reviews.indexWhere((r)=>r['reviewerId']==reviewer);final item={'id':reviewer,'reviewerId':reviewer,'reviewerName':reviewerName,'rating':rating,'text':text,'createdAt':DateTime.now()};if(index>=0){reviews[index]=item;}else{reviews.insert(0,item);}_emit();}
+  void addReview(String target,String reviewer,String reviewerName,int rating,String text){final reviews=_reviews[target]??= <Map<String,dynamic>>[];final index=reviews.indexWhere((r)=>r[ProfileFields.reviewerId]==reviewer);final item={'id':reviewer,ProfileFields.reviewerId:reviewer,'reviewerName':reviewerName,'rating':rating,'text':text,'createdAt':DateTime.now()};if(index>=0){reviews[index]=item;}else{reviews.insert(0,item);}_emit();}
 
   bool instituteBookmarked(String uid,String id)=>_instituteBookmarks.contains('$uid|$id');
   Set<String> instituteBookmarkIds(String uid)=>Set.unmodifiable(_instituteBookmarks.where((key)=>key.startsWith('$uid|')).map((key)=>key.substring(uid.length+1)));

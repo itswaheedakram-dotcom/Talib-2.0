@@ -16,7 +16,7 @@ jobs:
           channel: stable
       - run: flutter pub get
       - name: Verify institute and demo workflows
-        run: flutter test test/institute_reviews_test.dart test/student_affiliation_test.dart test/institute_program_intake_test.dart test/institute_workflow_test.dart test/institute_detail_listings_test.dart test/demo_identity_integration_test.dart test/smart_search_parser_test.dart
+        run: flutter test test/user_profile_test.dart test/institute_reviews_test.dart test/student_affiliation_test.dart test/institute_program_intake_test.dart test/institute_workflow_test.dart test/institute_detail_listings_test.dart test/demo_identity_integration_test.dart test/smart_search_parser_test.dart
       - name: Verify institute notification function
         run: node --test functions/institute_notifications.test.js
       - name: Analyze Dart code

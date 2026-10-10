@@ -10,6 +10,15 @@ service firebase.storage {
       return signedIn() && request.auth.token.admin == true;
     }
 
+    match /profiles/{userId}/{fileName} {
+      allow read: if signedIn()
+        && (request.auth.uid == userId
+          || firestore.get(/databases/(default)/documents/users/$(userId)).data.get('privateProfile', false) != true);
+      allow create, update: if signedIn() && request.auth.uid == userId
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if signedIn() && request.auth.uid == userId;
+    }
     match /institutes/{userId}/{allPaths=**} {
       allow read: if true;
       allow write: if signedIn() && (request.auth.uid == userId || admin());

@@ -1,3 +1,4 @@
+import '../../../../core/widgets/user_identity.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme.dart';
@@ -16,7 +17,7 @@ class AdminIssueReportsScreen extends StatelessWidget {
       Padding(padding:const EdgeInsets.fromLTRB(12,12,12,4),child:Row(children:[Expanded(child:_metric('Total',tickets.length.toString(),Icons.confirmation_number_outlined)),Expanded(child:_metric('Open',open.toString(),Icons.mark_email_unread_outlined)),Expanded(child:_metric('Resolved',resolved.toString(),Icons.check_circle_outline))])),
       Expanded(child:tickets.isEmpty?const Center(child:Padding(padding:EdgeInsets.all(24),child:Text('No issue reports have been submitted yet.',textAlign:TextAlign.center))):ListView.separated(padding:const EdgeInsets.all(12),itemCount:tickets.length,separatorBuilder:(_,__)=>const SizedBox(height:6),itemBuilder:(context,i){
         final t=tickets[i];final status=(t['status']??'open').toString();
-        return Card(child:ListTile(leading:CircleAvatar(backgroundColor:AppColors.softGreen,child:Icon(Icons.flag_outlined,color:AppColors.darkGreen)),title:Text((t['title']??'Issue').toString(),maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text((t['ticketNumber']??t['id']).toString()+' • '+(t['reporterName']??t['reporterId']).toString()+'\n'+(t['category']??'Other').toString()+' • '+statusLabel(status)+' • '+(t['priority']??'Medium').toString()),isThreeLine:true,trailing:const Icon(Icons.chevron_right_rounded),onTap:()=>context.push('/admin/issue-tickets/'+t['id'].toString())));
+        return Card(child:ListTile(leading:CircleAvatar(backgroundColor:AppColors.softGreen,child:Icon(Icons.flag_outlined,color:AppColors.darkGreen)),title:Text((t['title']??'Issue').toString(),maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[UserIdentity(uid:(t['reporterId']??'').toString(),name:(t['reporterName']??'Reporter').toString()),Text((t['ticketNumber']??t['id']).toString()+' • '+(t['reporterName']??t['reporterId']).toString()+'\n'+(t['category']??'Other').toString()+' • '+statusLabel(status)+' • '+(t['priority']??'Medium').toString())]),isThreeLine:true,trailing:const Icon(Icons.chevron_right_rounded),onTap:()=>context.push('/admin/issue-tickets/'+t['id'].toString())));
       })),
     ]);
   }));

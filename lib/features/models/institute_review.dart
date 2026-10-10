@@ -1,3 +1,4 @@
+import '../../core/models/user_profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class InstituteReview {
@@ -11,17 +12,17 @@ class InstituteReview {
     required this.authorName, required this.rating, required this.text, required this.updatedAt});
 
   Map<String, dynamic> toMap() => {
-    'instituteId': instituteId, 'userId': userId, 'authorName': authorName,
+    'instituteId': instituteId, ProfileFields.userId: userId, ProfileFields.authorName: authorName,
     'rating': rating, 'text': text, 'updatedAt': updatedAt.toUtc().toIso8601String(), 'published': true,
   };
   static InstituteReview? read(Map<String, dynamic> map) {
     final rating = map['rating'];
     if (rating is! int || rating < 1 || rating > 5 || map['published'] != true) return null;
     final id = map['instituteId']?.toString() ?? '';
-    final uid = map['userId']?.toString() ?? '';
+    final uid = map[ProfileFields.userId]?.toString() ?? '';
     if (id.isEmpty || uid.isEmpty) return null;
     return InstituteReview(instituteId: id, userId: uid,
-      authorName: map['authorName']?.toString() ?? 'Community member', rating: rating,
+      authorName: map[ProfileFields.authorName]?.toString() ?? 'Community member', rating: rating,
       text: map['text']?.toString() ?? '',
       updatedAt: map['updatedAt'] is Timestamp ? (map['updatedAt'] as Timestamp).toDate() : DateTime.tryParse(map['updatedAt']?.toString() ?? '') ?? DateTime(1970));
   }

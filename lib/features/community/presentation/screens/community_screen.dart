@@ -1,3 +1,5 @@
+import '../../../../core/widgets/user_identity.dart';
+import '../../../../core/models/user_profile.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -271,7 +273,7 @@ class _PostCard extends StatelessWidget{
         InkWell(onTap:onAuthor,child:CircleAvatar(backgroundColor:AppColors.softGreen,child:Text(post.authorName.isEmpty?'?':post.authorName[0].toUpperCase(),
           style:const TextStyle(color:AppColors.primaryGreen,fontWeight:FontWeight.bold)))),
         const SizedBox(width:10),Expanded(child:InkWell(onTap:onAuthor,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text(post.authorName,style:const TextStyle(fontWeight:FontWeight.w700,color:AppColors.darkGreen)),
+          UserIdentity(uid: post.authorId, name: post.authorName),
           const SizedBox(height:3),
           if(post.tags.isNotEmpty || post.instituteIds.isNotEmpty || post.instituteId!=null)
             Wrap(spacing:5,runSpacing:4,children:[
@@ -293,7 +295,7 @@ class _PostCard extends StatelessWidget{
       if(post.attachments.isNotEmpty) ...[
         const SizedBox(height:8),
         ...post.attachments.map((a){
-          final type=a['type']??'file'; final url=a['url']??''; final name=a['name']??'Attachment';
+          final type=a['type']??'file'; final url=a['url']??''; final name=a[ProfileFields.name]??'Attachment';
           if(type=='photo'&&url.isNotEmpty) return Padding(
             padding:const EdgeInsets.only(bottom:7),
             child:ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.network(
@@ -315,7 +317,12 @@ class _PostCard extends StatelessWidget{
         }),const SizedBox(height:4),
       ],
       Row(children:[
-        IconButton(onPressed:onLike,icon:Icon(liked?Icons.favorite:Icons.favorite_border,color:liked?Colors.red:AppColors.primaryGreen)),Text(post.likesCount.toString()),
+        IconButton(onPressed:onLike,icon:Icon(liked?Icons.favorite:Icons.favorite_border,color:liked?Colors.red:AppColors.primaryGreen)),TextButton(onPressed: post.likedBy.isEmpty ? null : () => showModalBottomSheet<void>(
+          context: context, builder: (_) => ListView(children: [
+            const ListTile(title: Text('Liked by')),
+            ...post.likedBy.map((id) => ListTile(title: UserIdentity(uid: id, name: 'Community member'),
+              onTap: () { Navigator.pop(context); context.push('/profile/$id'); })),
+          ])), child: Text(post.likesCount.toString())),
         IconButton(onPressed:onOpen,icon:const Icon(Icons.comment_outlined,color:AppColors.primaryGreen)),Text(post.commentsCount.toString()),
         const Spacer(),TextButton(onPressed:onOpen,child:const Text('View')),
       ]),

@@ -1,3 +1,4 @@
+import '../../../../core/widgets/user_identity.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme.dart';
@@ -48,21 +49,7 @@ class TemporaryProfilesScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              title: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      p.name,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  const Icon(
-                    Icons.verified,
-                    size: 19,
-                    color: AppColors.primaryGreen,
-                  ),
-                ],
-              ),
+              title: UserIdentity(uid: p.id, name: p.name),
               subtitle: Text('${p.level}\n${p.city}'),
               isThreeLine: true,
               trailing: const Icon(Icons.chevron_right_rounded),

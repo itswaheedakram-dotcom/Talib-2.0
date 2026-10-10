@@ -1,3 +1,4 @@
+import '../../../../core/models/user_profile.dart';
 import '../widgets/institute_score_field.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -254,10 +255,10 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
     final districts = <String>{..._districtsForProvince(_province.text), ...remoteDistricts}.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final remoteDistrictCities = _locations.options(
-      type: 'city', parentName: _district.text, country: _country.text,
+      type: ProfileFields.city, parentName: _district.text, country: _country.text,
     );
     final remoteProvinceCities = _locations.options(
-      type: 'city', parentName: _province.text, country: _country.text,
+      type: ProfileFields.city, parentName: _province.text, country: _country.text,
     );
     final cities = (_district.text.trim().isNotEmpty
         ? remoteDistrictCities

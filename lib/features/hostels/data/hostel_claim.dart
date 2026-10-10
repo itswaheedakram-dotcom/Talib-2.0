@@ -1,3 +1,4 @@
+import '../../../core/models/user_profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HostelClaim {
@@ -30,7 +31,7 @@ class HostelClaim {
       id: doc.id,
       hostelId: (data['hostelId'] ?? '').toString(),
       hostelName: (data['hostelName'] ?? '').toString(),
-      userId: (data['userId'] ?? '').toString(),
+      userId: (data[ProfileFields.userId] ?? '').toString(),
       userName: (data['userName'] ?? 'Member').toString(),
       contact: (data['contact'] ?? '').toString(),
       note: (data['note'] ?? '').toString(),

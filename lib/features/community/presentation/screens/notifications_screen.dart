@@ -1,3 +1,4 @@
+import '../../../../core/widgets/user_identity.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -108,7 +109,11 @@ class NotificationsScreen extends StatelessWidget {
           item['text']?.toString() ?? 'Activity',
           style: TextStyle(fontWeight: read ? FontWeight.normal : FontWeight.w700),
         ),
-        subtitle: Text(read ? 'Read' : 'New notification'),
+        subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if ((item['fromId'] ?? '').toString().isNotEmpty)
+            UserIdentity(uid: item['fromId'].toString(), name: 'Community member'),
+          Text(read ? 'Read' : 'New notification'),
+        ]),
         onTap: onTap,
       ),
     );

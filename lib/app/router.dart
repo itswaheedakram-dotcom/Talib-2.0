@@ -1,3 +1,4 @@
+import '../core/models/user_profile.dart';
 import '../features/institutes/presentation/widgets/institute_record_scope.dart';
 import 'package:go_router/go_router.dart';
 import '../features/home/presentation/screens/main_screen.dart';
@@ -66,7 +67,7 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/institutes/:type',builder:(_,s)=>InstituteModeScope(builder:()=>InstituteListScreen(type:s.pathParameters['type']!))),
   GoRoute(path:'/institute/:id',builder:(_,s)=>InstituteRecordScope(id:s.pathParameters['id']!,builder:()=>InstituteDetailScreen(id:s.pathParameters['id']!))),
   GoRoute(path:'/institute/:id/edit',builder:(_,s)=>InstituteRecordScope(id:s.pathParameters['id']!,builder:()=>EditInstituteScreen(id:s.pathParameters['id']!))),
-  GoRoute(path:'/institute/:id/claim',builder:(_,s)=>InstituteRecordScope(id:s.pathParameters['id']!,builder:()=>ClaimInstituteScreen(instituteId:s.pathParameters['id']!,instituteName:s.uri.queryParameters['name']??'Institute'))),
+  GoRoute(path:'/institute/:id/claim',builder:(_,s)=>InstituteRecordScope(id:s.pathParameters['id']!,builder:()=>ClaimInstituteScreen(instituteId:s.pathParameters['id']!,instituteName:s.uri.queryParameters[ProfileFields.name]??'Institute'))),
   GoRoute(path:'/find',builder:(_,__)=>InstituteModeScope(builder:()=>const FindInstituteScreen())),
   GoRoute(path:'/add-institute/:type',builder:(_,s)=>InstituteModeScope(builder:()=>AddInstituteScreen(type:s.pathParameters['type']!))),
   GoRoute(path:'/institute/:id/programs',builder:(_,s)=>InstituteRecordScope(id:s.pathParameters['id']!,builder:()=>DisciplineInfoScreen(instituteId:s.pathParameters['id']!))),
@@ -96,7 +97,7 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/community/create',builder:(_,s)=>CreatePostScreen(post:s.extra is Post?s.extra as Post:null,instituteId:s.uri.queryParameters['instituteId'],instituteName:s.uri.queryParameters['instituteName'])),
   GoRoute(path:'/notifications',builder:(_,__)=>const NotificationsScreen()),
   GoRoute(path:'/community/post/:id',builder:(_,s)=>PostCommentsScreen(id:s.pathParameters['id']!)),
-  GoRoute(path:'/institute/:id/community',builder:(_,s)=>CommunityScreen(instituteId:s.pathParameters['id'],instituteName:s.uri.queryParameters['name'])),
+  GoRoute(path:'/institute/:id/community',builder:(_,s)=>CommunityScreen(instituteId:s.pathParameters['id'],instituteName:s.uri.queryParameters[ProfileFields.name])),
   GoRoute(path:'/signin',builder:(_,__)=>const SignInScreen()),
   GoRoute(path:'/profile',builder:(_,__)=>const ProfileScreen()),
   GoRoute(path:'/profile/:id',builder:(_,s)=>PublicProfileScreen(id:s.pathParameters['id']!)),
@@ -108,7 +109,7 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/hostels',builder:(_,__)=>const HostelsScreen()),
   GoRoute(path:'/hostel/:id',builder:(_,s)=>s.extra is Hostel ? HostelDetailScreen(hostel:s.extra as Hostel) : HostelDetailLoaderScreen(hostelId:s.pathParameters['id']!)),
   GoRoute(path:'/hostels/list',builder:(_,__)=>const ListHostelScreen()),
-  GoRoute(path:'/hostel/:id/claim',builder:(_,s)=>HostelClaimScreen(hostelId:s.pathParameters['id']!,hostelName:s.uri.queryParameters['name']??'Hostel',isDemo:s.pathParameters['id']!.startsWith('example_'))),
+  GoRoute(path:'/hostel/:id/claim',builder:(_,s)=>HostelClaimScreen(hostelId:s.pathParameters['id']!,hostelName:s.uri.queryParameters[ProfileFields.name]??'Hostel',isDemo:s.pathParameters['id']!.startsWith('example_'))),
   GoRoute(path:'/hostel/:id/manage',builder:(_,s)=>HostelManagementScreen(hostelId:s.pathParameters['id']!,initialHostel:s.extra is Hostel ? s.extra as Hostel : null)),
   GoRoute(path:'/hostel/:id/managers',builder:(_,s)=>HostelManagersScreen(hostelId:s.pathParameters['id']!)),
   GoRoute(path:'/internships',builder:(_,__)=>const InternshipsScreen()),
@@ -119,5 +120,5 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/settings',builder:(_,__)=>const SettingsScreen()),
   GoRoute(path:'/blocked-users',builder:(_,__)=>const BlockedUsersScreen()),
   GoRoute(path:'/temporary-profiles',builder:(_,__)=>const TemporaryProfilesScreen()),
-  GoRoute(path:'/chat/:id',builder:(_,s)=>ChatScreen(conversationId:s.pathParameters['id']!,otherUid:s.uri.queryParameters['uid']!,otherName:s.uri.queryParameters['name']??'Student')),
+  GoRoute(path:'/chat/:id',builder:(_,s)=>ChatScreen(conversationId:s.pathParameters['id']!,otherUid:s.uri.queryParameters[ProfileFields.uid]!,otherName:s.uri.queryParameters[ProfileFields.name]??'Student')),
 ]);

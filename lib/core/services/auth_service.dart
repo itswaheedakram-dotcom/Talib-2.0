@@ -1,3 +1,4 @@
+import '../models/user_profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -34,15 +35,17 @@ class AuthService {
 
     await user.updateDisplayName(name.trim());
     await _db.collection('users').doc(user.uid).set({
-      'uid': user.uid,
-      'name': name.trim(),
-      'email': user.email ?? email.trim(),
+      ProfileFields.uid: user.uid,
+      ProfileFields.name: name.trim(),
       'role': role,
       'isVerified': false,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
+    await _db.collection('users').doc(user.uid).collection('private').doc('account').set({
+      'email': user.email ?? email.trim(),
+    }, SetOptions(merge: true));
     return result;
   }
 

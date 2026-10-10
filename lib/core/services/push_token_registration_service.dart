@@ -1,3 +1,4 @@
+import '../models/user_profile.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -49,7 +50,7 @@ class PushTokenRegistrationService {
     final access = AdminAccessService.instance;
     final adminRecipient = access.isSuperAdmin || access.can('manage_reports');
     await FirebaseFirestore.instance.collection('pushTokens').doc(uid).set({
-      'uid':uid,
+      ProfileFields.uid:uid,
       'tokens':FieldValue.arrayUnion([token]),
       'adminRecipient':adminRecipient,
       'updatedAt':FieldValue.serverTimestamp(),

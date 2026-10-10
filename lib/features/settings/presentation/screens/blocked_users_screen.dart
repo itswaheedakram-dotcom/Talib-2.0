@@ -1,3 +1,5 @@
+import '../../../../core/widgets/user_identity.dart';
+import '../../../../core/models/user_profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -43,7 +45,7 @@ class BlockedUsersScreen extends StatelessWidget {
                 future: FirebaseFirestore.instance.collection('users').doc(blockedId).get(),
                 builder: (context, userSnapshot) {
                   final data = userSnapshot.data?.data() ?? {};
-                  final nameRaw = (data['name'] ?? data['username'] ?? 'User').toString().trim();
+                  final nameRaw = (data[ProfileFields.name] ?? data['username'] ?? 'User').toString().trim();
                   final name = nameRaw.isEmpty ? 'User' : nameRaw;
                   return Card(
                     child: ListTile(
@@ -51,7 +53,7 @@ class BlockedUsersScreen extends StatelessWidget {
                         backgroundColor: AppColors.softGreen,
                         child: Text(name[0].toUpperCase(), style: const TextStyle(color: AppColors.primaryGreen, fontWeight: FontWeight.w700)),
                       ),
-                      title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      title: UserIdentity(uid: blockedId, name: name),
                       subtitle: const Text('Blocked'),
                       trailing: TextButton(
                         onPressed: () async {

@@ -1,3 +1,5 @@
+import '../../../../core/widgets/user_identity.dart';
+import '../../../../core/models/user_profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -71,7 +73,7 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
             ),
             const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(post.authorName, style: const TextStyle(fontWeight: FontWeight.w700)),
+              UserIdentity(uid: post.authorId, name: post.authorName),
               const Text('View profile', style: TextStyle(color: AppColors.homeMutedText, fontSize: 12)),
             ])),
           ]),
@@ -83,7 +85,7 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
         if(post.attachments.isNotEmpty) ...[
           const SizedBox(height:10),
           ...post.attachments.map((a){
-            final type=a['type']??'file'; final url=a['url']??''; final name=a['name']??'Attachment';
+            final type=a['type']??'file'; final url=a['url']??''; final name=a[ProfileFields.name]??'Attachment';
             if(type=='photo'&&url.isNotEmpty) return ClipRRect(
               borderRadius:BorderRadius.circular(12),
               child:Image.network(url,height:240,width:double.infinity,fit:BoxFit.cover,errorBuilder:(_,__,___)=>_attachmentTile(name,Icons.broken_image_outlined)),
@@ -154,8 +156,8 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
     List<Map<String, dynamic>> current() => DemoDataService.instance.comments(widget.id)
         .map((x) => {
               'id': x.id,
-              'authorId': x.authorId,
-              'authorName': x.authorName,
+              ProfileFields.authorId: x.authorId,
+              ProfileFields.authorName: x.authorName,
               'text': x.text,
               'createdAt': x.createdAt,
             })
@@ -178,7 +180,7 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
           contentPadding: EdgeInsets.zero,
           leading: const CircleAvatar(backgroundColor: AppColors.softGreen, child: Icon(Icons.person, color: AppColors.primaryGreen)),
           title: Row(children:[
-            Expanded(child:Text((x['authorName'] ?? 'Student').toString(),style:const TextStyle(fontWeight:FontWeight.w600))),
+            Expanded(child:UserIdentity(uid: (x[ProfileFields.authorId] ?? '').toString(), name: (x[ProfileFields.authorName] ?? 'Student').toString())),
             if(widget.id.isNotEmpty && DemoDataService.instance.post(widget.id)?.bestAnswerId==x['id'])
               const Text('BEST ANSWER',style:TextStyle(color:AppColors.primaryGreen,fontSize:10,fontWeight:FontWeight.bold)),
           ]),
@@ -212,7 +214,7 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
             contentPadding: EdgeInsets.zero,
             leading: const CircleAvatar(backgroundColor: AppColors.softGreen, child: Icon(Icons.person, color: AppColors.primaryGreen)),
             title: Row(children: [
-              Expanded(child: Text((data['authorName'] ?? 'Student').toString(), style: const TextStyle(fontWeight: FontWeight.w600))),
+              Expanded(child: UserIdentity(uid: (data[ProfileFields.authorId] ?? '').toString(), name: (data[ProfileFields.authorName] ?? 'Student').toString())),
               if (accepted) const Text('BEST ANSWER', style: TextStyle(color: AppColors.primaryGreen, fontSize: 10, fontWeight: FontWeight.bold)),
             ]),
             subtitle: Text((data['text'] ?? '').toString()),
@@ -222,7 +224,7 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
                 onPressed: () => _db!.setBestAnswer(postId: post.id, commentId: commentId, uid: user!.uid),
                 icon: Icon(accepted ? Icons.check_circle : Icons.check_circle_outline, color: AppColors.primaryGreen),
               ),
-              if (user?.uid == data['authorId']) PopupMenuButton<String>(
+              if (user?.uid == data[ProfileFields.authorId]) PopupMenuButton<String>(
                 onSelected: (value) async {
                   if (value != 'delete') return;
                   final ok = await showDialog<bool>(

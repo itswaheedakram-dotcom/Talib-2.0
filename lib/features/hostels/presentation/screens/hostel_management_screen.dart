@@ -1,3 +1,4 @@
+import '../../../../core/models/user_profile.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
@@ -115,11 +116,11 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
   }
 
   void _seedFields(Hostel h) {
-    _field('name', h.name);
+    _field(ProfileFields.name, h.name);
     _field('type', h.type);
     _field('gender', h.gender);
     _field('description', h.description);
-    _field('city', h.city);
+    _field(ProfileFields.city, h.city);
     _field('area', h.area);
     _field('distance', h.distance);
     _field('address', h.address);
@@ -171,8 +172,8 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
 
   Hostel _applyLocalChanges(Hostel h, Map<String, dynamic> x) {
     return Hostel(
-      id: h.id, name: (x['name'] ?? h.name).toString(),
-      city: (x['city'] ?? h.city).toString(), area: (x['area'] ?? h.area).toString(),
+      id: h.id, name: (x[ProfileFields.name] ?? h.name).toString(),
+      city: (x[ProfileFields.city] ?? h.city).toString(), area: (x['area'] ?? h.area).toString(),
       type: (x['type'] ?? h.type).toString(), gender: (x['gender'] ?? h.gender).toString(),
       distance: (x['distance'] ?? h.distance).toString(), price: (x['price'] ?? h.price).toString(),
       securityFee: (x['securityFee'] ?? h.securityFee).toString(), roomType: (x['roomType'] ?? h.roomType).toString(),
@@ -191,14 +192,14 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
   }
 
   Future<void> _saveBasic() => _saveSection(HostelManagerPermissions.basicInfo, {
-    'name': _c['name']!.text.trim(),
+    ProfileFields.name: _c[ProfileFields.name]!.text.trim(),
     'type': _c['type']!.text.trim(),
     'gender': _c['gender']!.text.trim(),
     'description': _c['description']!.text.trim(),
   });
 
   Future<void> _saveLocation() => _saveSection(HostelManagerPermissions.location, {
-    'city': _c['city']!.text.trim(),
+    ProfileFields.city: _c[ProfileFields.city]!.text.trim(),
     'area': _c['area']!.text.trim(),
     'distance': _c['distance']!.text.trim(),
     'address': _c['address']!.text.trim(),
@@ -526,13 +527,13 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
           ],
           const SizedBox(height: 16),
           _section('Basic information', HostelManagerPermissions.basicInfo, [
-            _fieldWidget('name', 'Hostel name'),
+            _fieldWidget(ProfileFields.name, 'Hostel name'),
             _fieldWidget('type', 'Hostel type'),
             _fieldWidget('gender', 'For'),
             _fieldWidget('description', 'Description', maxLines: 4),
           ], _saveBasic),
           _section('Location', HostelManagerPermissions.location, [
-            _fieldWidget('city', 'City'),
+            _fieldWidget(ProfileFields.city, 'City'),
             _fieldWidget('area', 'Area'),
             _fieldWidget('distance', 'Distance'),
             _fieldWidget('address', 'Full address', maxLines: 2),

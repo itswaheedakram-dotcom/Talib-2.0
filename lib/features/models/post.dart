@@ -1,3 +1,4 @@
+import '../../core/models/user_profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Post {
@@ -41,8 +42,8 @@ class Post {
     return Post(
       id:doc.id,
       text:(d['text']??'').toString(),
-      authorId:(d['authorId']??'').toString(),
-      authorName:(d['authorName']??'Student').toString(),
+      authorId:(d[ProfileFields.authorId]??'').toString(),
+      authorName:(d[ProfileFields.authorName]??'Student').toString(),
       createdAt:raw is Timestamp?raw.toDate():DateTime.now(),
       category:(d['category']??'General').toString(),
       likesCount:asInt(d['likesCount']),
@@ -64,7 +65,7 @@ class Post {
   bool likedByUser(String? uid)=>uid!=null&&likedBy.contains(uid);
 
   Map<String,dynamic> toMap() => {
-    'text':text,'authorId':authorId,'authorName':authorName,'category':category,
+    'text':text,ProfileFields.authorId:authorId,ProfileFields.authorName:authorName,'category':category,
     'createdAt':Timestamp.fromDate(createdAt),'likesCount':likesCount,'likedBy':likedBy,
     'commentsCount':commentsCount,'isQuestion':isQuestion,'bestAnswerId':bestAnswerId,
     if(instituteId!=null)'instituteId':instituteId,'instituteIds':instituteIds,'tags':tags,'pollOptions':pollOptions,'pollVotes':pollVotes,
