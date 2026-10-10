@@ -67,7 +67,7 @@ def submit():
             'name': 'Student', 'studentInstituteId': 'affiliation-rules-university',
             'studentInstituteName': 'Affiliation rules university', 'studentProgram': 'BS Computer Science',
             'studentVerificationStatus': 'pending'})}},
-        {'update': {'name': f'{student_path}/notifications/affiliation-request', 'fields': fields({
+        {'update': {'name': f'{student_path}/notifications/affiliation-request-{time.time_ns()}', 'fields': fields({
             'type': 'student_affiliation', 'text': 'Student requested verification.',
             'instituteId': 'affiliation-rules-university', 'fromId': 'affiliation-student', 'read': False})},
          'updateTransforms': [{'fieldPath': 'createdAt', 'setToServerValue': 'REQUEST_TIME'}]},
