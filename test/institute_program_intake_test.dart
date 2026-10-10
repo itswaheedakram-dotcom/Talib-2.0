@@ -241,6 +241,17 @@ void main() {
       );
       await tester.tap(find.text('Open editor'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      final missingSelection = find.text(
+        'Select at least one program. Add programs in Program categories first.',
+      );
+      expect(missingSelection, findsOneWidget);
+      expect(tester.getRect(missingSelection).top, lessThan(900));
+      expect(
+        InstituteOpportunityRepository.instance.forInstitute(institute.id),
+        isEmpty,
+      );
       await tester.ensureVisible(
         find.text('Select / clear all Undergraduate programs'),
       );

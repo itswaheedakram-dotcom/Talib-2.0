@@ -237,7 +237,23 @@ class _ProgramEditorState extends State<_ProgramEditor> {
   Widget build(BuildContext context) => PopScope(
     canPop: !_saving,
     child: AlertDialog(
-      title: Text(_admission ? 'Admission intake' : 'Program details'),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(_admission ? 'Admission intake' : 'Program details'),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                _error!,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ),
+        ],
+      ),
       content: SizedBox(
         width: 520,
         child: SingleChildScrollView(
@@ -462,16 +478,6 @@ class _ProgramEditorState extends State<_ProgramEditor> {
                       ],
                     ),
                 ],
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text(
-                      _error!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
