@@ -87,12 +87,7 @@ service cloud.firestore {
         || (managerAdminPermission('ownership_claim_review')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'role', 'instituteAdmin', 'instituteId', 'instituteName', 'designation'
-          ]))
-        || (signedIn()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentVerificationStatus'])
-          && request.resource.data.studentVerificationStatus in ['approved', 'rejected']
-          && canManageInstitute(resource.data.studentInstituteId)
-          && get(/databases/$(database)/documents/institutes/$(resource.data.studentInstituteId)/studentAffiliations/$(userId)).data.status == 'pending');
+          ]));
 
       match /bookmarks/{postId} {
         allow read, write: if signedIn() && request.auth.uid == userId;

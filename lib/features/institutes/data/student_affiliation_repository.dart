@@ -30,11 +30,17 @@ class StudentAffiliationRepository extends ChangeNotifier {
       'studentProgram': data?['studentProgram'] ?? '',
       'studentVerificationStatus': data?['studentVerificationStatus'] ?? 'not_requested',
     };
-    if (result['studentVerificationStatus'] == 'approved') {
-      final instituteId = result['studentInstituteId'].toString();
-      final verification = await FirebaseFirestore.instance.collection('institutes').doc(instituteId)
-          .collection('studentVerifications').doc(uid).get();
-      if (verification.data()?['status'] != 'approved') result['studentVerificationStatus'] = 'pending';
+    final instituteId = result['studentInstituteId'].toString();
+    if (instituteId.isNotEmpty) {
+      final institute = FirebaseFirestore.instance.collection('institutes').doc(instituteId);
+      final verification = await institute.collection('studentVerifications').doc(uid).get();
+      if (verification.data()?['status'] == 'approved') {
+        result['studentVerificationStatus'] = 'approved';
+      } else {
+        final request = await institute.collection('studentAffiliations').doc(uid).get();
+        final status = request.data()?['status'];
+        if (status == 'pending' || status == 'rejected') result['studentVerificationStatus'] = status;
+      }
     }
     return result;
   }
@@ -48,21 +54,55 @@ class StudentAffiliationRepository extends ChangeNotifier {
         controller.onCancel = sub;
       });
     }
-    return FirebaseFirestore.instance.collection('users').doc(uid).snapshots().asyncMap((snapshot) async {
-      final data = snapshot.data() ?? const <String, dynamic>{};
-      final result = {
-        'studentInstituteId': data['studentInstituteId'] ?? '',
-        'studentInstituteName': data['studentInstituteName'] ?? '',
-        'studentProgram': data['studentProgram'] ?? '',
-        'studentVerificationStatus': data['studentVerificationStatus'] ?? 'not_requested',
-      };
-      if (result['studentVerificationStatus'] == 'approved') {
-        final instituteId = result['studentInstituteId'].toString();
-        final verification = await FirebaseFirestore.instance.collection('institutes').doc(instituteId)
-            .collection('studentVerifications').doc(uid).get();
-        if (verification.data()?['status'] != 'approved') result['studentVerificationStatus'] = 'pending';
+    final db = FirebaseFirestore.instance;
+    return Stream.multi((controller) {
+      Map<String, dynamic> data = const {};
+      String instituteId = '';
+      String requestStatus = 'not_requested';
+      bool verified = false;
+      StreamSubscription? profileSubscription;
+      StreamSubscription? requestSubscription;
+      StreamSubscription? verificationSubscription;
+      void emit() {
+        controller.add({
+          'studentInstituteId': data['studentInstituteId'] ?? '',
+          'studentInstituteName': data['studentInstituteName'] ?? '',
+          'studentProgram': data['studentProgram'] ?? '',
+          'studentVerificationStatus': verified ? 'approved' : requestStatus,
+        });
       }
-      return result;
+      void watchAffiliation(String id) {
+        requestSubscription?.cancel();
+        verificationSubscription?.cancel();
+        requestStatus = (data['studentVerificationStatus'] ?? 'not_requested').toString();
+        verified = false;
+        if (id.isEmpty) { emit(); return; }
+        requestSubscription = db.collection('institutes').doc(id).collection('studentAffiliations').doc(uid)
+            .snapshots().listen((snapshot) {
+              final status = snapshot.data()?['status'];
+              if (status == 'pending' || status == 'rejected') requestStatus = status.toString();
+              emit();
+            }, onError: controller.addError);
+        verificationSubscription = db.collection('institutes').doc(id).collection('studentVerifications').doc(uid)
+            .snapshots().listen((snapshot) {
+              verified = snapshot.data()?['status'] == 'approved';
+              emit();
+            }, onError: controller.addError);
+      }
+      profileSubscription = db.collection('users').doc(uid).snapshots().listen((snapshot) {
+        data = snapshot.data() ?? const {};
+        final nextInstituteId = (data['studentInstituteId'] ?? '').toString();
+        if (nextInstituteId != instituteId) {
+          instituteId = nextInstituteId;
+          watchAffiliation(instituteId);
+        }
+        emit();
+      }, onError: controller.addError);
+      controller.onCancel = () async {
+        await profileSubscription?.cancel();
+        await requestSubscription?.cancel();
+        await verificationSubscription?.cancel();
+      };
     });
   }
 
@@ -193,7 +233,6 @@ class StudentAffiliationRepository extends ChangeNotifier {
         throw StateError('The student changed their selected university before review. Ask them to submit the request again.');
       }
       tx.update(request, {'status': status, 'reviewedAt': FieldValue.serverTimestamp(), 'reviewedBy': InstituteAccess.uid});
-      tx.set(user, {'studentVerificationStatus': status}, SetOptions(merge: true));
       if (status == 'approved') {
         tx.set(verification, {
           'studentId': studentId, 'instituteId': institute.id, 'status': 'approved',

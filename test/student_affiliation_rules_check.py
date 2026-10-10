@@ -91,8 +91,6 @@ check(200, call('POST', ROOT + ':commit', {'writes': [
         'studentName': 'Student', 'instituteId': 'affiliation-rules-university',
         'program': 'BS Computer Science', 'status': 'approved', 'reviewedBy': 'affiliation-owner'})},
      'updateTransforms': [{'fieldPath': 'reviewedAt', 'setToServerValue': 'REQUEST_TIME'}]},
-    {'update': {'name': student_path, 'fields': fields({'studentVerificationStatus': 'approved'})},
-     'updateMask': {'fieldPaths': ['studentVerificationStatus']}},
     {'update': {'name': verification, 'fields': fields({'studentId': 'affiliation-student',
         'instituteId': 'affiliation-rules-university', 'status': 'approved'})},
      'updateTransforms': [{'fieldPath': 'verifiedAt', 'setToServerValue': 'REQUEST_TIME'}]},
