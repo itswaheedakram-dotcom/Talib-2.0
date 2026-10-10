@@ -29,6 +29,56 @@ void main() {
     await institutes.setSubmissionStatus(i.id, 'approved');
     return institutes.byId(i.id)!;
   }
+  testWidgets('three demo profiles rank seeded universities and edits update the displayed rank', (tester) async {
+    ActiveProfileController.instance.activate(temporaryProfiles[0]);
+    final institutes = InstituteRepository.instance;
+    await institutes.load();
+    final first = institutes.byId('university-2')!;
+    final second = institutes.byId('university-31')!;
+    final repo = InstituteReviewRepository.instance;
+    final originals = repo.forInstitute(second.id).toList();
+    addTearDown(() async {
+      for (var n = 0; n < 3; n++) {
+        ActiveProfileController.instance.activate(temporaryProfiles[n]);
+        final review = originals.singleWhere((r) => r.userId == temporaryProfiles[n].id);
+        await repo.save(second.id, review.rating, review.text);
+      }
+    });
+    expect(repo.summary(first.id).average, closeTo(4.33, .01));
+    expect(repo.rank(first), 1);
+    expect(repo.rank(second), 2);
+    for (var n = 0; n < 3; n++) {
+      ActiveProfileController.instance.activate(temporaryProfiles[n]);
+      await repo.save(second.id, 5, 'Demo profile ${n + 1}: testing community ranking.');
+    }
+    expect(repo.summary(second.id).count, 3);
+    expect(repo.summary(second.id).average, 5);
+    expect(repo.rank(second), 1);
+    expect(repo.rank(first), 2);
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: Scaffold(body: SingleChildScrollView(child: InstituteReviewsSection(institute: second)))));
+    await tester.pumpAndSettle();
+    expect(find.text('5.0 / 5'), findsOneWidget);
+    expect(find.text('3 ratings'), findsOneWidget);
+    expect(find.text('Community rank #1 of 2'), findsOneWidget);
+    // Editing the same three accounts changes the rank without adding votes.
+    for (var n = 0; n < 3; n++) {
+      ActiveProfileController.instance.activate(temporaryProfiles[n]);
+      await repo.save(second.id, [5, 4, 4][n], 'Demo review updated.');
+    }
+    await tester.pumpAndSettle();
+    expect(repo.summary(second.id).count, 3);
+    expect(repo.rank(first), 1);
+    expect(repo.rank(second), 1);
+    expect(find.text('Community rank #1 of 2'), findsOneWidget);
+    ActiveProfileController.instance.activate(temporaryProfiles[2]);
+    await repo.save(second.id, 3, 'Demo review updated again.');
+    await tester.pumpAndSettle();
+    expect(repo.rank(second), 2);
+    expect(find.text('Community rank #2 of 2'), findsOneWidget);
+    expect(FirebaseService.initialized, isFalse);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
   test('demo users have one editable rating each; ranks require three and deletion updates totals', () async {
     final i = await fixture('Review repository test');
     final repo = InstituteReviewRepository.instance;
