@@ -1,4 +1,5 @@
 import '../models/user_profile.dart';
+import '../models/username_rules.dart';
 import 'active_profile_controller.dart';
 import 'auth_form_rules.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -25,17 +26,32 @@ class AuthService {
 
   Future<void> _ensureProfile(User user, {String? name, String role = 'student'}) async {
     final ref = _db.collection('users').doc(user.uid);
-    await _db.runTransaction((transaction) async {
-      final existing = await transaction.get(ref);
-      if (!existing.exists) {
-        transaction.set(ref, {
-          ProfileFields.uid: user.uid, ProfileFields.name: name ?? user.displayName ?? 'Student',
-          ProfileFields.role: role, 'createdAt': FieldValue.serverTimestamp(),
+    await UsernameRules.assign(name ?? user.displayName ?? 'Student', (candidate) async {
+      return _db.runTransaction<bool>((transaction) async {
+        final existing = await transaction.get(ref);
+        final previous = (existing.data()?[ProfileFields.username] ?? '').toString();
+        final needsUsername = previous.isEmpty;
+        final claimRef = _db.collection('usernames').doc(candidate);
+        if (needsUsername) {
+          final claim = await transaction.get(claimRef);
+          if (claim.exists && claim.data()?[ProfileFields.uid] != user.uid) return false;
+        }
+        final values = <String, dynamic>{
+          ProfileFields.uid: user.uid, 'email': FieldValue.delete(),
+          if (!existing.exists) ...{
+            ProfileFields.name: name ?? user.displayName ?? 'Student',
+            ProfileFields.role: role, 'createdAt': FieldValue.serverTimestamp(),
+          },
           ProfileFields.updatedAt: FieldValue.serverTimestamp(),
-        });
-      }
-      transaction.set(ref, {ProfileFields.uid: user.uid, 'email': FieldValue.delete()}, SetOptions(merge: true));
-      transaction.set(ref.collection('private').doc('account'), {'email': user.email ?? ''}, SetOptions(merge: true));
+        };
+        if (needsUsername) {
+          values[ProfileFields.username] = candidate;
+          transaction.set(claimRef, {ProfileFields.uid: user.uid});
+        }
+        transaction.set(ref, values, SetOptions(merge: true));
+        transaction.set(ref.collection('private').doc('account'), {'email': user.email ?? ''}, SetOptions(merge: true));
+        return true;
+      });
     });
   }
 

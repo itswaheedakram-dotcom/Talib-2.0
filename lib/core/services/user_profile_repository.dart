@@ -6,6 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/user_profile.dart';
+import '../models/username_rules.dart';
 import 'active_profile_controller.dart';
 import 'demo_data_service.dart';
 import 'firebase_service.dart';
@@ -55,8 +56,8 @@ class UserProfileRepository extends ChangeNotifier {
     });
   }
 
-  static String normalizeUsername(String value) => value.trim().toLowerCase();
-  static bool validUsername(String value) => RegExp(r'^[a-z][a-z0-9_]{2,23}$').hasMatch(value);
+  static String normalizeUsername(String value) => UsernameRules.normalize(value);
+  static bool validUsername(String value) => UsernameRules.valid(value);
   Future<bool> usernameAvailable(String value) async {
     final username = normalizeUsername(value);
     if (!validUsername(username)) return false;

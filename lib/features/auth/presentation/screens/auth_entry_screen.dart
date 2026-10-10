@@ -36,7 +36,7 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> {
       if (registering) { await auth.register(email.text, password.text, name: name.text, role: role); }
       else { await auth.signIn(email.text, password.text); }
       TextInput.finishAutofillContext(shouldSave: true);
-      if (mounted) { if (registering) message('Account created. Choose your User ID in Edit profile.'); context.go('/'); }
+      if (mounted) { if (registering) message('Account created. Your User ID has been assigned automatically.'); context.go('/'); }
     } on AccountSetupIncomplete {
       if (mounted) message('Your account exists, but the profile could not be loaded. Check your connection, then sign in to retry.');
     } on FirebaseAuthException catch (error) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:talib_2/core/services/auth_form_rules.dart';
+import 'package:talib_2/core/models/username_rules.dart';
 import 'package:talib_2/core/services/firebase_service.dart';
 import 'package:talib_2/features/auth/presentation/screens/auth_entry_screen.dart';
 
@@ -14,6 +15,18 @@ void main() {
     expect(AuthFormRules.password('old123'), isNull);
     expect(AuthFormRules.password('old123', registering: true), isNotNull);
     expect(AuthFormRules.error('email-already-in-use'), contains('Sign in or reset'));
+  });
+  test('signup allocates name-based IDs and retries taken candidates', () async {
+    final claimed = <String>{'waheed_akram'};
+    Future<bool> claim(String id) async => claimed.add(id);
+    await Future.wait([
+      UsernameRules.assign(' Waheed Akram ', claim),
+      UsernameRules.assign('Waheed Akram', claim),
+    ]);
+    expect(claimed, {'waheed_akram', 'waheed_akram1', 'waheed_akram2'});
+    for (final name in ['علی', 'Al', '123 Student', 'A' * 80]) {
+      expect(UsernameRules.valid(UsernameRules.candidate(name, 999)), isTrue);
+    }
   });
   testWidgets('sign-up validates confirmation and does not expose fake social sign-in', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: AuthEntryScreen(registering: true)));
