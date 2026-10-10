@@ -14,6 +14,7 @@ class ActiveDemoProfile {
 class ActiveProfileController extends ChangeNotifier {
   ActiveProfileController._();
   static final instance=ActiveProfileController._();
+  final Map<String, ActiveDemoProfile> _editedProfiles = {};
   ActiveDemoProfile? _active;
   ActiveDemoProfile? get active=>_active;
   bool get isDemoActive=>_active!=null;
@@ -26,7 +27,26 @@ class ActiveProfileController extends ChangeNotifier {
   String? get effectiveProgram => _active?.program;
   String resolveUid(String realUid) => _active?.id ?? realUid;
   String resolveName(String realName) => _active?.name ?? realName;
-  void activate(ActiveDemoProfile profile){_active=profile;notifyListeners();}
+  ActiveDemoProfile profileById(String id) => _editedProfiles[id] ?? temporaryProfiles.firstWhere((p) => p.id == id);
+  void activate(ActiveDemoProfile profile){_active=_editedProfiles[profile.id] ?? profile;notifyListeners();}
+  void updateProfile({required String name, required String city, required String level}) {
+    final current = _active;
+    if (current == null) return;
+    final updated = ActiveDemoProfile(id: current.id, name: name.trim(), username: current.username,
+      city: city.trim(), level: level.trim(), institute: current.institute, program: current.program);
+    _editedProfiles[current.id] = updated;
+    _active = updated;
+    notifyListeners();
+  }
+  void updateAffiliation(String institute, String program) {
+    final current = _active;
+    if (current == null) return;
+    final updated = ActiveDemoProfile(id: current.id, name: current.name, username: current.username,
+      city: current.city, level: current.level, institute: institute, program: program);
+    _editedProfiles[current.id] = updated;
+    _active = updated;
+    notifyListeners();
+  }
   void clear(){if(_active==null)return;_active=null;notifyListeners();}
 }
 

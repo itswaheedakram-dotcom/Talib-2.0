@@ -67,6 +67,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _editDemoProfile() async {
+    final profile = ActiveProfileController.instance.active;
+    if (profile == null) return;
+    final editName = TextEditingController(text: profile.name);
+    final editCity = TextEditingController(text: profile.city);
+    final editLevel = TextEditingController(text: profile.level);
+    final formKey = GlobalKey<FormState>();
+    await showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+      title: const Text('Edit profile'),
+      content: SingleChildScrollView(child: Form(key: formKey, child: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextFormField(controller: editName, decoration: const InputDecoration(labelText: 'Name'),
+          validator: (value) => value == null || value.trim().isEmpty ? 'Enter your name.' : null),
+        TextFormField(controller: editCity, decoration: const InputDecoration(labelText: 'City')),
+        TextFormField(controller: editLevel, decoration: const InputDecoration(labelText: 'Education level')),
+        const Padding(padding: EdgeInsets.only(top: 12), child: Text('Edit your university and course in My university.')),
+      ]))),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+        FilledButton(onPressed: () {
+          if (!formKey.currentState!.validate()) return;
+          ActiveProfileController.instance.updateProfile(name: editName.text, city: editCity.text, level: editLevel.text);
+          Navigator.pop(dialogContext);
+        }, child: const Text('Save profile')),
+      ],
+    ));
+    // Controllers remain alive until the closing dialog animation completes.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    editName.dispose(); editCity.dispose(); editLevel.dispose();
+  }
+
   @override void dispose() { for (final c in [name, level, institute, program, city]) c.dispose(); super.dispose(); }
 
   @override Widget build(BuildContext context) {
@@ -75,7 +105,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return AnimatedBuilder(
         animation: ActiveProfileController.instance,
         builder: (context, _) {
-          final p = ActiveProfileController.instance.active!;
+          final p = ActiveProfileController.instance.active;
+          if (p == null) return const ProfileScreen();
           return Scaffold(
             appBar: AppBar(
               title: const Text('Profile'),
@@ -122,6 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _demoInfo(Icons.school_outlined, 'Education Level', p.level),
                   _demoInfo(Icons.menu_book_outlined, 'Program / Degree', p.program),
                   _demoInfo(Icons.location_on_outlined, 'City', p.city),
+                  OutlinedButton.icon(onPressed: _editDemoProfile, icon: const Icon(Icons.edit_outlined), label: const Text('Edit profile')),
                 ])),
                 const SizedBox(height: 12),
                 AnimatedBuilder(

@@ -100,9 +100,25 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     controller.dispose();
   }
 
+  @override void initState() {
+    super.initState();
+    ActiveProfileController.instance.addListener(_profileChanged);
+  }
+  void _profileChanged() { if (mounted) setState(() {}); }
+  @override void dispose() {
+    ActiveProfileController.instance.removeListener(_profileChanged);
+    super.dispose();
+  }
+
   @override Widget build(BuildContext context) {
     if (!FirebaseService.initialized || widget.id.startsWith('demo-user-')) {
-      final demo={'demo-user-1':{'name':'Ayesha Khan','city':'Lahore, Punjab','level':'BS Computer Science','institute':'University of the Punjab','program':'Computer Science'},'demo-user-2':{'name':'Ali Raza','city':'Multan, Punjab','level':'BS Software Engineering','institute':'BZU Multan','program':'Software Engineering'},'demo-user-3':{'name':'Hira Ahmed','city':'Islamabad','level':'MS Education','institute':'NUST Islamabad','program':'Education'},'demo-user-4':{'name':'Usman Malik','city':'Faisalabad, Punjab','level':'BS Agriculture','institute':'University of Agriculture Faisalabad','program':'Agriculture'},'demo-user-5':{'name':'Ahtasham Malik','username':'','city':'Lahore, Punjab','level':'BS Business Administration','institute':'University of the Punjab','program':'Business Administration'},'demo-user-6':{'name':'Waheed Akram','username':'waheed','city':'Pakistan','level':'Community Member','institute':'','program':''}}[widget.id]??{'name':'Student','city':'Pakistan','level':'Community Member','institute':'','program':''};
+      final controller = ActiveProfileController.instance;
+      final profile = temporaryProfiles.any((p) => p.id == widget.id) ? controller.profileById(widget.id) : null;
+      final demo = {
+        'name': profile?.name ?? 'Student', 'username': profile?.username ?? '',
+        'city': profile?.city ?? 'Pakistan', 'level': profile?.level ?? 'Community Member',
+        'institute': profile?.institute ?? '', 'program': profile?.program ?? '',
+      };
       final name=demo['name']!;
       return Scaffold(appBar:AppBar(title:const Text('Profile')),body:ListView(padding:const EdgeInsets.all(16),children:[
         Center(child:CircleAvatar(radius:44,backgroundColor:const Color(0xFFE8F5E9),child:Text(name[0],style:const TextStyle(fontSize:32,color:Color(0xFF2E7D32))))),

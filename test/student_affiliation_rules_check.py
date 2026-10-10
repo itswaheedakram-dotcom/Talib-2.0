@@ -99,3 +99,32 @@ check(403, call('PATCH', ROOT + '/institutes/affiliation-rules-university/studen
                 {'fields': fields({'studentId': 'forged-student', 'instituteId': 'affiliation-rules-university', 'status': 'approved'})}, uid='affiliation-student'), 'student cannot forge a public verification badge')
 check(403, call('DELETE', ROOT + '/institutes/affiliation-rules-university/studentAffiliations/affiliation-student', uid='affiliation-student'), 'student cannot remove verified affiliation to alter count')
 print('All student affiliation rules checks passed; no production services contacted.')
+
+check(200, submit(), 'verified student can edit course by resetting affiliation to pending')
+check(403, call('GET', ROOT + '/institutes/affiliation-rules-university/studentAffiliations/affiliation-student', uid='unrelated-user'), 'old public badge disappears while course change awaits approval')
+
+check(200, call('POST', ROOT + ':commit', {'writes': [
+    {'update': {'name': request_path, 'fields': fields({
+        'studentId': 'affiliation-student', 'instituteId': 'affiliation-rules-university', 'status': 'approved'})},
+     'updateTransforms': [{'fieldPath': 'verifiedAt', 'setToServerValue': 'REQUEST_TIME'}]},
+]}, uid='affiliation-owner'), 'university reapproves edited course before student changes university')
+
+check(200, call('PATCH', ROOT + '/institutes/affiliation-rules-other',
+               {'fields': fields({'name': 'Other university', 'status': 'approved', 'ownerId': 'other-owner'})}, seed=True), 'seed second university')
+new_request = f'projects/{PROJECT}/databases/(default)/documents/institutes/affiliation-rules-other/studentAffiliations/affiliation-student'
+check(200, call('POST', ROOT + ':commit', {'writes': [
+    {'update': {'name': new_request, 'fields': fields({
+        'studentId': 'affiliation-student', 'studentName': 'Student',
+        'instituteId': 'affiliation-rules-other', 'program': 'BS Education', 'status': 'pending'})},
+     'updateTransforms': [{'fieldPath': 'updatedAt', 'setToServerValue': 'REQUEST_TIME'}]},
+    {'update': {'name': student_path, 'fields': fields({
+        'name': 'Student', 'studentInstituteId': 'affiliation-rules-other',
+        'studentInstituteName': 'Other university', 'studentProgram': 'BS Education',
+        'studentVerificationStatus': 'pending'})}},
+    {'delete': request_path},
+]}, uid='affiliation-student'), 'student can switch university and remove previous affiliation atomically')
+check(403, call('PATCH', ROOT + '/users/affiliation-student',
+               {'fields': fields({'name': 'Student', 'studentInstituteId': 'affiliation-rules-university',
+                                 'studentProgram': 'Unmatched course', 'studentVerificationStatus': 'pending'})},
+               uid='affiliation-student'), 'profile cannot switch to an unmatched verification request')
+print('Student affiliation edit checks passed.')

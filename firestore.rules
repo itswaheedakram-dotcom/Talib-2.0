@@ -80,7 +80,14 @@ service cloud.firestore {
       allow update: if (signedIn() && request.auth.uid == userId
           && (!request.resource.data.diff(resource.data).affectedKeys().hasAny([
             'studentInstituteId', 'studentInstituteName', 'studentProgram', 'studentVerificationStatus'
-          ]) || resource.data.get('studentVerificationStatus', 'not_requested') != 'approved')
+          ]) || (
+            request.resource.data.get('studentVerificationStatus', 'not_requested') == 'pending'
+            && getAfter(/databases/$(database)/documents/institutes/$(request.resource.data.studentInstituteId)/studentAffiliations/$(userId)).data.status == 'pending'
+            && getAfter(/databases/$(database)/documents/institutes/$(request.resource.data.studentInstituteId)/studentAffiliations/$(userId)).data.program == request.resource.data.studentProgram
+            && (resource.data.get('studentInstituteId', '') == request.resource.data.studentInstituteId
+              || resource.data.get('studentInstituteId', '') == ''
+              || !existsAfter(/databases/$(database)/documents/institutes/$(resource.data.studentInstituteId)/studentAffiliations/$(userId)))
+          ))
           && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['studentVerificationStatus'])
             || request.resource.data.studentVerificationStatus in ['pending', 'not_requested']))
         || admin()
@@ -327,7 +334,11 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['studentId', 'studentName', 'instituteId', 'program', 'status', 'updatedAt']);
         allow update: if
           (signedIn() && request.auth.uid == studentId
-            && resource.data.status in ['pending', 'rejected']
+            && approvedInstitute()
+            && resource.data.status in ['pending', 'rejected', 'approved']
+            && getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentInstituteId == instituteId
+            && getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentProgram == request.resource.data.program
+            && getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentVerificationStatus == 'pending'
             && request.resource.data.status == 'pending'
             && request.resource.data.studentId == studentId
             && request.resource.data.instituteId == instituteId
@@ -350,7 +361,11 @@ service cloud.firestore {
                 && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy']))
             )
           );
-        allow delete: if signedIn() && ((request.auth.uid == studentId && resource.data.status != 'approved')
+        allow delete: if signedIn() && ((request.auth.uid == studentId
+            && (resource.data.status != 'approved'
+              || (getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentInstituteId != instituteId
+                && getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentVerificationStatus == 'pending'
+                && getAfter(/databases/$(database)/documents/institutes/$(getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentInstituteId)/studentAffiliations/$(studentId)).data.status == 'pending')))
           || canManageInstitute(instituteId));
       }
 

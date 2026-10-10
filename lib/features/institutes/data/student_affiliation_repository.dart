@@ -128,9 +128,6 @@ class StudentAffiliationRepository extends ChangeNotifier {
     final validPrograms = availablePrograms.isNotEmpty ? availablePrograms : institute.programs.toSet();
     if (!validPrograms.contains(program.trim())) throw ArgumentError('Choose a program listed by this university.');
     final current = await profile(uid);
-    if (current['studentVerificationStatus'] == 'approved') {
-      throw StateError('Your university has already verified this affiliation. Contact the university to change it.');
-    }
     final previousInstituteId = (current['studentInstituteId'] ?? '').toString();
     final next = {
       'studentInstituteId': institute.id,
@@ -146,6 +143,7 @@ class StudentAffiliationRepository extends ChangeNotifier {
         'program': program.trim(), 'status': 'pending', 'updatedAt': DateTime.now(),
       };
       _demoProfiles[uid] = next;
+      ActiveProfileController.instance.updateAffiliation(institute.name, program.trim());
       if (previousInstituteId.isNotEmpty && previousInstituteId != institute.id) {
         _demoRequests[previousInstituteId]?.remove(uid);
       }
@@ -164,16 +162,9 @@ class StudentAffiliationRepository extends ChangeNotifier {
     final ownerId = institute.ownerId;
     final name = FirebaseAuth.instance.currentUser?.displayName?.trim();
     await db.runTransaction((tx) async {
-      final existing = await tx.get(request);
-      if (existing.exists && existing.data()?['status'] == 'approved') {
-        throw StateError('This university has already verified your student status.');
-      }
       if (previousInstituteId.isNotEmpty && previousInstituteId != institute.id) {
         final previous = db.collection('institutes').doc(previousInstituteId).collection('studentAffiliations').doc(uid);
         final oldRequest = await tx.get(previous);
-        if (oldRequest.exists && oldRequest.data()?['status'] == 'approved') {
-          throw StateError('Your previous university has already verified this affiliation. Contact it before changing universities.');
-        }
         if (oldRequest.exists) tx.delete(previous);
       }
       tx.set(request, {

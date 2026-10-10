@@ -79,6 +79,8 @@ class _StudentAffiliationCardState extends State<StudentAffiliationCard> {
             ),
             if (distinct.isEmpty && selected != null) const Padding(padding: EdgeInsets.only(top: 8), child: Text('This university has not listed its programs yet.')),
             const SizedBox(height: 18),
+            if (_profile['studentVerificationStatus'] == 'approved')
+              const Padding(padding: EdgeInsets.only(bottom: 12), child: Text('Saving your university or course sends a new request. The university student badge returns after approval.')),
             FilledButton(
             onPressed: saving || selectedInstitute == null || selectedProgram == null ? null : () async {
                 setSheetState(() => saving = true);
@@ -111,7 +113,7 @@ class _StudentAffiliationCardState extends State<StudentAffiliationCard> {
       if (selected) ...[
         const SizedBox(height: 7),
         Text(institute, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-        if (status == 'approved') const Padding(padding: EdgeInsets.only(top: 6), child: Tooltip(message: 'Student affiliation verified by this university', child: Chip(backgroundColor: AppColors.softGreen, avatar: Icon(Icons.verified, size: 17, color: AppColors.primaryGreen), label: Text('University verified')))),
+        if (status == 'approved') const Padding(padding: EdgeInsets.only(top: 6), child: Tooltip(message: 'Student affiliation verified by this university', child: Chip(backgroundColor: AppColors.softGreen, avatar: Text('🎓', style: TextStyle(fontSize: 18)), label: Text('University student')))),
         if (program.isNotEmpty) Text(program, style: Theme.of(context).textTheme.bodyMedium),
         const SizedBox(height: 5),
         if (widget.editable) Text(switch (status) { 'approved' => 'This university confirmed your student affiliation.', 'pending' => 'Verification request sent. Waiting for the university.', 'rejected' => 'The university could not verify this request. You can update your details and send it again.', _ => 'University selected; verification has not been requested.' }, style: Theme.of(context).textTheme.bodySmall),
@@ -119,7 +121,7 @@ class _StudentAffiliationCardState extends State<StudentAffiliationCard> {
         const SizedBox(height: 5),
         const Text('Choose your university and program. The university name will show on your profile immediately.'),
       ],
-      if (widget.editable && status != 'approved') ...[
+      if (widget.editable) ...[
         const SizedBox(height: 10),
         OutlinedButton.icon(onPressed: _choose, icon: const Icon(Icons.edit_outlined), label: Text(selected ? 'Choose or update university' : 'Add my university')),
       ],

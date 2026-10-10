@@ -25,21 +25,46 @@ void main() {
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: const Scaffold(body: StudentAffiliationCard(uid: 'demo-user-1'))));
     await tester.pumpAndSettle();
     expect(find.text('University of the Punjab'), findsOneWidget);
-    expect(find.text('University verified'), findsOneWidget);
+    expect(find.text('University student'), findsOneWidget);
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: const Scaffold(body: StudentAffiliationCard(uid: 'demo-user-4'))));
     await tester.pumpAndSettle();
     expect(find.text('University of Agriculture Faisalabad'), findsOneWidget);
-    expect(find.text('University verified'), findsNothing);
+    expect(find.text('University student'), findsNothing);
     expect(find.text('Verification request sent. Waiting for the university.'), findsNothing);
     ActiveProfileController.instance.activate(temporaryProfiles[5]);
     final university = InstituteRepository.instance.byId('university-14')!;
     expect((await affiliations.requests(university).first).single['studentId'], 'demo-user-4');
     await affiliations.review(university, 'demo-user-4', 'approved');
     await tester.pumpAndSettle();
-    expect(find.text('University verified'), findsOneWidget);
+    expect(find.text('University student'), findsOneWidget);
     expect(await affiliations.verifiedStudentCount('university-14'), 1);
     expect(FirebaseService.initialized, isFalse);
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  test('approved demo students can edit course and switch university with fresh approval', () async {
+    affiliations.resetDemoForTest(seed: true);
+    ActiveProfileController.instance.activate(temporaryProfiles[0]);
+    final controller = ActiveProfileController.instance;
+    controller.updateProfile(name: 'Ayesha Updated', city: 'Multan', level: 'BS');
+    controller.clear();
+    controller.activate(temporaryProfiles[0]);
+    expect(controller.effectiveName, 'Ayesha Updated');
+    final punjab = InstituteRepository.instance.byId('university-1')!;
+    await affiliations.select(punjab, 'BS Education (Demo)');
+    expect((await affiliations.profile('demo-user-1'))['studentVerificationStatus'], 'pending');
+    expect(await affiliations.verifiedStudentCount('university-1'), 1);
+    ActiveProfileController.instance.activate(temporaryProfiles[5]);
+    await affiliations.review(punjab, 'demo-user-1', 'approved');
+    expect(await affiliations.verifiedStudentCount('university-1'), 2);
+    ActiveProfileController.instance.activate(temporaryProfiles[0]);
+    final bzu = InstituteRepository.instance.byId('university-18')!;
+    await affiliations.select(bzu, 'BS Education (Demo)');
+    expect(controller.effectiveInstitute, bzu.name);
+    expect(controller.effectiveProgram, 'BS Education (Demo)');
+    expect(await affiliations.verifiedStudentCount('university-1'), 1);
+    expect(await affiliations.verifiedStudentCount('university-18'), 1);
+    expect((await affiliations.profile('demo-user-1'))['studentInstituteId'], bzu.id);
   });
 
   testWidgets('selected university shows before approval; approval adds badge and verified count only', (tester) async {
@@ -58,7 +83,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(university.name), findsOneWidget);
     expect(find.text('Verification request sent. Waiting for the university.'), findsOneWidget);
-    expect(find.text('University verified'), findsNothing);
+    expect(find.text('University student'), findsNothing);
 
     ActiveProfileController.instance.activate(temporaryProfiles[5]);
     final managerRequests = await affiliations.requests(university).first;
@@ -68,7 +93,7 @@ void main() {
     profile = await affiliations.profile('demo-user-1');
     expect(profile['studentVerificationStatus'], 'approved');
     await tester.pumpAndSettle();
-    expect(find.text('University verified'), findsOneWidget);
+    expect(find.text('University student'), findsOneWidget);
     expect(DemoDataService.instance.notifications('demo-user-1').any((n) => n['type'] == 'student_affiliation_result'), isTrue);
     expect(FirebaseService.initialized, isFalse);
     expect(tester.takeException(), isNull);
