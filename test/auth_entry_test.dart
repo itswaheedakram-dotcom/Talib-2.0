@@ -4,7 +4,7 @@ import 'package:talib_2/core/services/auth_form_rules.dart';
 import 'package:talib_2/core/services/firebase_service.dart';
 import 'package:talib_2/features/auth/presentation/screens/auth_entry_screen.dart';
 
-Finder field(String label) => find.byWidgetPredicate((widget) => widget is TextFormField && widget.decoration?.labelText == label);
+Finder field(String label) => find.byWidgetPredicate((widget) => widget is TextField && widget.decoration?.labelText == label);
 void main() {
   setUp(() => FirebaseService.initialized = false);
   test('shared validation protects registration without rejecting existing sign-in passwords', () {
