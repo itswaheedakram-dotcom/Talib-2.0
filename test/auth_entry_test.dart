@@ -43,6 +43,22 @@ void main() {
     expect(find.byIcon(Icons.facebook), findsNothing);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('reference-style signup fits narrow screens and large text', (tester) async {
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.4)), child: child!),
+      home: const AuthEntryScreen(registering: true)));
+    expect(find.text('Sign Up'), findsOneWidget);
+    expect(find.byTooltip('Add profile photo'), findsOneWidget);
+    expect(find.text('Your User ID is created automatically from your name.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.ensureVisible(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('reset validates email without Firebase and ignores empty password', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: AuthEntryScreen(registering: false)));
     await tester.enterText(field('Email'), 'bad-email');

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+import 'profile_photo_storage.dart';
 import '../models/user_profile.dart';
 import '../models/username_rules.dart';
 import 'active_profile_controller.dart';
@@ -60,10 +62,14 @@ class AuthService {
     String password, {
     required String name,
     String role = 'student',
+    String bio = '',
+    Uint8List? photoBytes,
   }) async {
     if (AuthFormRules.name(name) != null || AuthFormRules.email(email) != null || AuthFormRules.password(password, registering: true) != null) {
       throw ArgumentError('Invalid registration details.');
     }
+    if (bio.trim().length > 300) throw ArgumentError('Keep your bio within 300 characters.');
+    if (photoBytes != null && photoBytes.length > 5 * 1024 * 1024) throw ArgumentError('Choose a smaller photo.');
     if (!['student', 'institute'].contains(role)) throw ArgumentError('Invalid account type.');
     final result = await _auth.createUserWithEmailAndPassword(
       email: email.trim(),
@@ -80,6 +86,10 @@ class AuthService {
     try {
       await user.updateDisplayName(name.trim());
       await _ensureProfile(user, name: name.trim(), role: role);
+      final photoUrl = photoBytes == null ? '' : await ProfilePhotoStorage.upload(user.uid, photoBytes);
+      await _db.collection('users').doc(user.uid).set({
+        ProfileFields.bio: bio.trim(), if (photoUrl.isNotEmpty) ProfileFields.photoUrl: photoUrl,
+      }, SetOptions(merge: true));
     } catch (_) {
       await _auth.signOut();
       throw const AccountSetupIncomplete();

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'profile_photo_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/user_profile.dart';
@@ -125,8 +125,6 @@ class UserProfileRepository extends ChangeNotifier {
     final bytes = await photo.readAsBytes();
     if (bytes.length > 5 * 1024 * 1024) throw ArgumentError('Choose a photo smaller than 5 MB.');
     if (isDemo(uid)) return 'data:image/jpeg;base64,${base64Encode(bytes)}';
-    final ref = FirebaseStorage.instance.ref('profiles/$uid/${DateTime.now().microsecondsSinceEpoch}.jpg');
-    await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
-    return 'storage:${ref.fullPath}';
+    return ProfilePhotoStorage.upload(uid, bytes);
   }
 }
