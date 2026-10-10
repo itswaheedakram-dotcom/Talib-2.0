@@ -78,6 +78,25 @@ class Institute {
     'imageUrl': imageUrl, 'facilities': facilities,
   };
 
+  /// Reads list fields written by both the current form and older records.
+  /// Legacy documents may contain a comma-separated string instead of an array.
+  static List<String> _readStringList(dynamic value) {
+    if (value == null) return const <String>[];
+    final Iterable<dynamic> values;
+    if (value is Iterable) {
+      values = value;
+    } else if (value is String) {
+      values = value.split(RegExp(r'[,;\\n]'));
+    } else {
+      values = <dynamic>[value];
+    }
+    return values
+        .map((item) => item.toString().trim())
+        .where((item) => item.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+  }
+
   factory Institute.fromMap(String id, Map<String, dynamic> map) => Institute(
     id: id,
     name: (map['name'] ?? '').toString(),
@@ -101,7 +120,7 @@ class Institute {
     applicationUrl: (map['applicationUrl'] ?? '').toString(),
     submissionMode: (map['submissionMode'] ?? 'Online').toString(),
     eligibility: (map['eligibility'] ?? '').toString(),
-    programs: List<String>.from((map['programs'] ?? const []).map((e) => e.toString())),
+    programs: _readStringList(map['programs']),
     contact: (map['contact'] ?? '').toString(),
     status: (map['status'] ?? 'approved').toString(),
     minScore: double.tryParse((map['minScore'] ?? 0).toString()) ?? 0,
@@ -111,6 +130,6 @@ class Institute {
     feeRange: (map['feeRange'] ?? '').toString(),
     entryTestRequired: map['entryTestRequired'] == true,
     imageUrl: (map['imageUrl'] ?? '').toString(),
-    facilities: List<String>.from((map['facilities'] ?? const []).map((e) => e.toString())),
+    facilities: _readStringList(map['facilities']),
   );
 }
