@@ -26,8 +26,8 @@ service cloud.firestore {
       return signedIn() && participants.size() == 2 && participants.hasAny([request.auth.uid]);
     }
     function canManageInstitute(instituteId) {
-      return signedIn() && (admin() || managerAdminPermission('manage_institutes')
-        || get(/databases/$(database)/documents/institutes/$(instituteId)).data.ownerId == request.auth.uid);
+      return signedIn() && (get(/databases/$(database)/documents/institutes/$(instituteId)).data.ownerId == request.auth.uid
+        || managerAdminPermission('manage_institutes') || admin());
     }
 
     function validInstituteScore(data) {
