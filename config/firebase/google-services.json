@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "412175760839",
+    "project_id": "talib-60512",
+    "storage_bucket": "talib-60512.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:412175760839:android:610f5984c110218720ede2",
+        "android_client_info": {
+          "package_name": "com.talib.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCa19onxz3sekDuUjO8HVDS9Ql1dicQQ6Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

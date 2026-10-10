@@ -22,7 +22,9 @@ jobs:
       - name: Analyze Dart code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - name: Generate Android project
-        run: flutter create --platforms=android --project-name talib_2 --org com.talib2 .
+        run: |
+          flutter create --platforms=android --project-name talib_2 --org com.talib2 .
+          python3 scripts/configure_android_firebase.py
       - name: Configure Android compatibility
         shell: bash
         run: |
