@@ -37,7 +37,7 @@ class StudentAffiliationRepository extends ChangeNotifier {
       Map<String, dynamic> current() => Map<String, dynamic>.from(_demoProfiles[uid] ?? const {});
       return Stream.multi((controller) {
         controller.add(current());
-        final sub = addListenerStream((_) => controller.add(current()));
+        final sub = addListenerStream(() => controller.add(current()));
         controller.onCancel = sub;
       });
     }
@@ -134,7 +134,7 @@ class StudentAffiliationRepository extends ChangeNotifier {
           .where((r) => r['status'] == 'pending').map(Map<String, dynamic>.from).toList();
       return Stream.multi((controller) {
         controller.add(current());
-        final sub = addListenerStream((_) => controller.add(current()));
+        final sub = addListenerStream(() => controller.add(current()));
         controller.onCancel = sub;
       });
     }
