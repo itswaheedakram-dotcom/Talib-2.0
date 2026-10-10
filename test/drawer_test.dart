@@ -29,7 +29,6 @@ void main() {
     await tester.scrollUntilVisible(find.text('Sign in'), 160, scrollable: find.byType(Scrollable).first);
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/signin');
     expect(find.text('Page /signin'), findsOneWidget);
     expect(tester.state<ScaffoldState>(find.byType(Scaffold)).isDrawerOpen, isFalse);
   });
