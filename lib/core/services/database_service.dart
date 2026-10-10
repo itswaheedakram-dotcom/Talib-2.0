@@ -10,7 +10,7 @@ import '../../features/community/timeline_topics.dart';
 class DatabaseService {
   FirebaseFirestore get _db => FirebaseFirestore.instance;
   String _uid(String uid)=>ActiveProfileController.instance.resolveUid(uid);
-  bool _demo(String uid)=>DemoDataService.instance.isDemo(_uid(uid));
+  bool _demo(String uid)=>DemoDataService.instance.isDemo(uid);
   Stream<T> _demoStream<T>(T initial,T Function() current) async* {yield initial;yield* DemoDataService.instance.changes.map((_)=>current());}
   CollectionReference<Map<String,dynamic>> collection(String name)=>_db.collection(name);
   Stream<List<Post>> postsStream({bool popular=false,String category='All',String query=''}){if(ActiveProfileController.instance.isDemo)return _demoStream(DemoDataService.instance.posts(category:category,query:query),()=>DemoDataService.instance.posts(category:category,query:query));return _db.collection('posts').orderBy(popular?'likesCount':'createdAt',descending:true).snapshots().map((s)=>s.docs.map(Post.fromDoc).where((p)=>(category=='All'||p.category==category)&&(query.isEmpty||p.text.toLowerCase().contains(query.toLowerCase())||p.authorName.toLowerCase().contains(query.toLowerCase()))).toList());}
@@ -84,10 +84,10 @@ class DatabaseService {
   Future<void> unblockUser(String uid,String blockedId)=>_db.collection('users').doc(uid).collection('blockedUsers').doc(blockedId).delete();
   Stream<Set<String>> blockedUserIdsStream(String uid)=>_db.collection('users').doc(uid).collection('blockedUsers').snapshots().map((s)=>s.docs.map((d)=>d.id).toSet());
   Stream<QuerySnapshot<Map<String,dynamic>>> notificationsStream(String uid)=>_db.collection('users').doc(uid).collection('notifications').orderBy('createdAt',descending:true).limit(50).snapshots();
-  Future<void> toggleFollow(String uid,String targetId,bool follow)async{uid=_uid(uid);targetId=_uid(targetId);if(_demo(uid)){DemoDataService.instance.toggleFollow(uid,targetId,follow);return;}final following=_db.collection('users').doc(uid).collection('following').doc(targetId);final follower=_db.collection('users').doc(targetId).collection('followers').doc(uid);final batch=_db.batch();if(follow){batch.set(following,{ProfileFields.userId:targetId,'createdAt':FieldValue.serverTimestamp()});batch.set(follower,{ProfileFields.userId:uid,'createdAt':FieldValue.serverTimestamp()});final n=_db.collection('users').doc(targetId).collection('notifications').doc();batch.set(n,{'type':'follow','text':'started following you',ProfileFields.fromId:uid,'createdAt':FieldValue.serverTimestamp(),'read':false});}else{batch.delete(following);batch.delete(follower);}await batch.commit();}
+  Future<void> toggleFollow(String uid,String targetId,bool follow)async{uid=_uid(uid);if(_demo(uid)){DemoDataService.instance.toggleFollow(uid,targetId,follow);return;}final following=_db.collection('users').doc(uid).collection('following').doc(targetId);final follower=_db.collection('users').doc(targetId).collection('followers').doc(uid);final batch=_db.batch();if(follow){batch.set(following,{ProfileFields.userId:targetId,'createdAt':FieldValue.serverTimestamp()});batch.set(follower,{ProfileFields.userId:uid,'createdAt':FieldValue.serverTimestamp()});final n=_db.collection('users').doc(targetId).collection('notifications').doc();batch.set(n,{'type':'follow','text':'started following you',ProfileFields.fromId:uid,'createdAt':FieldValue.serverTimestamp(),'read':false});}else{batch.delete(following);batch.delete(follower);}await batch.commit();}
   DocumentReference<Map<String,dynamic>> _followingRef(String uid,String targetId) => _db.collection('users').doc(uid).collection('following').doc(targetId);
   String conversationId(String a,String b) { final ids=[a,b]..sort(); return '${ids[0]}_${ids[1]}'; }
-  Future<bool> isBlocked(String uid,String targetId) async {uid=_uid(uid);targetId=_uid(targetId);if(_demo(uid))return false;
+  Future<bool> isBlocked(String uid,String targetId) async {uid=_uid(uid);if(_demo(uid))return false;
     if(uid==targetId)return false;
     final r=await _db.collection('users').doc(uid).collection('blockedUsers').doc(targetId).get();
     return r.exists;
@@ -97,7 +97,7 @@ class DatabaseService {
     final r=await Future.wait([isBlocked(uid,targetId),isBlocked(targetId,uid)]);
     return r[0] || r[1];
   }
-  Future<bool> isMutualFollow(String uid,String targetId) async {uid=_uid(uid);targetId=_uid(targetId);if(_demo(uid)||_demo(targetId))return DemoDataService.instance.isMutual(uid,targetId);
+  Future<bool> isMutualFollow(String uid,String targetId) async {uid=_uid(uid);if(_demo(uid)||_demo(targetId))return DemoDataService.instance.isMutual(uid,targetId);
     if(uid==targetId)return false;
     if(await isEitherBlocked(uid,targetId))return false;
     final r=await Future.wait([
@@ -140,10 +140,8 @@ class DatabaseService {
     return _db.collection('users').doc(uid).collection('following').snapshots().map((s)=>s.docs.map((d)=>d.id).toSet());
   }
 
-  Stream<bool> followingStream(String uid,String targetId){uid=_uid(uid);targetId=_uid(targetId);if(_demo(uid)||_demo(targetId))return _demoStream(DemoDataService.instance.isFollowing(uid,targetId),()=>DemoDataService.instance.isFollowing(uid,targetId));return _db.collection('users').doc(uid).collection('following').doc(targetId).snapshots().map((s)=>s.exists);}
+  Stream<bool> followingStream(String uid,String targetId){if(_demo(uid)||_demo(targetId))return _demoStream(DemoDataService.instance.isFollowing(uid,targetId),()=>DemoDataService.instance.isFollowing(uid,targetId));return _db.collection('users').doc(uid).collection('following').doc(targetId).snapshots().map((s)=>s.exists);}
   Stream<bool> mutualFollowStream(String uid,String targetId) {
-    uid=_uid(uid);
-    targetId=_uid(targetId);
     if (uid == targetId) return Stream<bool>.value(false);
     return Stream<bool>.multi((controller) {
       var following = false;
@@ -177,7 +175,7 @@ class DatabaseService {
       };
     });
   }
-  Stream<int> followerCountStream(String uid){uid=_uid(uid);if(_demo(uid))return _demoStream(DemoDataService.instance.followerCount(uid),()=>DemoDataService.instance.followerCount(uid));return _db.collection('users').doc(uid).collection('followers').snapshots().map((s)=>s.size);}
+  Stream<int> followerCountStream(String uid){if(_demo(uid))return _demoStream(DemoDataService.instance.followerCount(uid),()=>DemoDataService.instance.followerCount(uid));return _db.collection('users').doc(uid).collection('followers').snapshots().map((s)=>s.size);}
   Future<void> notifyMention({required String targetId,required String fromId,required String postId})=>_db.collection('users').doc(targetId).collection('notifications').add({'type':'mention','text':'mentioned you in a community post','postId':postId,ProfileFields.fromId:fromId,'createdAt':FieldValue.serverTimestamp(),'read':false});
   Future<void> votePoll({required String postId,required String uid,required int option})async{uid=_uid(uid);if(ActiveProfileController.instance.isDemo){DemoDataService.instance.votePoll(postId:postId,uid:uid,option:option);return;}final ref=_db.collection('posts').doc(postId);await _db.runTransaction((tx)async{final s=await tx.get(ref);if(!s.exists)return;final d=s.data()??{};final voters=Map<String,dynamic>.from(d['pollVoters']??{});final old=voters[uid];final votes=Map<String,dynamic>.from(d['pollVotes']??{});if(old!=null){final k=old.toString();votes[k]=((votes[k]??0) as num).toInt()-1;}voters[uid]=option;final k=option.toString();votes[k]=((votes[k]??0) as num).toInt()+1;tx.update(ref,{'pollVoters':voters,'pollVotes':votes});});}
   Future<void> notifyMentions({required String text,required String fromId,required String postId})async{
@@ -195,7 +193,6 @@ class DatabaseService {
     }
   }
   Future<Map<String,dynamic>> reputation(String uid)async{
-    uid=_uid(uid);
     if(_demo(uid)) return DemoDataService.instance.reputation(uid);
     final posts=(await _db.collection('posts').where(ProfileFields.authorId,isEqualTo:uid).get()).docs;
     var likes=0,comments=0,bestAnswers=0;

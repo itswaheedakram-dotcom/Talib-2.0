@@ -1,3 +1,4 @@
+import '../../../../core/widgets/user_identity.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -61,6 +62,7 @@ class AdminHostelClaimsScreen extends StatelessWidget {
     required String id,
     required String hostelName,
     required String userName,
+    required String userId,
     required String contact,
     required String note,
     required bool demo,
@@ -75,7 +77,7 @@ class AdminHostelClaimsScreen extends StatelessWidget {
               fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.darkGreen,
             )),
             const SizedBox(height: 6),
-            Text('Claimant: $userName'),
+            UserIdentity(uid: userId, name: userName),
             Text('Contact: $contact'),
             if (note.trim().isNotEmpty)
               Padding(padding: const EdgeInsets.only(top: 6), child: Text(note)),
@@ -117,7 +119,7 @@ class AdminHostelClaimsScreen extends StatelessWidget {
             final claim = claims[index];
             return _claimCard(
               context, id: claim.id, hostelName: claim.hostelName,
-              userName: claim.userName, contact: claim.contact,
+              userName: claim.userName, userId: claim.userId, contact: claim.contact,
               note: claim.note, demo: true,
             );
           },
@@ -173,6 +175,7 @@ class AdminHostelClaimsScreen extends StatelessWidget {
                 context, id: doc.id,
                 hostelName: (data['hostelName'] ?? 'Hostel').toString(),
                 userName: (data['userName'] ?? 'Unknown').toString(),
+                userId: (data['userId'] ?? '').toString(),
                 contact: (data['contact'] ?? 'Not provided').toString(),
                 note: (data['note'] ?? '').toString(),
                 demo: false,

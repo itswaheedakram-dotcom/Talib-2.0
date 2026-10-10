@@ -1,3 +1,4 @@
+import '../../../../core/widgets/user_identity.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -88,7 +89,7 @@ class AdminHostelSubmissionsScreen extends StatelessWidget {
                   )),
                   const SizedBox(height: 4),
                   Text(location.isEmpty ? 'Location not provided' : location),
-                  Text('Submitted by: ${hostel.ownerName.isEmpty ? 'Unknown owner' : hostel.ownerName}'),
+                  UserIdentity(uid: hostel.ownerId, name: hostel.ownerName.isEmpty ? 'Unknown owner' : hostel.ownerName),
                 ]),
               ),
               const Chip(label: Text('Pending')),

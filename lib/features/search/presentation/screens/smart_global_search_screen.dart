@@ -140,7 +140,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
           final posts=await DatabaseService().postsStream().first;
           for(final Post post in posts) {
             final score=_score(q,post.text,['community','post',post.authorName,post.category,post.tags.join(' '),post.attachments.map((a)=>a.values.join(' ')).join(' ')]);
-            if(score>0)hits.add(_Hit(post.text.length>76?' ${post.text.substring(0,76)}…':post.text,'Community • ${post.category}','By ${post.authorName} • ${post.likesCount} likes • ${post.commentsCount} comments','', '/community/post/${post.id}',Icons.forum_outlined,score,post));
+            if(score>0)hits.add(_Hit(post.text.length>76?' ${post.text.substring(0,76)}…':post.text,'Community • ${post.category}','By ${post.authorName}\nUID: ${post.authorId}\n${post.likesCount} likes • ${post.commentsCount} comments','', '/community/post/${post.id}',Icons.forum_outlined,score,post));
           }
         } catch (_) {}
       }

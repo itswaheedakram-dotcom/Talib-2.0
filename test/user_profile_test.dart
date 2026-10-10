@@ -4,6 +4,8 @@ import 'package:talib_2/core/models/user_profile.dart';
 import 'package:talib_2/core/services/user_profile_repository.dart';
 import 'package:talib_2/core/services/active_profile_controller.dart';
 import 'package:talib_2/core/services/firebase_service.dart';
+import 'package:talib_2/core/services/database_service.dart';
+import 'package:talib_2/core/services/demo_data_service.dart';
 import 'package:talib_2/core/widgets/user_identity.dart';
 import 'package:talib_2/features/institutes/data/institute_repository.dart';
 import 'package:talib_2/features/institutes/data/student_affiliation_repository.dart';
@@ -12,6 +14,20 @@ import 'package:talib_2/app/theme.dart';
 
 void main() {
   tearDown(() { ActiveProfileController.instance.clear(); FirebaseService.initialized = false; });
+  test('other student activity retains its own UID in a demo session', () async {
+    ActiveProfileController.instance.activate(temporaryProfiles[0]);
+    final demo = DemoDataService.instance;
+    final database = DatabaseService();
+    final previous = demo.isFollowing('demo-user-2', 'demo-user-3');
+    demo.toggleFollow('demo-user-2', 'demo-user-3', true);
+    try {
+      expect(await database.followingStream('demo-user-2', 'demo-user-3').first, isTrue);
+      expect(await database.followerCountStream('demo-user-3').first, demo.followerCount('demo-user-3'));
+      expect(await database.reputation('demo-user-3'), demo.reputation('demo-user-3'));
+    } finally {
+      demo.toggleFollow('demo-user-2', 'demo-user-3', previous);
+    }
+  });
   test('immutable UID and canonical course override old profile values', () {
     final profile = UserProfile.fromMap('real-uid', {
       'uid': 'forged-uid', 'name': 'Student',
