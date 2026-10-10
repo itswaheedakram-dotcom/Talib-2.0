@@ -12,6 +12,11 @@ import 'firebase_service.dart';
 import '../../features/institutes/data/student_affiliation_repository.dart';
 
 /// One profile source for editing, display and analytics; demo and live share the schema.
+class UsernameTaken implements Exception {
+  final String username;
+  const UsernameTaken(this.username);
+}
+
 class UserProfileRepository extends ChangeNotifier {
   UserProfileRepository._() {
     ActiveProfileController.instance.addListener(notifyListeners);
@@ -27,6 +32,7 @@ class UserProfileRepository extends ChangeNotifier {
   UserProfile demoProfile(String uid) {
     final identity = ActiveProfileController.instance.profileById(uid);
     return UserProfile.fromMap(uid, {
+      ProfileFields.username: identity.name.split(' ').first.toLowerCase(),
       ProfileFields.name: identity.name, ProfileFields.city: identity.city,
       ProfileFields.educationLevel: identity.level,
       ProfileFields.role: uid == 'demo-user-6' ? 'community' : 'student',
@@ -49,25 +55,65 @@ class UserProfileRepository extends ChangeNotifier {
     });
   }
 
+  static String normalizeUsername(String value) => value.trim().toLowerCase();
+  static bool validUsername(String value) => RegExp(r'^[a-z][a-z0-9_]{2,23}$').hasMatch(value);
+  Future<bool> usernameAvailable(String value) async {
+    final username = normalizeUsername(value);
+    if (!validUsername(username)) return false;
+    final uid = currentUid;
+    if (uid == null) throw StateError('Sign in first.');
+    if (isDemo(uid)) {
+      return !temporaryProfiles.any((p) => p.id != uid && demoProfile(p.id).username == username);
+    }
+    final claim = await FirebaseFirestore.instance.collection('usernames').doc(username).get();
+    return !claim.exists || claim.data()?[ProfileFields.uid] == uid;
+  }
+  Future<List<String>> usernameSuggestions(String value) async {
+    var base = normalizeUsername(value).replaceAll(RegExp('[^a-z0-9_]'), '');
+    if (base.isEmpty || !RegExp('^[a-z]').hasMatch(base)) base = 'student$base';
+    if (base.length > 18) base = base.substring(0, 18);
+    final candidates = [for (final suffix in ['_1', '_2', '_pk', '01', '24', '99']) '$base$suffix'];
+    final result = <String>[];
+    for (final candidate in candidates) {
+      if (await usernameAvailable(candidate)) result.add(candidate);
+      if (result.length == 3) break;
+    }
+    return result;
+  }
+
   Future<void> save(UserProfile profile) async {
     if (profile.uid != currentUid) throw StateError('You can edit only your own profile.');
     if (profile.name.trim().isEmpty || profile.name.length > 80) throw ArgumentError('Enter a name of 1–80 characters.');
+    final username = normalizeUsername(profile.username);
+    if (!validUsername(username)) throw ArgumentError('Use 3–24 lowercase letters, numbers or underscores; start with a letter.');
     if (profile.bio.length > 300) throw ArgumentError('Keep your bio within 300 characters.');
     if (isDemo(profile.uid)) {
-      _demo[profile.uid] = {...?_demo[profile.uid], ...profile.editableFields};
+      if (temporaryProfiles.any((p) => p.id != profile.uid && demoProfile(p.id).username == username)) throw UsernameTaken(username);
+      _demo[profile.uid] = {...?_demo[profile.uid], ...profile.editableFields, ProfileFields.username: username};
       ActiveProfileController.instance.updateProfile(name: profile.name, city: profile.city);
       notifyListeners(); return;
     }
     // Only personal fields are editable here. University/course use the affiliation transaction.
     final user = FirebaseAuth.instance.currentUser!;
     final db = FirebaseFirestore.instance;
-    final batch = db.batch();
-    batch.set(db.collection('users').doc(profile.uid).collection('private').doc('account'), {'email': user.email ?? ''}, SetOptions(merge: true));
-    batch.set(db.collection('users').doc(profile.uid), {
-      ...profile.editableFields, ProfileFields.uid: profile.uid, 'email': FieldValue.delete(),
-      ProfileFields.updatedAt: FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-    await batch.commit();
+    final profileRef = db.collection('users').doc(profile.uid);
+    final claimRef = db.collection('usernames').doc(username);
+    await db.runTransaction((transaction) async {
+      final existing = await transaction.get(profileRef);
+      final claim = await transaction.get(claimRef);
+      if (claim.exists && claim.data()?[ProfileFields.uid] != profile.uid) throw UsernameTaken(username);
+      final previous = (existing.data()?[ProfileFields.username] ?? '').toString();
+      if (previous.isNotEmpty && previous != username) {
+        transaction.delete(db.collection('usernames').doc(previous));
+      }
+      transaction.set(claimRef, {ProfileFields.uid: profile.uid});
+      transaction.set(profileRef.collection('private').doc('account'), {'email': user.email ?? ''}, SetOptions(merge: true));
+      transaction.set(profileRef, {
+        ...profile.editableFields, ProfileFields.username: username,
+        ProfileFields.uid: profile.uid, 'email': FieldValue.delete(),
+        ProfileFields.updatedAt: FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    });
     await user.updateDisplayName(profile.name);
   }
 

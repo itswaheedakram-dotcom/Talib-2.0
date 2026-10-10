@@ -12,10 +12,31 @@ class _ProfileEditorState extends State<ProfileEditor> {
   final form = GlobalKey<FormState>();
   late final Map<String, TextEditingController> fields;
   late String photoUrl;
-  bool saving = false, picking = false, changed = false;
+  bool saving = false, picking = false, changed = false, checkingId = false;
+  String? idMessage;
+  List<String> suggestions = [];
+  Future<void> _checkId() async {
+    final requested = fields[ProfileFields.username]!.text;
+    setState(() { checkingId = true; idMessage = null; suggestions = []; });
+    try {
+      final normalized = UserProfileRepository.normalizeUsername(requested);
+      if (!UserProfileRepository.validUsername(normalized)) {
+        if (mounted) setState(() => idMessage = 'Use 3–24 letters, numbers or underscores; start with a letter.');
+        return;
+      }
+      final available = await UserProfileRepository.instance.usernameAvailable(normalized);
+      final choices = available ? <String>[] : await UserProfileRepository.instance.usernameSuggestions(normalized);
+      if (mounted && fields[ProfileFields.username]!.text == requested) setState(() {
+        idMessage = available ? 'This User ID is available.' : 'This User ID is already taken. Choose another.';
+        suggestions = choices;
+      });
+    } catch (_) { if (mounted) setState(() => idMessage = 'Could not check availability. Please retry.'); }
+    finally { if (mounted) setState(() => checkingId = false); }
+  }
   @override void initState() {
     super.initState(); final p = widget.profile; photoUrl = p.photoUrl;
     fields = {
+      ProfileFields.username: TextEditingController(text: p.username),
       ProfileFields.name: TextEditingController(text: p.name),
       ProfileFields.city: TextEditingController(text: p.city),
       ProfileFields.bio: TextEditingController(text: p.bio),
@@ -38,12 +59,14 @@ class _ProfileEditorState extends State<ProfileEditor> {
     setState(() => saving = true);
     String value(String key) => fields[key]!.text.trim();
     try {
-      await UserProfileRepository.instance.save(UserProfile(uid: widget.profile.uid,
+      await UserProfileRepository.instance.save(UserProfile(uid: widget.profile.uid, username: value(ProfileFields.username),
         name: value(ProfileFields.name), city: value(ProfileFields.city),
         bio: value(ProfileFields.bio),
         portfolioUrl: value(ProfileFields.portfolioUrl), photoUrl: photoUrl,
         skills: value(ProfileFields.skills).split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toSet().take(12).toList()));
       if (mounted) Navigator.pop(context, true);
+    } on UsernameTaken {
+      await _checkId();
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not save profile. Check your connection and retry.')));
     } finally { if (mounted) setState(() => saving = false); }
@@ -62,6 +85,13 @@ class _ProfileEditorState extends State<ProfileEditor> {
         if (photoUrl.isNotEmpty) TextButton(onPressed: saving ? null : () => setState(() { photoUrl = ''; changed = true; }), child: const Text('Remove photo')),
       ]),
       _field(ProfileFields.name, 'Name', maxLength: 80, validate: (value) => value == null || value.trim().isEmpty ? 'Enter your name.' : null),
+      _field(ProfileFields.username, 'User ID', maxLength: 24, validate: (value) =>
+        UserProfileRepository.validUsername(UserProfileRepository.normalizeUsername(value ?? '')) ? null : 'Use 3–24 letters, numbers or underscores; start with a letter.'),
+      Align(alignment: Alignment.centerLeft, child: TextButton(onPressed: saving || checkingId ? null : _checkId,
+        child: Text(checkingId ? 'Checking…' : 'Check availability'))),
+      if (idMessage != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(idMessage!)),
+      if (suggestions.isNotEmpty) Wrap(spacing: 8, children: suggestions.map((id) => ActionChip(label: Text(id),
+        onPressed: saving ? null : () { fields[ProfileFields.username]!.text = id; _checkId(); })).toList()),
       _field(ProfileFields.bio, 'About me', lines: 3, maxLength: 300),
       _field(ProfileFields.city, 'City', maxLength: 100),
       _field(ProfileFields.skills, 'Skills / interests (comma separated)', maxLength: 240),

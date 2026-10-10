@@ -77,6 +77,24 @@ service cloud.firestore {
       );
     }
 
+    function validUsernameClaim(data, userId) {
+      let username = data.get('username', '');
+      return username.matches('^[a-z][a-z0-9_]{2,23}$')
+        && getAfter(/databases/$(database)/documents/usernames/$(username)).data.uid == userId;
+    }
+    match /usernames/{username} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create, update: if signedIn()
+        && username.matches('^[a-z][a-z0-9_]{2,23}$')
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid
+        && (!exists(/databases/$(database)/documents/usernames/$(username)) || resource.data.uid == request.auth.uid)
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == username;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('username', '') != username;
+    }
+
     match /users/{userId} {
       // Authenticated users may view profiles, but may only change their own profile.
       // Admin tools may update only the representative fields needed after a verified claim.
@@ -85,6 +103,7 @@ service cloud.firestore {
         || (resource.data.get('studentInstituteId', '') != '' && canManageInstitute(resource.data.studentInstituteId)));
       allow create: if (signedIn() && request.auth.uid == userId
           && request.resource.data.get('uid', userId) == userId
+          && (request.resource.data.get('username', '') == '' || validUsernameClaim(request.resource.data, userId))
           && request.resource.data.get('studentVerificationStatus', 'not_requested') != 'approved')
         || admin()
         || (managerAdminPermission('ownership_claim_review')
@@ -94,6 +113,12 @@ service cloud.firestore {
       allow delete: if signedIn() && request.auth.uid == userId || admin();
       allow update: if (signedIn() && request.auth.uid == userId
           && request.resource.data.get('uid', userId) == userId
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['username']) || (
+            validUsernameClaim(request.resource.data, userId)
+            && (resource.data.get('username', '') == ''
+              || resource.data.get('username', '') == request.resource.data.username
+              || !existsAfter(/databases/$(database)/documents/usernames/$(resource.data.username)))
+          ))
           && (!request.resource.data.diff(resource.data).affectedKeys().hasAny([
             'studentInstituteId', 'studentInstituteName', 'studentProgram', 'studentVerificationStatus'
           ]) || (

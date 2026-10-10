@@ -148,3 +148,29 @@ check(200, call('PATCH', ROOT + '/users/affiliation-student/private/account',
                {'fields': fields({'email': 'owner@example.test'})}, uid='affiliation-student'), 'owner saves private account details')
 check(403, call('GET', ROOT + '/users/affiliation-student/private/account', uid='unrelated-user'), 'other user cannot read account email')
 print('Central profile privacy and UID checks passed.')
+
+# User IDs are public, unique claims; internal UID stays permanent.
+base_path = f'projects/{PROJECT}/databases/(default)/documents'
+for actor in ['handle-owner', 'handle-other']:
+    check(200, call('PATCH', ROOT + '/users/' + actor,
+                   {'fields': fields({'name': actor, 'uid': actor})}, seed=True), 'seed ' + actor)
+def claim_handle(actor, username, previous=None):
+    writes = [
+        {'update': {'name': base_path + '/usernames/' + username, 'fields': fields({'uid': actor})}},
+        {'update': {'name': base_path + '/users/' + actor, 'fields': fields({'username': username})},
+         'updateMask': {'fieldPaths': ['username']}},
+    ]
+    if previous:
+        writes.append({'delete': base_path + '/usernames/' + previous})
+    return call('POST', ROOT + ':commit', {'writes': writes}, uid=actor)
+check(200, claim_handle('handle-owner', 'waheed'), 'claim available User ID atomically')
+check(200, call('GET', ROOT + '/usernames/waheed', uid='handle-other'), 'check availability without reading private profile')
+check(403, claim_handle('handle-other', 'waheed'), 'duplicate User ID cannot be stolen')
+check(403, call('PATCH', ROOT + '/users/handle-other?updateMask.fieldPaths=username',
+               {'fields': fields({'username': 'waheed'})}, uid='handle-other'), 'cannot bypass username registry')
+check(403, claim_handle('handle-other', 'Bad-ID'), 'invalid User ID rejected')
+check(403, claim_handle('handle-owner', 'waheed_2'), 'rename must release old User ID atomically')
+check(200, claim_handle('handle-owner', 'waheed_2', 'waheed'), 'rename retains permanent UID and releases old User ID')
+check(200, claim_handle('handle-other', 'waheed'), 'released User ID becomes available')
+check(403, call('DELETE', ROOT + '/usernames/waheed', uid='handle-other'), 'cannot release a still-active User ID')
+print('Unique User ID claim and rename checks passed.')

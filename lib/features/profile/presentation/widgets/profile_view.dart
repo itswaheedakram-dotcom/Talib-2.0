@@ -151,6 +151,7 @@ class _ProfileViewState extends State<ProfileView> {
           ProfileAvatar(name: p.name, photoUrl: p.photoUrl), const SizedBox(width: 16),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(p.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+            if (p.username.isNotEmpty) UserIdLabel(uid: p.username, showLabel: false),
             UserIdLabel(uid: p.uid), Text(p.roleLabel),
             if (p.city.isNotEmpty) Text(p.city),
           ])),

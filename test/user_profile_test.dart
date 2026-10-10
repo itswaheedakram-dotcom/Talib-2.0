@@ -28,6 +28,18 @@ void main() {
       demo.toggleFollow('demo-user-2', 'demo-user-3', previous);
     }
   });
+  test('user IDs normalize, reject duplicates and offer available suggestions', () async {
+    ActiveProfileController.instance.activate(temporaryProfiles[0]);
+    final repo = UserProfileRepository.instance;
+    expect(UserProfileRepository.normalizeUsername('  Waheed  '), 'waheed');
+    expect(UserProfileRepository.validUsername('waheed_1'), isTrue);
+    expect(UserProfileRepository.validUsername('1waheed'), isFalse);
+    expect(await repo.usernameAvailable('waheed'), isFalse);
+    final suggestions = await repo.usernameSuggestions('waheed');
+    expect(suggestions, isNotEmpty);
+    for (final id in suggestions) { expect(await repo.usernameAvailable(id), isTrue); }
+    await expectLater(repo.save(const UserProfile(uid: 'demo-user-1', username: 'waheed', name: 'Ayesha')), throwsA(isA<UsernameTaken>()));
+  });
   test('immutable UID and canonical course override old profile values', () {
     final profile = UserProfile.fromMap('real-uid', {
       'uid': 'forged-uid', 'name': 'Student',

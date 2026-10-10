@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// Canonical profile schema. Document id/Auth UID is the immutable user key.
 /// Relation fields (authorId, senderId, userId, etc.) reference that same UID.
 abstract final class ProfileFields {
+  static const username = 'username';
   static const uid = 'uid', name = 'name', city = 'city', role = 'role';
   static const bio = 'bio', photoUrl = 'photoUrl', educationLevel = 'educationLevel';
   static const semester = 'semester', graduationYear = 'graduationYear';
@@ -15,11 +16,11 @@ abstract final class ProfileFields {
 }
 
 class UserProfile {
-  final String uid, name, city, role, bio, photoUrl, educationLevel;
+  final String uid, username, name, city, role, bio, photoUrl, educationLevel;
   final String semester, graduationYear, portfolioUrl, instituteId, instituteName, course;
   final List<String> skills;
   final bool privateProfile;
-  const UserProfile({required this.uid, this.name = 'Student', this.city = '',
+  const UserProfile({required this.uid, this.username = '', this.name = 'Student', this.city = '',
     this.role = 'student', this.bio = '', this.photoUrl = '', this.educationLevel = '',
     this.semester = '', this.graduationYear = '', this.portfolioUrl = '',
     this.instituteId = '', this.instituteName = '', this.course = '',
@@ -28,7 +29,7 @@ class UserProfile {
     String value(String key) => (data[key] ?? '').toString().trim();
     final name = value(ProfileFields.name);
     final instituteId = value(ProfileFields.instituteId);
-    return UserProfile(uid: uid, name: name.isEmpty ? 'Student' : name,
+    return UserProfile(uid: uid, username: value(ProfileFields.username), name: name.isEmpty ? 'Student' : name,
       city: value(ProfileFields.city), role: value(ProfileFields.role).isEmpty ? 'student' : value(ProfileFields.role),
       bio: value(ProfileFields.bio), photoUrl: value(ProfileFields.photoUrl),
       educationLevel: value(ProfileFields.educationLevel), semester: value(ProfileFields.semester),

@@ -14,18 +14,18 @@ class UserIdentity extends StatelessWidget {
   final bool resolveName;
   const UserIdentity({super.key, required this.uid, required this.name, this.color, this.resolveName = true});
   @override Widget build(BuildContext context) {
-    Widget content(String display, [String photoUrl = '']) => Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Widget content(String display, [String photoUrl = '', String username = '']) => Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
       ProfileAvatar(name: display, photoUrl: photoUrl, radius: 18),
       const SizedBox(width: 8),
       Flexible(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
       Text(display.isEmpty ? 'Student' : display, softWrap: true,
         style: TextStyle(fontWeight: FontWeight.w700, color: color)),
-      if (uid.isNotEmpty) UserIdLabel(uid: uid, color: color, showLabel: false),
+      if (uid.isNotEmpty) UserIdLabel(uid: username.isEmpty ? uid : username, color: color, showLabel: false),
     ])),
     ]);
     if (!resolveName || uid.isEmpty || (!FirebaseService.initialized && !temporaryProfiles.any((p) => p.id == uid))) return content(name);
     return StreamBuilder(stream: UserProfileRepository.instance.watch(uid),
-      builder: (context, snapshot) => content(snapshot.data?.name ?? name, snapshot.data?.photoUrl ?? ''));
+      builder: (context, snapshot) => content(snapshot.data?.name ?? name, snapshot.data?.photoUrl ?? '', snapshot.data?.username ?? ''));
   }
 }
 
