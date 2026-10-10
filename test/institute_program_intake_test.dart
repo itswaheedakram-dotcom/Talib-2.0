@@ -241,8 +241,6 @@ void main() {
       );
       await tester.tap(find.text('Open editor'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Undergraduate'));
-      await tester.pumpAndSettle();
       await tester.ensureVisible(
         find.text('Select / clear all Undergraduate programs'),
       );
@@ -252,6 +250,37 @@ void main() {
       final title = find.widgetWithText(TextFormField, 'Intake title');
       await tester.ensureVisible(title);
       await tester.enterText(title, 'Shared Fall Intake');
+      final scale = find.widgetWithText(
+        DropdownButtonFormField<String>,
+        'Academic score scale',
+      );
+      await tester.ensureVisible(scale);
+      await tester.tap(scale);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Percentage').last);
+      await tester.pumpAndSettle();
+      final commonScore = find.widgetWithText(
+        TextFormField,
+        'Minimum marks / CGPA',
+      );
+      await tester.ensureVisible(commonScore);
+      await tester.enterText(commonScore, '50');
+      final exception = find.text('BS Computer Science').last;
+      await tester.ensureVisible(exception);
+      await tester.tap(exception);
+      await tester.pumpAndSettle();
+      final customizeScore = find.widgetWithText(
+        SwitchListTile,
+        'Minimum marks / CGPA',
+      );
+      await tester.ensureVisible(customizeScore);
+      await tester.tap(customizeScore);
+      await tester.pumpAndSettle();
+      final specificScore = find
+          .widgetWithText(TextFormField, 'Minimum marks / CGPA')
+          .last;
+      await tester.ensureVisible(specificScore);
+      await tester.enterText(specificScore, '60');
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
       final saved = InstituteOpportunityRepository.instance
@@ -259,7 +288,9 @@ void main() {
           .single;
       expect(saved.title, 'Shared Fall Intake');
       expect(saved.programKeys.toSet(), {cs, education});
-      expect(saved.programOverrides, isEmpty);
+      expect(saved.requirements['minScore'], '50');
+      expect(saved.forProgram(cs).requirements['minScore'], '60');
+      expect(saved.forProgram(education).requirements['minScore'], '50');
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     },

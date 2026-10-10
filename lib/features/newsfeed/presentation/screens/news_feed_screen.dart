@@ -288,25 +288,10 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
     );
   }
 
-  bool _isOpen(InstituteOpportunity item) {
-    if (item.status.trim().toLowerCase() != 'open') return false;
-    final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
-    final opening = DateTime.tryParse(item.openingDate);
-    if (opening != null && opening.isAfter(todayDate)) return false;
-    final deadline = DateTime.tryParse(item.deadline);
-    return deadline == null || !deadline.isBefore(todayDate);
-  }
+  bool _isOpen(InstituteOpportunity item) => item.displayStatus == 'Open';
 
-  bool _isUpcoming(InstituteOpportunity item) {
-    final status = item.status.trim().toLowerCase();
-    if (status == 'closed' || status == 'cancelled' || status == 'awarded') return false;
-    final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
-    final opening = DateTime.tryParse(item.openingDate);
-    if (opening != null) return opening.isAfter(todayDate);
-    return status == 'upcoming' || status == 'not announced';
-  }
+  bool _isUpcoming(InstituteOpportunity item) =>
+      {'Upcoming', 'Not announced'}.contains(item.displayStatus);
 
   int _sortByDeadline(InstituteOpportunity a, InstituteOpportunity b) {
     final aDate = DateTime.tryParse(a.deadline) ?? DateTime(9999);

@@ -84,8 +84,9 @@ class _InstituteDetailListingsState extends State<InstituteDetailListings> {
     final courses = items.where((item) => item.kind == 'course').toList();
     final admissions = items.where((item) => item.hasActiveAdmissions).toList();
     admissions.sort((a, b) {
-      final priority = (a.status.trim().toLowerCase() == 'open' ? 0 : 1)
-          .compareTo(b.status.trim().toLowerCase() == 'open' ? 0 : 1);
+      final priority = (a.displayStatus == 'Open' ? 0 : 1).compareTo(
+        b.displayStatus == 'Open' ? 0 : 1,
+      );
       if (priority != 0) return priority;
       final aDate = DateTime.tryParse(a.openingDate) ?? DateTime(9999);
       final bDate = DateTime.tryParse(b.openingDate) ?? DateTime(9999);
@@ -160,7 +161,10 @@ class _InstituteDetailListingsState extends State<InstituteDetailListings> {
     trailing: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        InstituteDetailBadge(label: '${programs.length + items.length}'),
+        InstituteDetailBadge(
+          label:
+              '${(kind == 'course' && widget.institute.programGroups.isNotEmpty ? widget.institute.programGroups.values.fold<int>(0, (count, names) => count + names.length) : programs.length) + items.length}',
+        ),
         if (InstituteAccess.canManage(widget.institute))
           IconButton(
             tooltip: 'Manage $title',
