@@ -31,7 +31,7 @@ class InstituteDetailScreen extends StatelessWidget {
         leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), onPressed: () => context.pop()),
         title: Text(typeLabel),
         actions: [
-          if (ActiveProfileController.instance.isDemo || (FirebaseAuth.instance.currentUser?.uid == institute.ownerId && institute.ownerId.isNotEmpty))
+          if (ActiveProfileController.instance.isDemo || (FirebaseService.initialized && FirebaseAuth.instance.currentUser?.uid == institute.ownerId && institute.ownerId.isNotEmpty))
             IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () => context.push('/institute/${institute.id}/edit')),
           const SizedBox(width: 8),
         ],
@@ -82,7 +82,7 @@ class InstituteDetailScreen extends StatelessWidget {
                   icon: Icon(snapshot.data == true ? Icons.bookmark : Icons.bookmark_border, color: green),
                 ),
               )
-            else if (FirebaseAuth.instance.currentUser != null)
+            else if (FirebaseService.initialized && FirebaseAuth.instance.currentUser != null)
               StreamBuilder<bool>(
                 stream: DatabaseService().instituteBookmarkStream(
                   FirebaseAuth.instance.currentUser!.uid,
