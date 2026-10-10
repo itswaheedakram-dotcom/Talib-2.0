@@ -142,7 +142,7 @@ class _VerifiedStudentCountState extends State<VerifiedStudentCount> {
       builder: (context, snapshot) => Row(children: [
         const Icon(Icons.groups_outlined, color: AppColors.primaryGreen, size: 20),
         const SizedBox(width: 8),
-        Text(snapshot.hasError ? 'Sign in to view verified student count' : '${snapshot.data ?? 0} university-verified students'),
+        Expanded(child: Text(snapshot.hasError ? 'Sign in to view verified student count' : '${snapshot.data ?? 0} university-verified students')),
       ]),
     );
 }
