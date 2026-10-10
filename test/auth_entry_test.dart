@@ -32,15 +32,15 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: AuthEntryScreen(registering: true)));
     await tester.enterText(field('Full name'), 'Student');
     await tester.enterText(field('Email'), 'student@example.com');
-    await tester.scrollUntilVisible(field('Password'), 150);
+    await tester.scrollUntilVisible(field('Password'), 150, scrollable: find.byType(Scrollable).first);
     await tester.enterText(field('Password'), 'strong-password');
-    await tester.scrollUntilVisible(field('Confirm password'), 150);
+    await tester.scrollUntilVisible(field('Confirm password'), 150, scrollable: find.byType(Scrollable).first);
     await tester.enterText(field('Confirm password'), 'different-password');
     final submit = find.byType(FilledButton);
-    await tester.scrollUntilVisible(submit, 150);
+    await tester.scrollUntilVisible(submit, 150, scrollable: find.byType(Scrollable).first);
     await tester.tap(submit);
     await tester.pump();
-    await tester.scrollUntilVisible(find.text('Passwords do not match.'), -100);
+    await tester.scrollUntilVisible(find.text('Passwords do not match.'), -100, scrollable: find.byType(Scrollable).first);
     expect(find.text('Passwords do not match.'), findsOneWidget);
     expect(find.byIcon(Icons.facebook), findsNothing);
     expect(tester.takeException(), isNull);
@@ -57,7 +57,7 @@ void main() {
     expect(find.byTooltip('Add profile photo'), findsOneWidget);
     expect(find.text('Your User ID is created automatically from your name.'), findsOneWidget);
     expect(tester.takeException(), isNull);
-    await tester.scrollUntilVisible(find.byType(FilledButton), 150);
+    await tester.scrollUntilVisible(find.byType(FilledButton), 150, scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });

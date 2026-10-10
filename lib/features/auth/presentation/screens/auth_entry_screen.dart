@@ -106,7 +106,8 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> {
   @override Widget build(BuildContext context) => PopScope(canPop: !busy, child: Scaffold(
     backgroundColor: cream,
     body: SafeArea(child: Align(alignment: Alignment.topCenter, child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520),
-      child: AutofillGroup(child: Form(key: form, child: ListView(padding: const EdgeInsets.fromLTRB(24, 12, 24, 24), children: [
+      child: AutofillGroup(child: Form(key: form, child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Align(alignment: Alignment.centerLeft, child: IconButton(onPressed: busy ? null : back, tooltip: 'Back', icon: const Icon(Icons.arrow_back, color: ink))),
       const SizedBox(height: 12), header(),
       if (registering && photo != null) Align(alignment: Alignment.centerRight, child: TextButton(
@@ -166,5 +167,5 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> {
       TextButton(onPressed: busy ? null : () => context.go(registering ? '/signin' : '/register'),
         child: Text(registering ? 'Already have an account? Sign in' : 'Don’t have an account? Sign up', textAlign: TextAlign.center,
           style: const TextStyle(color: green, fontWeight: FontWeight.w600))),
-    ]))))))));
+    ])))))))));
 }
