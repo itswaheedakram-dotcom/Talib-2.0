@@ -85,6 +85,7 @@ check(403, call('PATCH', ROOT + '/institutes/affiliation-rules-university/studen
                 {'fields': fields({'status': 'approved'})}, uid='unrelated-user'), 'unrelated user cannot approve requests')
 
 request = f'projects/{PROJECT}/databases/(default)/documents/institutes/affiliation-rules-university/studentAffiliations/affiliation-student'
+verification = f'projects/{PROJECT}/databases/(default)/documents/institutes/affiliation-rules-university/studentVerifications/affiliation-student'
 check(200, call('POST', ROOT + ':commit', {'writes': [
     {'update': {'name': request, 'fields': fields({'studentId': 'affiliation-student',
         'studentName': 'Student', 'instituteId': 'affiliation-rules-university',
@@ -92,6 +93,12 @@ check(200, call('POST', ROOT + ':commit', {'writes': [
      'updateTransforms': [{'fieldPath': 'reviewedAt', 'setToServerValue': 'REQUEST_TIME'}]},
     {'update': {'name': student_path, 'fields': fields({'studentVerificationStatus': 'approved'})},
      'updateMask': {'fieldPaths': ['studentVerificationStatus']}},
+    {'update': {'name': verification, 'fields': fields({'studentId': 'affiliation-student',
+        'instituteId': 'affiliation-rules-university', 'status': 'approved'})},
+     'updateTransforms': [{'fieldPath': 'verifiedAt', 'setToServerValue': 'REQUEST_TIME'}]},
 ]}, uid='affiliation-owner'), 'university approves request and grants profile badge')
+check(200, call('GET', ROOT + '/institutes/affiliation-rules-university/studentVerifications/affiliation-student', uid='unrelated-user'), 'public verification summary contains only minimal affiliation fields')
+check(403, call('PATCH', ROOT + '/institutes/affiliation-rules-university/studentVerifications/forged-student',
+                {'fields': fields({'studentId': 'forged-student', 'instituteId': 'affiliation-rules-university', 'status': 'approved'})}, uid='affiliation-student'), 'student cannot forge a public verification badge')
 check(403, call('DELETE', ROOT + '/institutes/affiliation-rules-university/studentAffiliations/affiliation-student', uid='affiliation-student'), 'student cannot remove verified affiliation to alter count')
 print('All student affiliation rules checks passed; no production services contacted.')

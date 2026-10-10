@@ -92,7 +92,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentVerificationStatus'])
           && request.resource.data.studentVerificationStatus in ['approved', 'rejected']
           && canManageInstitute(resource.data.studentInstituteId)
-          && getAfter(/databases/$(database)/documents/institutes/$(resource.data.studentInstituteId)/studentAffiliations/$(userId)).data.status == request.resource.data.studentVerificationStatus);
+          && get(/databases/$(database)/documents/institutes/$(resource.data.studentInstituteId)/studentAffiliations/$(userId)).data.status == 'pending');
 
       match /bookmarks/{postId} {
         allow read, write: if signedIn() && request.auth.uid == userId;
@@ -317,10 +317,6 @@ service cloud.firestore {
         function approvedInstitute() {
           return get(/databases/$(database)/documents/institutes/$(instituteId)).data.status in ['approved', 'verified'];
         }
-        function selectedByStudentAfter(studentUid) {
-          return getAfter(/databases/$(database)/documents/users/$(studentUid)).data.studentInstituteId == instituteId
-            && getAfter(/databases/$(database)/documents/users/$(studentUid)).data.studentVerificationStatus == 'pending';
-        }
         allow read: if signedIn() && (request.auth.uid == studentId || canManageInstitute(instituteId));
         allow create: if signedIn() && request.auth.uid == studentId
           && approvedInstitute()
@@ -331,7 +327,6 @@ service cloud.firestore {
           && request.resource.data.studentName is string && request.resource.data.studentName.size() <= 100
           && request.resource.data.status == 'pending'
           && request.resource.data.updatedAt is timestamp
-          && selectedByStudentAfter(studentId)
           && request.resource.data.keys().hasOnly(['studentId', 'studentName', 'instituteId', 'program', 'status', 'updatedAt']);
         allow update: if (signedIn() && request.auth.uid == studentId
           && resource.data.status in ['pending', 'rejected']
@@ -342,7 +337,6 @@ service cloud.firestore {
           && request.resource.data.program.size() <= 160
           && request.resource.data.studentName is string && request.resource.data.studentName.size() <= 100
           && request.resource.data.updatedAt is timestamp
-          && selectedByStudentAfter(studentId)
           && request.resource.data.keys().hasOnly(['studentId', 'studentName', 'instituteId', 'program', 'status', 'updatedAt']))
           || (canManageInstitute(instituteId)
           && resource.data.status == 'pending'
@@ -351,11 +345,26 @@ service cloud.firestore {
           && request.resource.data.program == resource.data.program
           && request.resource.data.status in ['approved', 'rejected']
           && request.resource.data.reviewedBy == request.auth.uid
-          && getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentInstituteId == instituteId
-          && getAfter(/databases/$(database)/documents/users/$(studentId)).data.studentVerificationStatus == request.resource.data.status
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy']));
         allow delete: if signedIn() && ((request.auth.uid == studentId && resource.data.status != 'approved')
           || canManageInstitute(instituteId));
+      }
+
+      // This minimal public record powers the badge and aggregate count. It
+      // contains no name, program, or other student information.
+      match /studentVerifications/{studentId} {
+        allow get, list: if signedIn() && resource.data.status == 'approved'
+          && resource.data.keys().hasOnly(['studentId', 'instituteId', 'status', 'verifiedAt']);
+        allow create: if canManageInstitute(instituteId)
+          && request.resource.data.studentId == studentId
+          && request.resource.data.instituteId == instituteId
+          && request.resource.data.status == 'approved'
+          && request.resource.data.verifiedAt is timestamp
+          && request.resource.data.keys().hasOnly(['studentId', 'instituteId', 'status', 'verifiedAt'])
+          && get(/databases/$(database)/documents/institutes/$(instituteId)/studentAffiliations/$(studentId)).data.status == 'pending'
+          && get(/databases/$(database)/documents/users/$(studentId)).data.studentInstituteId == instituteId
+          && get(/databases/$(database)/documents/users/$(studentId)).data.studentVerificationStatus == 'pending';
+        allow update, delete: if false;
       }
 
       match /opportunities/{opportunityId} {

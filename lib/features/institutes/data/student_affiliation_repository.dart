@@ -24,12 +24,19 @@ class StudentAffiliationRepository extends ChangeNotifier {
       return Map<String, dynamic>.from(_demoProfiles[uid] ?? const {});
     }
     final data = (await FirebaseFirestore.instance.collection('users').doc(uid).get()).data();
-    return {
+    final result = {
       'studentInstituteId': data?['studentInstituteId'] ?? '',
       'studentInstituteName': data?['studentInstituteName'] ?? '',
       'studentProgram': data?['studentProgram'] ?? '',
       'studentVerificationStatus': data?['studentVerificationStatus'] ?? 'not_requested',
     };
+    if (result['studentVerificationStatus'] == 'approved') {
+      final instituteId = result['studentInstituteId'].toString();
+      final verification = await FirebaseFirestore.instance.collection('institutes').doc(instituteId)
+          .collection('studentVerifications').doc(uid).get();
+      if (verification.data()?['status'] != 'approved') result['studentVerificationStatus'] = 'pending';
+    }
+    return result;
   }
 
   Stream<Map<String, dynamic>> watchProfile(String uid) {
@@ -41,14 +48,21 @@ class StudentAffiliationRepository extends ChangeNotifier {
         controller.onCancel = sub;
       });
     }
-    return FirebaseFirestore.instance.collection('users').doc(uid).snapshots().map((snapshot) {
+    return FirebaseFirestore.instance.collection('users').doc(uid).snapshots().asyncMap((snapshot) async {
       final data = snapshot.data() ?? const <String, dynamic>{};
-      return {
+      final result = {
         'studentInstituteId': data['studentInstituteId'] ?? '',
         'studentInstituteName': data['studentInstituteName'] ?? '',
         'studentProgram': data['studentProgram'] ?? '',
         'studentVerificationStatus': data['studentVerificationStatus'] ?? 'not_requested',
       };
+      if (result['studentVerificationStatus'] == 'approved') {
+        final instituteId = result['studentInstituteId'].toString();
+        final verification = await FirebaseFirestore.instance.collection('institutes').doc(instituteId)
+            .collection('studentVerifications').doc(uid).get();
+        if (verification.data()?['status'] != 'approved') result['studentVerificationStatus'] = 'pending';
+      }
+      return result;
     });
   }
 
@@ -168,15 +182,23 @@ class StudentAffiliationRepository extends ChangeNotifier {
     }
     final db = FirebaseFirestore.instance;
     final request = db.collection('institutes').doc(institute.id).collection('studentAffiliations').doc(studentId);
+    final verification = db.collection('institutes').doc(institute.id).collection('studentVerifications').doc(studentId);
     final user = db.collection('users').doc(studentId);
     await db.runTransaction((tx) async {
       final snapshot = await tx.get(request);
       final data = snapshot.data();
       if (data == null || data['status'] != 'pending') throw StateError('This request has already been reviewed.');
       final profile = await tx.get(user);
+      if (profile.data()?['studentInstituteId'] != institute.id || profile.data()?['studentVerificationStatus'] != 'pending') {
+        throw StateError('The student changed their selected university before review. Ask them to submit the request again.');
+      }
       tx.update(request, {'status': status, 'reviewedAt': FieldValue.serverTimestamp(), 'reviewedBy': InstituteAccess.uid});
-      if (profile.data()?['studentInstituteId'] == institute.id) {
-        tx.set(user, {'studentVerificationStatus': status}, SetOptions(merge: true));
+      tx.set(user, {'studentVerificationStatus': status}, SetOptions(merge: true));
+      if (status == 'approved') {
+        tx.set(verification, {
+          'studentId': studentId, 'instituteId': institute.id, 'status': 'approved',
+          'verifiedAt': FieldValue.serverTimestamp(),
+        });
       }
       final notification = db.collection('users').doc(studentId).collection('notifications').doc();
       tx.set(notification, {
@@ -194,9 +216,8 @@ class StudentAffiliationRepository extends ChangeNotifier {
       return (_demoRequests[instituteId]?.values ?? const <Map<String, dynamic>>[])
           .where((r) => r['status'] == 'approved').map((r) => r['studentId']).toSet().length;
     }
-    final result = await FirebaseFirestore.instance.collection('users')
-        .where('studentInstituteId', isEqualTo: instituteId)
-        .where('studentVerificationStatus', isEqualTo: 'approved').count().get();
+    final result = await FirebaseFirestore.instance.collection('institutes').doc(instituteId)
+        .collection('studentVerifications').where('status', isEqualTo: 'approved').count().get();
     return result.count ?? 0;
   }
 
