@@ -106,17 +106,31 @@ class InstituteRepository extends ChangeNotifier {
           .collection('institutes')
           .where('status', whereIn: const ['approved', 'verified'])
           .get();
-      final loaded = snapshot.docs.map((doc) {
-        final data = Map<String, dynamic>.from(doc.data());
-        // Normalize legacy records written with the old claim status into the shared model.
-        if ((data['status'] ?? '').toString().toLowerCase() == 'verified') {
-          data['status'] = 'approved';
+      final loaded = <Institute>[];
+      var skippedMalformedRecord = false;
+      for (final doc in snapshot.docs) {
+        try {
+          final data = Map<String, dynamic>.from(doc.data());
+          // Normalize legacy records written with the old claim status into the shared model.
+          if ((data['status'] ?? '').toString().toLowerCase() == 'verified') {
+            data['status'] = 'approved';
+          }
+          final institute = Institute.fromMap(doc.id, data);
+          if (institute.status.toLowerCase() == 'approved') {
+            loaded.add(institute);
+          }
+        } catch (_) {
+          // One older or malformed document must not prevent all other institutes
+          // from loading. Keep the valid records available to the browse screens.
+          skippedMalformedRecord = true;
         }
-        return Institute.fromMap(doc.id, data);
-      }).where((item) => item.status.toLowerCase() == 'approved').toList();
+      }
       _realItems
         ..clear()
         ..addAll(loaded);
+      if (skippedMalformedRecord && loaded.isEmpty) {
+        error = 'Institute records could not be read. Please check their saved field formats.';
+      }
     } catch (e) {
       error = e.toString();
     } finally {
