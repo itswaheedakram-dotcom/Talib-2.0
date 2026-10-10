@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme.dart';
 import '../../data/institute_catalog.dart';
 import '../widgets/institute_image_preview.dart';
+import '../widgets/institute_detail_listings.dart';
 import '../../../models/institute.dart';
 import '../../data/institute_repository.dart';
 import '../../data/institute_access.dart';
@@ -175,7 +176,7 @@ class InstituteDetailScreen extends StatelessWidget {
               ]),
             ),
           const SizedBox(height: 10),
-          _section('Admission', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _section('Admission Information', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Wrap(spacing: 8, runSpacing: 8, children: [
               _admissionBadge('Status', institute.admissionStatus),
               if (institute.admissionDeadline.isNotEmpty) _admissionBadge('Deadline', institute.admissionDeadline),
@@ -186,20 +187,7 @@ class InstituteDetailScreen extends StatelessWidget {
               if (institute.eligibility.isNotEmpty) _admissionBadge('Eligibility', institute.eligibility),
             ]),
             const SizedBox(height: 12),
-            Wrap(spacing: 7, runSpacing: 7, children: institute.programs.map((p) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-              decoration: BoxDecoration(color: lightGreen, borderRadius: BorderRadius.circular(18)),
-              child: Text(p, style: const TextStyle(color: darkGreen, fontWeight: FontWeight.w600)),
-            )).toList()),
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: OutlinedButton.icon(
-                onPressed: () => context.push('/institute/' + institute.id + '/programs'),
-                icon: const Icon(Icons.menu_book_outlined),
-                label: const Text('Programs'),
-              )),
-              const SizedBox(width: 9),
-              Expanded(child: FilledButton(
+            SizedBox(width: double.infinity, child: FilledButton(
                 onPressed: () {
                   final target = institute.applicationUrl.trim().isNotEmpty
                       ? institute.applicationUrl.trim()
@@ -215,7 +203,6 @@ class InstituteDetailScreen extends StatelessWidget {
                 style: FilledButton.styleFrom(backgroundColor: green),
                 child: Text(institute.applicationUrl.trim().isNotEmpty ? 'Apply Now' : 'Website / Details'),
               )),
-            ]),
             const SizedBox(height: 9),
             SizedBox(width: double.infinity, child: OutlinedButton.icon(
               onPressed: () => context.push('/institute/' + institute.id + '/community?name=' + Uri.encodeComponent(institute.name)),
@@ -223,28 +210,8 @@ class InstituteDetailScreen extends StatelessWidget {
               label: const Text('Institute Community'),
             )),
           ])),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              OutlinedButton.icon(
-                onPressed: () => context.push('/institute/${institute.id}/opportunities?kind=course'),
-                icon: const Icon(Icons.school_outlined),
-                label: const Text('Programs / Courses'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => context.push('/institute/${institute.id}/opportunities?kind=admission'),
-                icon: const Icon(Icons.calendar_month_outlined),
-                label: const Text('Admissions'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => context.push('/institute/${institute.id}/opportunities?kind=scholarship'),
-                icon: const Icon(Icons.workspace_premium_outlined),
-                label: const Text('Scholarships'),
-              ),
-            ],
-          ),
+          const SizedBox(height: 10),
+          InstituteDetailListings(institute: institute),
           const SizedBox(height: 10),
           _section('Facilities', institute.facilities.isEmpty
               ? const Text('No facilities added yet.')

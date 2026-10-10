@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme.dart';
 import '../../../models/institute.dart';
@@ -8,6 +7,7 @@ import '../../../models/institute_opportunity.dart';
 import '../../data/institute_opportunity_repository.dart';
 import '../../data/institute_repository.dart';
 import '../../data/institute_access.dart';
+import '../widgets/institute_opportunity_card.dart';
 
 class InstituteOpportunitiesScreen extends StatefulWidget {
   final String instituteId;
@@ -199,8 +199,14 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                     itemCount: visibleItems.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) => _opportunityCard(
-                      context, institute, visibleItems[index],
+                    itemBuilder: (context, index) => InstituteOpportunityCard(
+                      item: visibleItems[index],
+                      onEdit: _canManage
+                          ? () => _openEditor(context, institute, visibleItems[index].kind, visibleItems[index])
+                          : null,
+                      onDelete: _canManage
+                          ? () => _confirmDelete(context, visibleItems[index])
+                          : null,
                     ),
                   ),
           ),
@@ -224,120 +230,6 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
     selected: _kind == value,
     onSelected: (_) => setState(() { _kind = value; _yearFilter = 'All years'; }),
   );
-
-  Widget _opportunityCard(
-    BuildContext context,
-    Institute institute,
-    InstituteOpportunity item,
-  ) {
-    final statusColor = item.status.toLowerCase() == 'open'
-        ? AppColors.primaryGreen
-        : item.status.toLowerCase() == 'closed' || item.status.toLowerCase() == 'cancelled'
-            ? AppColors.mutedText
-            : AppColors.darkGreen;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(item.title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    )),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.softGreen,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(item.status,
-                    style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w700)),
-                ),
-                if (_canManage)
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'edit') _openEditor(context, institute, item.kind, item);
-                      if (value == 'delete') _confirmDelete(context, item);
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      PopupMenuItem(value: 'delete', child: Text('Delete')),
-                    ],
-                  ),
-              ],
-            ),
-            if (item.academicYear.isNotEmpty || item.intake.isNotEmpty) ...[
-              const SizedBox(height: 5),
-              Text([item.academicYear, item.intake].where((value) => value.isNotEmpty).join(' • '),
-                style: Theme.of(context).textTheme.bodySmall),
-            ],
-            if (item.openingDate.isNotEmpty || item.deadline.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Wrap(spacing: 8, runSpacing: 6, children: [
-                if (item.openingDate.isNotEmpty) _detailPill('Opens', item.openingDate),
-                if (item.deadline.isNotEmpty) _detailPill(
-                  _kind == 'scholarship' ? 'Scholarship deadline' : 'Deadline', item.deadline,
-                ),
-              ]),
-            ],
-            if (item.eligibility.isNotEmpty) _detailLine('Eligibility', item.eligibility),
-            if (item.feeDetails.isNotEmpty) _detailLine('Fee', item.feeDetails),
-            if (item.coverage.isNotEmpty) _detailLine('Coverage', item.coverage),
-            if (item.deliveryMode.isNotEmpty) _detailLine('Mode', item.deliveryMode),
-            if (item.provider.isNotEmpty) _detailLine('Provider', item.provider),
-            if (item.description.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(item.description),
-            ],
-            if (item.applicationUrl.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: OutlinedButton.icon(
-                  onPressed: () => _openExternal(context, item.applicationUrl),
-                  icon: const Icon(Icons.open_in_new),
-                  label: const Text('Apply / View details'),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _detailLine(String label, String value) => Padding(
-    padding: const EdgeInsets.only(top: 7),
-    child: Text('$label: $value'),
-  );
-
-  Widget _detailPill(String label, String value) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-    decoration: BoxDecoration(
-      color: AppColors.softGreen,
-      borderRadius: BorderRadius.circular(9),
-    ),
-    child: Text('$label: $value', style: const TextStyle(fontSize: 12)),
-  );
-
-  Future<void> _openExternal(BuildContext context, String rawUrl) async {
-    if (rawUrl.trim().isEmpty) return;
-    var uri = Uri.tryParse(rawUrl.trim());
-    if (uri != null && !uri.hasScheme) uri = Uri.tryParse('https://${rawUrl.trim()}');
-    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open this link on your device.')),
-        );
-      }
-    }
-  }
 
   Future<void> _confirmDelete(BuildContext context, InstituteOpportunity item) async {
     final confirmed = await showDialog<bool>(
