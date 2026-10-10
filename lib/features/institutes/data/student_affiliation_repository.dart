@@ -12,7 +12,7 @@ import 'institute_access.dart';
 /// approve the affiliation and award the institute-specific badge.
 class StudentAffiliationRepository extends ChangeNotifier {
   StudentAffiliationRepository._() { _seedDemoAffiliations(); }
-  static final instance = StudentAffiliationRepository._() { _seedDemoAffiliations(); }
+  static final instance = StudentAffiliationRepository._();
   final Map<String, Map<String, dynamic>> _demoProfiles = {};
   final Map<String, Map<String, Map<String, dynamic>>> _demoRequests = {};
 
