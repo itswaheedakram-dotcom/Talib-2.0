@@ -16,7 +16,7 @@ jobs:
           channel: stable
       - run: flutter pub get
       - name: Verify institute and demo workflows
-        run: flutter test test/institute_program_intake_test.dart test/institute_workflow_test.dart test/institute_detail_listings_test.dart test/demo_identity_integration_test.dart test/smart_search_parser_test.dart
+        run: flutter test test/institute_reviews_test.dart test/institute_program_intake_test.dart test/institute_workflow_test.dart test/institute_detail_listings_test.dart test/demo_identity_integration_test.dart test/smart_search_parser_test.dart
       - name: Verify institute notification function
         run: node --test functions/institute_notifications.test.js
       - name: Analyze Dart code
@@ -62,3 +62,15 @@ jobs:
 
       - name: Build debug APK
         run: flutter build apk --debug
+
+  review-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify public review permissions in local emulator
+        env:
+          CI: 'true'
+        run: npx --yes firebase-tools@14.19.0 emulators:exec --project demo-talib-review-tests --only firestore "python3 test/institute_reviews_rules_check.py"

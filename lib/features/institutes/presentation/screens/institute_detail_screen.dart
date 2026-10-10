@@ -12,6 +12,7 @@ import '../../data/institute_repository.dart';
 import '../../data/institute_score.dart';
 import '../widgets/institute_detail_components.dart';
 import '../widgets/institute_detail_listings.dart';
+import '../widgets/institute_reviews_section.dart';
 import '../widgets/institute_image_preview.dart';
 
 class InstituteDetailScreen extends StatefulWidget {
@@ -30,6 +31,7 @@ class _InstituteDetailScreenState extends State<InstituteDetailScreen> {
     'Scholarships',
     'Facilities',
     'Contact',
+    'Reviews',
   ];
   final _anchors = {for (final section in _sections) section: GlobalKey()};
   final _navigationKey = GlobalKey();
@@ -412,6 +414,8 @@ class _InstituteDetailScreenState extends State<InstituteDetailScreen> {
                         ),
                     ],
                   ),
+                  const SizedBox(height: 14),
+                  InstituteReviewsSection(key: _anchors['Reviews'], institute: institute),
                   const SizedBox(height: 14),
                   InstituteDetailSection(
                     title: 'Institute community',

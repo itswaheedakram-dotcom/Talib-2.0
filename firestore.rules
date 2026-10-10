@@ -39,6 +39,10 @@ service cloud.firestore {
       allow read: if resource.data.published == true;
     }
 
+    match /{path=**}/instituteReviews/{reviewId} {
+      allow read: if resource.data.published == true;
+    }
+
     match /locationCatalog/{locationId} {
       allow read: if resource.data.enabled == true || admin() || managerAdminPermission('manage_institutes');
       allow create, update, delete: if admin() || managerAdminPermission('manage_institutes');
@@ -273,6 +277,26 @@ service cloud.firestore {
           ]));
 
       allow delete: if admin() || managerAdminPermission('manage_institutes');
+
+      match /instituteReviews/{reviewId} {
+        function validReview() {
+          return request.resource.data.keys().hasOnly(['instituteId', 'userId', 'authorName', 'rating', 'text', 'updatedAt', 'published'])
+            && request.resource.data.instituteId == instituteId
+            && request.resource.data.userId == request.auth.uid
+            && reviewId == request.auth.uid
+            && request.resource.data.rating is int
+            && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+            && request.resource.data.authorName is string && request.resource.data.authorName.size() <= 100
+            && request.resource.data.text is string && request.resource.data.text.size() <= 1000
+            && request.resource.data.updatedAt is timestamp
+            && request.resource.data.updatedAt == request.time
+            && request.resource.data.published == true
+            && get(/databases/$(database)/documents/institutes/$(instituteId)).data.status in ['approved', 'verified'];
+        }
+        allow create, update: if signedIn() && validReview();
+        allow delete: if (signedIn() && reviewId == request.auth.uid)
+          || admin() || managerAdminPermission('manage_institutes');
+      }
 
       match /opportunities/{opportunityId} {
         function canManageOpportunity() {
