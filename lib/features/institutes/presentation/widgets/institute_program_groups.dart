@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
 import '../../../models/institute.dart';
+import '../../../models/institute_program_requirements.dart';
+import '../../../models/institute_opportunity.dart';
+import '../../data/institute_opportunity_repository.dart';
+import '../../../../core/services/active_profile_controller.dart';
+import 'institute_opportunity_card.dart';
+import 'institute_program_editor.dart';
 import '../../data/institute_access.dart';
 
 /// One selected category expands inline; selecting it again collapses its list.
@@ -20,6 +26,123 @@ class InstituteProgramGroups extends StatefulWidget {
 
 class _InstituteProgramGroupsState extends State<InstituteProgramGroups> {
   String? _selected;
+  final _repository = InstituteOpportunityRepository.instance;
+  @override
+  void initState() {
+    super.initState();
+    _repository.addListener(_changed);
+    ActiveProfileController.instance.addListener(_modeChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _repository.load(widget.institute.id);
+    });
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  void _modeChanged() {
+    if (!mounted) return;
+    setState(() => _selected = null);
+    _repository.load(widget.institute.id);
+  }
+
+  @override
+  void dispose() {
+    _repository.removeListener(_changed);
+    ActiveProfileController.instance.removeListener(_modeChanged);
+    super.dispose();
+  }
+
+  Widget _program(String name) {
+    final key = InstituteProgramRequirements.key(_selected!, name);
+    final items = _repository.forInstitute(widget.institute.id);
+    InstituteOpportunity? details;
+    for (final item in items) {
+      if (item.kind == 'course' && item.programKeys.contains(key)) {
+        details = item;
+        break;
+      }
+    }
+    final linked = items
+        .where(
+          (item) => item.kind == 'admission' && item.programKeys.contains(key),
+        )
+        .toList();
+    linked.sort((a, b) {
+      int priority(InstituteOpportunity item) =>
+          switch (item.forProgram(key).statusAt()) {
+            'Open' => 0,
+            'Upcoming' => 1,
+            _ => 2,
+          };
+      final order = priority(a).compareTo(priority(b));
+      return order != 0 ? order : b.academicYear.compareTo(a.academicYear);
+    });
+    final status = linked.isEmpty
+        ? 'Not announced'
+        : linked.first.forProgram(key).statusAt();
+    final deadline = linked.isEmpty
+        ? ''
+        : linked.first.forProgram(key).deadline;
+    final record = details;
+    return ExpansionTile(
+      key: PageStorageKey('program:${widget.institute.id}:$key'),
+      tilePadding: EdgeInsets.zero,
+      leading: Icon(
+        Icons.school_outlined,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      title: Text(name),
+      subtitle: Text(
+        '$status${deadline.isEmpty ? '' : ' · Deadline: $deadline'}',
+      ),
+      children: [
+        if (InstituteAccess.canManage(widget.institute))
+          Wrap(
+            spacing: 8,
+            children: [
+              TextButton.icon(
+                onPressed: () => showInstituteProgramEditor(
+                  context,
+                  widget.institute,
+                  'course',
+                  existing: record,
+                  programKey: key,
+                ),
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Edit program details'),
+              ),
+              if (widget.onRemove != null)
+                TextButton.icon(
+                  onPressed: () => widget.onRemove!(_selected!, name),
+                  icon: const Icon(Icons.remove_circle_outline),
+                  label: const Text('Remove program'),
+                ),
+            ],
+          ),
+        if (record == null)
+          const Padding(
+            padding: EdgeInsets.all(8),
+            child: Text(
+              'Program details / requirements have not been added yet.',
+            ),
+          )
+        else
+          InstituteOpportunityCard(item: record, showLinkedPrograms: false),
+        if (linked.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(8),
+            child: Text('Admissions have not been announced for this program.'),
+          ),
+        for (final intake in linked)
+          InstituteOpportunityCard(
+            item: intake.forProgram(key, record?.requirements ?? const {}),
+            showLinkedPrograms: false,
+          ),
+      ],
+    );
+  }
 
   @override
   void didUpdateWidget(InstituteProgramGroups oldWidget) {
@@ -27,6 +150,11 @@ class _InstituteProgramGroupsState extends State<InstituteProgramGroups> {
     if (oldWidget.institute.id != widget.institute.id ||
         !widget.institute.programCategories.contains(_selected))
       _selected = null;
+    if (oldWidget.institute.id != widget.institute.id) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _repository.load(widget.institute.id);
+      });
+    }
   }
 
   @override
@@ -92,26 +220,7 @@ class _InstituteProgramGroupsState extends State<InstituteProgramGroups> {
                               style: TextStyle(fontSize: 12),
                             ),
                           ),
-                        for (final name in names)
-                          ListTile(
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            leading: Icon(
-                              Icons.school_outlined,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            title: Text(name),
-                            trailing: widget.onRemove == null
-                                ? null
-                                : IconButton(
-                                    tooltip: 'Remove $name',
-                                    icon: const Icon(
-                                      Icons.remove_circle_outline,
-                                    ),
-                                    onPressed: () =>
-                                        widget.onRemove!(_selected!, name),
-                                  ),
-                          ),
+                        for (final name in names) _program(name),
                       ],
                     ],
                   ),

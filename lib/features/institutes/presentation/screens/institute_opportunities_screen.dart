@@ -8,6 +8,7 @@ import '../../data/institute_opportunity_repository.dart';
 import '../../data/institute_repository.dart';
 import '../../data/institute_access.dart';
 import '../widgets/institute_opportunity_card.dart';
+import '../widgets/institute_program_editor.dart';
 
 class InstituteOpportunitiesScreen extends StatefulWidget {
   final String instituteId;
@@ -257,6 +258,10 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
     String kind, [
     InstituteOpportunity? existing,
   ]) async {
+    if (kind == 'course' || kind == 'admission') {
+      await showInstituteProgramEditor(context, institute, kind, existing: existing);
+      return;
+    }
     final title = TextEditingController(text: existing?.title ?? '');
     final year = TextEditingController(text: existing?.academicYear ?? DateTime.now().year.toString());
     final intake = TextEditingController(text: existing?.intake ?? '');

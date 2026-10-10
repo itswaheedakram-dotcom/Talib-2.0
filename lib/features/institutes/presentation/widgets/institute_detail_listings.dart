@@ -82,16 +82,7 @@ class _InstituteDetailListingsState extends State<InstituteDetailListings> {
   Widget build(BuildContext context) {
     final items = _repository.forInstitute(widget.institute.id);
     final courses = items.where((item) => item.kind == 'course').toList();
-    final admissions = items
-        .where(
-          (item) =>
-              item.kind == 'admission' &&
-              const {
-                'open',
-                'upcoming',
-              }.contains(item.status.trim().toLowerCase()),
-        )
-        .toList();
+    final admissions = items.where((item) => item.hasActiveAdmissions).toList();
     admissions.sort((a, b) {
       final priority = (a.status.trim().toLowerCase() == 'open' ? 0 : 1)
           .compareTo(b.status.trim().toLowerCase() == 'open' ? 0 : 1);
@@ -127,7 +118,7 @@ class _InstituteDetailListingsState extends State<InstituteDetailListings> {
           context,
           title: 'Programs / Courses',
           kind: 'course',
-          items: courses,
+          items: courses.where((item) => item.programKeys.isEmpty).toList(),
           emptyMessage: 'No programs or courses listed yet.',
           programs: widget.institute.programCategories,
         ),

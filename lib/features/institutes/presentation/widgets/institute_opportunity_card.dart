@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/institute_opportunity.dart';
+import '../../../models/institute_program_requirements.dart';
+import '../../data/institute_opportunity_repository.dart';
 import 'institute_detail_components.dart';
 
 /// Shared, expandable listing content for browsing and management.
@@ -8,28 +10,34 @@ class InstituteOpportunityCard extends StatelessWidget {
   final InstituteOpportunity item;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final bool showLinkedPrograms;
 
   const InstituteOpportunityCard({
     super.key,
     required this.item,
     this.onEdit,
     this.onDelete,
+    this.showLinkedPrograms = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final status = item.status.trim().toLowerCase();
+    final displayedStatus = item.displayStatus;
+    final status = displayedStatus.trim().toLowerCase();
     final statusIcon = switch (status) {
       'open' => Icons.check_circle_outline,
       'upcoming' => Icons.schedule_outlined,
       _ => Icons.info_outline,
     };
-    final hasMore = [
-      item.eligibility,
-      item.deliveryMode,
-      item.provider,
-      item.description,
-    ].any((value) => value.trim().isNotEmpty);
+    final hasMore =
+        [
+          item.eligibility,
+          item.deliveryMode,
+          item.provider,
+          item.description,
+        ].any((value) => value.trim().isNotEmpty) ||
+        item.requirements.values.any((value) => value.isNotEmpty) ||
+        item.programDetails.values.any((value) => value.isNotEmpty);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -77,8 +85,11 @@ class InstituteOpportunityCard extends StatelessWidget {
               spacing: 7,
               runSpacing: 7,
               children: [
-                if (item.status.trim().isNotEmpty)
-                  InstituteDetailBadge(label: item.status, icon: statusIcon),
+                if (item.kind != 'course' && displayedStatus.trim().isNotEmpty)
+                  InstituteDetailBadge(
+                    label: displayedStatus,
+                    icon: statusIcon,
+                  ),
                 if (item.academicYear.trim().isNotEmpty)
                   InstituteDetailBadge(
                     label: item.academicYear,
@@ -97,13 +108,18 @@ class InstituteOpportunityCard extends StatelessWidget {
                 children: [
                   if (item.openingDate.trim().isNotEmpty)
                     InstituteDetailBadge(
-                      label: 'Opens: ${item.openingDate}',
+                      label:
+                          '${item.programKeys.isNotEmpty && item.kind == 'admission' ? 'Common opening' : 'Opens'}: ${item.openingDate}',
                       icon: Icons.event_outlined,
                     ),
                   if (item.deadline.trim().isNotEmpty)
                     InstituteDetailBadge(
                       label:
-                          '${item.kind == 'scholarship' ? 'Scholarship deadline' : 'Deadline'}: ${item.deadline}',
+                          '${item.kind == 'scholarship'
+                              ? 'Scholarship deadline'
+                              : item.kind == 'admission' && item.programKeys.isNotEmpty
+                              ? 'Common deadline'
+                              : 'Deadline'}: ${item.deadline}',
                       icon: Icons.event_available_outlined,
                     ),
                 ],
@@ -123,6 +139,23 @@ class InstituteOpportunityCard extends StatelessWidget {
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 children: [
+                  for (final entry
+                      in InstituteProgramRequirements.metadataLabels.entries)
+                    if (item.programDetails[entry.key]?.trim().isNotEmpty ??
+                        false)
+                      _expandedLine(
+                        entry.value,
+                        item.programDetails[entry.key]!,
+                      ),
+                  for (final entry
+                      in InstituteProgramRequirements.labels.entries)
+                    if (item.requirements[entry.key]?.trim().isNotEmpty ??
+                        false)
+                      _expandedLine(entry.value, item.requirements[entry.key]!),
+                  if (item.requirements['minScore']?.isNotEmpty ?? false)
+                    const Text(
+                      'Meeting minimum eligibility does not guarantee admission.',
+                    ),
                   if (item.eligibility.trim().isNotEmpty)
                     _expandedLine('Eligibility', item.eligibility),
                   if (item.deliveryMode.trim().isNotEmpty)
@@ -142,6 +175,41 @@ class InstituteOpportunityCard extends StatelessWidget {
                     ),
                 ],
               ),
+            if (showLinkedPrograms &&
+                item.kind == 'admission' &&
+                item.programKeys.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'Programs in this intake',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              for (final key in item.programKeys)
+                Builder(
+                  builder: (_) {
+                    final resolved = item.forProgram(
+                      key,
+                      InstituteOpportunityRepository.instance.baselineFor(
+                        item.instituteId,
+                        key,
+                      ),
+                    );
+                    return ExpansionTile(
+                      key: PageStorageKey('admission-program:${item.id}:$key'),
+                      tilePadding: EdgeInsets.zero,
+                      title: Text(InstituteProgramRequirements.name(key)),
+                      subtitle: Text(
+                        '${InstituteProgramRequirements.group(key)} · ${resolved.statusAt()}${resolved.deadline.isEmpty ? '' : ' · Deadline: ${resolved.deadline}'}${item.programOverrides[key]?.isNotEmpty ?? false ? ' · Customized requirements' : ''}',
+                      ),
+                      children: [
+                        InstituteOpportunityCard(
+                          item: resolved,
+                          showLinkedPrograms: false,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+            ],
             if (item.applicationUrl.trim().isNotEmpty) ...[
               const SizedBox(height: 9),
               Align(
@@ -153,7 +221,9 @@ class InstituteOpportunityCard extends StatelessWidget {
                   ),
                   icon: const Icon(Icons.open_in_new),
                   label: Text(
-                    status == 'open'
+                    item.kind == 'course'
+                        ? 'Official program information'
+                        : status == 'open'
                         ? 'Apply on official website'
                         : 'Official announcement',
                   ),

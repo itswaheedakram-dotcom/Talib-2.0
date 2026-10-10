@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/services/demo_data_service.dart';
 import '../../models/institute_opportunity.dart';
+import '../../models/institute_program_requirements.dart';
 import 'institute_repository.dart';
 import 'institute_access.dart';
 
@@ -35,6 +36,12 @@ class InstituteOpportunityRepository extends ChangeNotifier {
           instituteId: 'university-31',
           kind: 'admission',
           title: 'Undergraduate Admissions (Demo)',
+          programKeys: [for (final name in ['BS Computer Science (Demo)', 'BS Education (Demo)', 'BS English (Demo)'])
+            InstituteProgramRequirements.key('Undergraduate', name)],
+          requirements: const {'qualification': 'Intermediate or equivalent (Demo)',
+            'scoreScale': 'Percentage', 'minScore': '50', 'documents': 'Academic certificates, identity document and photograph (Demo)'},
+          programOverrides: {InstituteProgramRequirements.key('Undergraduate', 'BS Computer Science (Demo)'):
+            {'subjects': 'Mathematics or institute-approved equivalent (Demo)'}},
           academicYear: DateTime.now().year.toString(),
           intake: 'Fall intake',
           status: 'Open',
@@ -49,6 +56,12 @@ class InstituteOpportunityRepository extends ChangeNotifier {
           instituteId: 'university-2',
           kind: 'admission',
           title: 'Undergraduate Admissions (Demo)',
+          programKeys: [for (final name in ['BS Computer Science (Demo)', 'BS Education (Demo)', 'BS English (Demo)'])
+            InstituteProgramRequirements.key('Undergraduate', name)],
+          requirements: const {'qualification': 'Intermediate or equivalent (Demo)',
+            'scoreScale': 'Percentage', 'minScore': '50', 'documents': 'Academic certificates, identity document and photograph (Demo)'},
+          programOverrides: {InstituteProgramRequirements.key('Undergraduate', 'BS Computer Science (Demo)'):
+            {'subjects': 'Mathematics or institute-approved equivalent (Demo)'}},
           academicYear: DateTime.now().year.toString(),
           intake: 'Current intake',
           status: 'Open',
@@ -72,6 +85,31 @@ class InstituteOpportunityRepository extends ChangeNotifier {
         ),
       ],
     });
+    // Permanent sample information is confined to built-in demo universities.
+    for (final id in ['university-2', 'university-31']) {
+      final groups = <String, List<String>>{
+        'Undergraduate': ['BS Computer Science (Demo)', 'BS Education (Demo)', 'BS English (Demo)'],
+        'Graduate': ['MS Education (Demo)', 'MS Computer Science (Demo)'],
+        'PhD': ['PhD Education (Demo)'],
+      };
+      for (final group in groups.entries) {
+        for (final name in group.value) {
+          final undergraduate = group.key == 'Undergraduate';
+          final doctoral = group.key == 'PhD';
+          _demoItems[id]!.add(InstituteOpportunity(
+            id: 'demo-program-$id-${InstituteProgramRequirements.key(group.key, name)}',
+            instituteId: id, kind: 'course', title: name,
+            programKeys: [InstituteProgramRequirements.key(group.key, name)],
+            programDetails: {'duration': undergraduate ? '4 years (Demo)' : doctoral ? '3–5 years (Demo)' : '2 years (Demo)', 'studyMode': 'On campus (Demo)'},
+            requirements: {'qualification': undergraduate ? 'Intermediate or equivalent (Demo)' : doctoral ? 'MS / MPhil or equivalent (Demo)' : 'Relevant 16-year degree (Demo)',
+              'scoreScale': undergraduate ? 'Percentage' : 'CGPA / 4',
+              'minScore': undergraduate ? '50' : doctoral ? '3.0' : '2.5',
+              if (doctoral) 'research': 'Research proposal and interview (Demo)'},
+            description: 'Demo sample criteria only. Not an official admission policy. Confirm actual requirements with the institute.',
+          ));
+        }
+      }
+    }
   }
   static final instance = InstituteOpportunityRepository._();
 
@@ -166,6 +204,7 @@ class InstituteOpportunityRepository extends ChangeNotifier {
     try {
       final institute = await InstituteRepository.instance.loadById(item.instituteId);
       if (institute == null || !InstituteAccess.canManage(institute)) throw StateError('Institute management access required.');
+      _validate(item, institute.programGroups);
       if (isDemoMode) {
         final created = InstituteOpportunity.fromMap(
           'demo-opportunity-${DateTime.now().microsecondsSinceEpoch}',
@@ -198,6 +237,35 @@ class InstituteOpportunityRepository extends ChangeNotifier {
       error = e.toString();
       notifyListeners();
       return null;
+    }
+  }
+
+  Map<String, String> baselineFor(String instituteId, String key) {
+    for (final item in forInstitute(instituteId)) {
+      if (item.kind == 'course' && item.programKeys.contains(key)) return item.requirements;
+    }
+    return const {};
+  }
+
+  void _validate(InstituteOpportunity item, Map<String, List<String>> groups) {
+    final keys = {for (final entry in groups.entries) for (final name in entry.value)
+      InstituteProgramRequirements.key(entry.key, name)};
+    if (item.programKeys.any((key) => !keys.contains(key))) throw StateError('Selected program is no longer offered.');
+    if (item.kind == 'course' && item.programKeys.isNotEmpty) {
+      if (item.programKeys.length != 1) throw StateError('Program details must link exactly one program.');
+      if (forInstitute(item.instituteId).any((other) => other.kind == 'course' && other.id != item.id &&
+          other.programKeys.any(item.programKeys.contains))) throw StateError('This program already has details. Edit the existing program.');
+    }
+    if (item.programOverrides.keys.any((key) => !item.programKeys.contains(key))) throw StateError('Overrides must belong to selected programs.');
+    final commonError = InstituteProgramRequirements.validate(item.requirements);
+    if (commonError != null) throw StateError(commonError);
+    for (final key in item.programKeys.isEmpty ? [''] : item.programKeys) {
+      final resolved = key.isEmpty ? item : item.forProgram(key, baselineFor(item.instituteId, key));
+      final error = InstituteProgramRequirements.validate(resolved.requirements);
+      if (error != null) throw StateError(error);
+      final opening = DateTime.tryParse(resolved.openingDate);
+      final deadline = DateTime.tryParse(resolved.deadline);
+      if (opening != null && deadline != null && deadline.isBefore(opening)) throw StateError('Deadline cannot precede opening date.');
     }
   }
 
@@ -235,6 +303,7 @@ class InstituteOpportunityRepository extends ChangeNotifier {
     try {
       final institute = await InstituteRepository.instance.loadById(item.instituteId);
       if (institute == null || !InstituteAccess.canManage(institute)) throw StateError('Institute management access required.');
+      _validate(item, institute.programGroups);
       if (isDemoMode) {
         final items = _demoItems[item.instituteId] ?? [];
         final index = items.indexWhere((entry) => entry.id == item.id);
