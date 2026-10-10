@@ -90,7 +90,7 @@ class UserProfileRepository extends ChangeNotifier {
     if (isDemo(profile.uid)) {
       if (temporaryProfiles.any((p) => p.id != profile.uid && demoProfile(p.id).username == username)) throw UsernameTaken(username);
       _demo[profile.uid] = {...?_demo[profile.uid], ...profile.editableFields, ProfileFields.username: username};
-      ActiveProfileController.instance.updateProfile(name: profile.name, city: profile.city);
+      ActiveProfileController.instance.updateProfile(name: profile.name, city: profile.city, level: ActiveProfileController.instance.profileById(profile.uid).level);
       notifyListeners(); return;
     }
     // Only personal fields are editable here. University/course use the affiliation transaction.
