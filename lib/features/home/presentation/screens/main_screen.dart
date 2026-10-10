@@ -68,13 +68,13 @@ class _MainScreenState extends State<MainScreen> {
         ];
         final safeIndex = index < pages.length ? index : 0;
         return Scaffold(
-          backgroundColor: AppColors.legacyCream,
-          drawer: const TalibDrawer(),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          drawer: TalibDrawer(currentRoute: ['/', '/search', '/community', '/messages', '/admin'][safeIndex]),
           body: IndexedStack(index: safeIndex, children: pages),
           bottomNavigationBar: SafeArea(
             minimum: const EdgeInsets.fromLTRB(8, 0, 8, 10),
             child: Material(
-              color: AppColors.white,
+              color: Theme.of(context).colorScheme.surface,
               elevation: 10,
               borderRadius: BorderRadius.circular(22),
               clipBehavior: Clip.antiAlias,
@@ -84,10 +84,10 @@ class _MainScreenState extends State<MainScreen> {
                   currentIndex: safeIndex,
                   onTap: (value) => setState(() => index = value),
                   type: BottomNavigationBarType.fixed,
-                  backgroundColor: AppColors.white,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
                   elevation: 0,
-                  selectedItemColor: AppColors.homeGreen,
-                  unselectedItemColor: AppColors.mutedText,
+                  selectedItemColor: Theme.of(context).colorScheme.primary,
+                  unselectedItemColor: Theme.of(context).colorScheme.onSurface.withOpacity(.65),
                   showSelectedLabels: false,
                   showUnselectedLabels: false,
                   iconSize: 25,

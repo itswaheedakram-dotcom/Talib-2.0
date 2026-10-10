@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 /// Single source of truth for the Talib reference palette.
 /// Keep these values unchanged; screens should consume these semantic colors.
 abstract final class AppColors {
+  static const darkBackground = Color(0xFF10221C);
+  static const darkSurface = Color(0xFF183129);
+  static const darkInput = Color(0xFF214238);
+  static const darkDivider = Color(0xFF315348);
   static const primaryGreen = Color(0xFF00A66A);
   static const darkGreen = Color(0xFF00543D);
   static const drawerGreen = Color(0xFF00563F);
@@ -57,14 +61,15 @@ ThemeData buildDarkTheme() {
     useMaterial3: false,
     primarySwatch: AppColors.swatch,
     primaryColor: AppColors.brightGreen,
-    scaffoldBackgroundColor: const Color(0xFF10221C),
+    scaffoldBackgroundColor: AppColors.darkBackground,
+    drawerTheme: const DrawerThemeData(backgroundColor: AppColors.darkSurface),
     fontFamily: 'Roboto',
     appBarTheme: const AppBarTheme(backgroundColor: AppColors.darkGreen, foregroundColor: AppColors.white, elevation: 0, iconTheme: IconThemeData(color: AppColors.white)),
-    colorScheme: const ColorScheme.dark(primary: AppColors.brightGreen, secondary: AppColors.primaryGreen, surface: Color(0xFF183129), background: Color(0xFF10221C), onPrimary: AppColors.darkGreen, onSecondary: AppColors.white, onSurface: AppColors.white),
-    cardTheme: CardThemeData(elevation: 0, margin: const EdgeInsets.all(6), color: Color(0xFF183129), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-    inputDecorationTheme: const InputDecorationTheme(filled: true, fillColor: Color(0xFF214238), hintStyle: TextStyle(color: AppColors.mutedText)),
-    bottomNavigationBarTheme: const BottomNavigationBarThemeData(backgroundColor: Color(0xFF183129), selectedItemColor: AppColors.brightGreen, unselectedItemColor: AppColors.mutedText, type: BottomNavigationBarType.fixed, elevation: 8),
-    dividerTheme: const DividerThemeData(color: Color(0xFF315348), thickness: 1),
+    colorScheme: const ColorScheme.dark(primary: AppColors.brightGreen, secondary: AppColors.primaryGreen, surface: AppColors.darkSurface, background: AppColors.darkBackground, onPrimary: AppColors.darkGreen, onSecondary: AppColors.white, onSurface: AppColors.white),
+    cardTheme: CardThemeData(elevation: 0, margin: const EdgeInsets.all(6), color: AppColors.darkSurface, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+    inputDecorationTheme: const InputDecorationTheme(filled: true, fillColor: AppColors.darkInput, hintStyle: TextStyle(color: AppColors.mutedText)),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(backgroundColor: AppColors.darkSurface, selectedItemColor: AppColors.brightGreen, unselectedItemColor: AppColors.mutedText, type: BottomNavigationBarType.fixed, elevation: 8),
+    dividerTheme: const DividerThemeData(color: AppColors.darkDivider, thickness: 1),
     textTheme: const TextTheme(bodyLarge: TextStyle(color: AppColors.white), bodyMedium: TextStyle(color: AppColors.white), titleLarge: TextStyle(color: AppColors.white, fontWeight: FontWeight.w700), titleMedium: TextStyle(color: AppColors.white, fontWeight: FontWeight.w600)),
   );
 }
@@ -75,6 +80,7 @@ ThemeData buildTheme() {
     primarySwatch: AppColors.swatch,
     primaryColor: AppColors.primaryGreen,
     scaffoldBackgroundColor: AppColors.cream,
+    drawerTheme: const DrawerThemeData(backgroundColor: AppColors.drawerGreen),
     fontFamily: 'Roboto',
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.primaryGreen,
