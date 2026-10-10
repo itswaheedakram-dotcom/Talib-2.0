@@ -248,6 +248,9 @@ class DemoDataService extends ChangeNotifier {
     String uid,
     String id, {
     String instituteName = '',
+    String designation = '',
+    String method = '',
+    String details = '',
   }) {
     final key = '$uid|$id';
     final existing = _instituteClaimRecords[key];
@@ -259,6 +262,9 @@ class DemoDataService extends ChangeNotifier {
       'instituteName': instituteName,
       'representativeId': uid,
       'representativeName': _demoName(uid),
+      'designation': designation,
+      'verificationMethod': method,
+      'verificationDetails': details,
       'status': 'pending',
       'createdAt': DateTime.now(),
     };
@@ -280,6 +286,10 @@ class DemoDataService extends ChangeNotifier {
     claim['reviewedAt'] = DateTime.now();
     _emit();
   }
+
+  List<Map<String, dynamic>> instituteClaimsFor(String uid) => _instituteClaimRecords.values
+      .where((claim) => claim['representativeId'] == uid)
+      .map((claim) => Map<String, dynamic>.unmodifiable(claim)).toList();
 
   String _demoName(String uid) => switch (uid) {
     'demo-user-1' => 'Ayesha Khan',

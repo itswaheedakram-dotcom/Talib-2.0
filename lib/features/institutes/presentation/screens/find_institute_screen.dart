@@ -1,3 +1,5 @@
+import '../../data/institute_score.dart';
+import '../widgets/institute_score_field.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/institute_repository.dart';
@@ -16,6 +18,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
   final _scoreController = TextEditingController();
   final _catalog = InstituteCatalog.instance;
 
+  String _scoreScale = 'percentage';
   String _education = 'All';
   String _province = 'All provinces';
   String _city = 'All cities';
@@ -114,7 +117,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
           (_admission == 'All admission statuses' || i.admissionStatus == _admission) &&
           (_entryTest == 'Any entry test' || (_entryTest == 'Required' ? i.entryTestRequired : !i.entryTestRequired)) &&
           (_feeRange == 'Any fee range' || i.feeRange == _feeRange) &&
-          (score == null || score >= i.minScore);
+          (_scoreController.text.trim().isEmpty || (score != null && InstituteScore.eligible(score: score, scale: _scoreScale, minimum: i.minScore, minimumScale: i.scoreScale)));
     }).toList();
   }
 
@@ -132,7 +135,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
     if (_admission != 'All admission statuses') _admission,
     if (_entryTest != 'Any entry test') 'Entry test: $_entryTest',
     if (_feeRange != 'Any fee range') _feeRange,
-    if (_scoreController.text.trim().isNotEmpty) 'Score ≥ ${_scoreController.text.trim()}',
+    if (_scoreController.text.trim().isNotEmpty) 'Score ≥ ${InstituteScore.display(double.tryParse(_scoreController.text.trim()) ?? 0, _scoreScale)}',
   ];
 
   void _reset() {
@@ -149,6 +152,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
       _entryTest = 'Any entry test';
       _feeRange = 'Any fee range';
       _scoreController.clear();
+      _scoreScale = 'percentage';
     });
   }
 
@@ -214,7 +218,8 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
     var admission = _admission;
     var entryTest = _entryTest;
     var feeRange = _feeRange;
-    var score = _scoreController.text;
+    final scoreController = TextEditingController(text: _scoreController.text);
+    var scoreScale = _scoreScale;
 
     showModalBottomSheet<void>(
       context: context,
@@ -265,8 +270,8 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                     sector = 'All sectors'; instituteId = 'All institutes'; program = 'All programs';
                     mode = 'All modes'; campus = 'All campuses';
                     admission = 'All admission statuses'; entryTest = 'Any entry test';
-                    feeRange = 'Any fee range'; score = '';
-                    _scoreController.clear(); sheetSet(() {});
+                    feeRange = 'Any fee range'; scoreScale = 'percentage';
+                    scoreController.clear(); sheetSet(() {});
                   }, child: const Text('Clear all')),
                 ]),
                 const SizedBox(height: 8),
@@ -306,29 +311,19 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
                 _Group('Admission Status', ['All admission statuses', ...InstituteCatalog.admissionStatuses], admission, (v) => sheetSet(() => admission = v)),
                 _Group('Entry Test', const ['Any entry test', 'Required', 'Not required'], entryTest, (v) => sheetSet(() => entryTest = v)),
                 _Group('Fee Range', feeOptions, feeRange, (v) => sheetSet(() => feeRange = v)),
-                const Text('Your Percentage / CGPA', style: TextStyle(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 7),
-                TextField(
-                  controller: _scoreController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    hintText: 'e.g. 72 or 3.2',
-                    labelText: 'Minimum score you have',
-                    prefixIcon: Icon(Icons.percent),
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (v) => sheetSet(() => score = v),
-                ),
+                InstituteScoreField(controller: scoreController, scale: scoreScale, label: 'Your score', onScaleChanged: (value) => sheetSet(() => scoreScale = value)),
                 const SizedBox(height: 18),
                 Row(children: [
                   Expanded(child: OutlinedButton(onPressed: () { _reset(); Navigator.pop(sheetContext); }, child: const Text('Clear all'))),
                   const SizedBox(width: 12),
                   Expanded(child: FilledButton(onPressed: () {
+                    final error = InstituteScore.validate(scoreController.text, scoreScale);
+                    if (error != null) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error))); return; }
                     setState(() {
                       _education = education; _province = province; _city = city;
                       _sector = sector; _instituteId = instituteId; _program = program; _submissionMode = mode;
                       _campus = campus; _admission = admission; _entryTest = entryTest;
-                      _feeRange = feeRange; _scoreController.text = score;
+                      _feeRange = feeRange; _scoreController.text = scoreController.text; _scoreScale = scoreScale;
                     });
                     Navigator.pop(sheetContext);
                   }, child: const Text('Apply filters'))),
@@ -339,7 +334,7 @@ class _FindInstituteScreenState extends State<FindInstituteScreen> {
           );
         },
       ),
-    );
+    ).whenComplete(scoreController.dispose);
   }
 
   @override
@@ -517,7 +512,7 @@ class _AdmissionSummary extends StatelessWidget {
       'Admission status': institute.admissionStatus,
       if (institute.admissionDeadline.trim().isNotEmpty) 'Deadline': institute.admissionDeadline,
       if (institute.feeRange.trim().isNotEmpty) 'Fee range': institute.feeRange,
-      'Minimum score': institute.minScore > 0 ? institute.minScore.toString() : 'Not specified',
+      'Minimum score': institute.minScore > 0 ? InstituteScore.display(institute.minScore, institute.scoreScale) : 'Not specified',
       'Entry test': institute.entryTestRequired ? 'Required' : 'Not specified',
       'Submission': institute.submissionMode,
       if (institute.eligibility.trim().isNotEmpty) 'Eligibility': institute.eligibility,

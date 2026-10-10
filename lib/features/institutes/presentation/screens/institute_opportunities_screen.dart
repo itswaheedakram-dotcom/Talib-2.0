@@ -1,14 +1,13 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme.dart';
-import '../../../../core/services/active_profile_controller.dart';
 import '../../../models/institute.dart';
 import '../../../models/institute_opportunity.dart';
 import '../../data/institute_opportunity_repository.dart';
 import '../../data/institute_repository.dart';
+import '../../data/institute_access.dart';
 
 class InstituteOpportunitiesScreen extends StatefulWidget {
   final String instituteId;
@@ -25,14 +24,7 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
 
   Institute? get _institute => InstituteRepository.instance.byId(widget.instituteId);
 
-  bool get _canManage {
-    final institute = _institute;
-    if (institute == null) return false;
-    if (ActiveProfileController.instance.isDemo) return true;
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    return uid != null && uid.isNotEmpty &&
-        (uid == institute.ownerId || uid == institute.representativeId);
-  }
+  bool get _canManage => _institute != null && InstituteAccess.canManage(_institute!);
 
   @override
   void initState() {
@@ -96,7 +88,7 @@ class _InstituteOpportunitiesScreenState extends State<InstituteOpportunitiesScr
               child: Text(institute.name,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: AppColors.darkGreen,
+                    color: Theme.of(context).colorScheme.onSurface,
                   )),
             ),
           ),

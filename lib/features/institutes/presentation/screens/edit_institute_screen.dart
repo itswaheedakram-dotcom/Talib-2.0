@@ -1,6 +1,8 @@
+import '../widgets/institute_score_field.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/institute_repository.dart';
+import '../../data/institute_access.dart';
 import '../../../models/institute.dart';
 import '../../../../app/theme.dart';
 import '../../data/institute_catalog.dart';
@@ -20,6 +22,7 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
       _nextProgram=TextEditingController(), _deadline=TextEditingController(), _fee=TextEditingController(),
       _contact=TextEditingController(), _programs=TextEditingController(), _facilities=TextEditingController(),
       _imageUrl=TextEditingController();
+  String _scoreScale='percentage';
   String _sector='Private', _submission='Online', _admissionStatus='Open';
   bool _entryTest=false, _saving=false;
 
@@ -27,6 +30,7 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
     super.initState();
     final i=InstituteRepository.instance.byId(widget.id);
     if(i==null) return;
+    _scoreScale=i.scoreScale;
     _name.text=i.name; _campus.text=i.campus; _subcategory.text=i.subcategory; _country.text=i.country; _province.text=i.province; _district.text=i.district; _city.text=i.city; _area.text=i.area; _board.text=i.board; _town.text=i.town;
     _address.text=i.address; _description.text=i.description; _website.text=i.website; _applicationUrl.text=i.applicationUrl;
     _eligibility.text=i.eligibility; _minScore.text=i.minScore == 0 ? '' : i.minScore.toString();
@@ -53,7 +57,7 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
       address:_address.text.trim(), description:_description.text.trim(), website:_website.text.trim(), applicationUrl:_applicationUrl.text.trim(),
       submissionMode:_submission, eligibility:_eligibility.text.trim(),
       programs:_split(_programs.text), contact:_contact.text.trim(), status:old.status,
-      minScore:double.tryParse(_minScore.text.trim())??0, nextProgram:_nextProgram.text.trim(),
+      minScore:double.tryParse(_minScore.text.trim())??0, scoreScale:_scoreScale, nextProgram:_nextProgram.text.trim(),
       admissionStatus:_admissionStatus, admissionDeadline:_deadline.text.trim(), feeRange:_fee.text.trim(),
       entryTestRequired:_entryTest, imageUrl:_imageUrl.text.trim(), facilities:_split(_facilities.text),
     );
@@ -74,6 +78,7 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
     const green=AppColors.primaryGreen, dark=AppColors.darkGreen;
     final i=InstituteRepository.instance.byId(widget.id);
     if(i==null) return const Scaffold(body:Center(child:Text('Institute not found')));
+    if(!InstituteAccess.canManage(i)) return const Scaffold(body:Center(child:Text('Institute management access required.')));
     return Scaffold(
       appBar:AppBar(leading:IconButton(icon:const Icon(Icons.arrow_back_ios_new,size:18),onPressed:()=>context.pop()),title:const Text('Edit Institute')),
       body:Form(key:_formKey,child:ListView(padding:const EdgeInsets.fromLTRB(16,8,16,30),children:[
@@ -100,7 +105,7 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
         _field(_programs,'Programs (comma separated)',Icons.menu_book_outlined,maxLines:2),
         _field(_nextProgram,'Next Education Program',Icons.school_outlined),
         _field(_eligibility,'Eligibility Criteria',Icons.rule_outlined,maxLines:4),
-        _field(_minScore,'Minimum Percentage / CGPA',Icons.percent,keyboard:const TextInputType.numberWithOptions(decimal:true)),
+        InstituteScoreField(controller:_minScore,scale:_scoreScale,onScaleChanged:(value)=>setState(()=>_scoreScale=value)),
         const SizedBox(height:8),
         Text('Admissions',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w700,color:dark)),
         const SizedBox(height:12),
@@ -114,7 +119,7 @@ class _EditInstituteScreenState extends State<EditInstituteScreen> {
         const SizedBox(height:12),
         _field(_facilities,'Facilities (comma separated)',Icons.business_outlined,maxLines:3),
         const SizedBox(height:18),
-        SizedBox(height:50,child:FilledButton(onPressed:_saving?null:_save,style:FilledButton.styleFrom(backgroundColor:green),child:_saving?const SizedBox(height:22,width:22,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):const Text('Save Changes'))),
+        SizedBox(height:50,child:FilledButton(onPressed:_saving?null:_save,style:FilledButton.styleFrom(backgroundColor:green),child:_saving?const SizedBox(height:22,width:22,child:CircularProgressIndicator(strokeWidth:2,color:AppColors.white)):const Text('Save Changes'))),
       ])),
     );
   }

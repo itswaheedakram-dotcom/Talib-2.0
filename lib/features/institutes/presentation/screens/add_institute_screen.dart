@@ -1,3 +1,4 @@
+import '../widgets/institute_score_field.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -52,6 +53,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
   final _catalog = InstituteCatalog.instance;
   final _locations = LocationCatalog.instance;
   final _repository = InstituteRepository.instance;
+  String _scoreScale = 'percentage';
   String _type = '';
   String _subcategory = '';
   String _sector = 'Private';
@@ -199,7 +201,8 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
       submissionMode: _submission,
       eligibility: _eligibility.text.trim(),
       programs: _split(_programs.text),
-      minScore: double.tryParse(_minScore.text.trim()) ?? 0,
+      minScore: ( _catalog.byId(_type)?.showMinimumScore ?? true) ? double.tryParse(_minScore.text.trim()) ?? 0 : 0,
+      scoreScale: _scoreScale,
       nextProgram: _nextProgram.text.trim(),
       admissionStatus: _admissionStatus,
       admissionDeadline: _deadline.text.trim(),
@@ -416,8 +419,7 @@ class _AddInstituteScreenState extends State<AddInstituteScreen> {
             _field(_nextProgram, selectedType?.featuredProgramLabel ?? 'Featured / next program', Icons.school_outlined),
             _field(_eligibility, selectedType?.eligibilityLabel ?? 'Eligibility criteria', Icons.rule_outlined, maxLines: 3),
             if (selectedType?.showMinimumScore ?? true)
-              _field(_minScore, 'Minimum percentage / CGPA (optional)', Icons.percent,
-                  keyboard: const TextInputType.numberWithOptions(decimal: true)),
+              InstituteScoreField(controller: _minScore, scale: _scoreScale, onScaleChanged: (value) => setState(() => _scoreScale = value)),
             const SizedBox(height: 8),
             Text('Admissions', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 10),

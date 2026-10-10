@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../core/services/firebase_service.dart';
-import '../../../core/services/active_profile_controller.dart';
 import '../../models/institute.dart';
+import 'institute_access.dart';
+import 'institute_score.dart';
 
 class InstituteRepository extends ChangeNotifier {
   InstituteRepository._() : _demoItems = _seedItems.map(_withDemoDetails).toList();
@@ -105,6 +105,7 @@ class InstituteRepository extends ChangeNotifier {
       contact: item.contact,
       status: item.status,
       minScore: item.minScore,
+      scoreScale: item.scoreScale,
       nextProgram: item.nextProgram,
       admissionStatus: item.admissionStatus,
       admissionDeadline: item.admissionDeadline,
@@ -123,13 +124,10 @@ class InstituteRepository extends ChangeNotifier {
   /// Demo and production records are kept in separate collections in memory.
   /// Only approved institutes are exposed to public browsing screens.
   bool get isDemoMode =>
-      ActiveProfileController.instance.isDemo || !FirebaseService.initialized;
+      InstituteAccess.isDemo;
 
   List<Institute> get items {
     final records = <String, Institute>{
-      if (!isDemoMode)
-        for (final rawItem in _seedItems)
-          if (rawItem.status.toLowerCase() == 'approved') rawItem.id: _withDemoDetails(rawItem),
       for (final item in (isDemoMode ? _demoItems : _realItems))
         if (item.status.toLowerCase() == 'approved') item.id: item,
     };
@@ -145,12 +143,46 @@ class InstituteRepository extends ChangeNotifier {
     for (final item in source) {
       if (item.id == id) return item;
     }
-    if (!isDemoMode) {
-      for (final item in _seedItems) {
-        if (item.id == id) return _withDemoDetails(item);
-      }
-    }
     return null;
+  }
+
+  Future<Institute?> loadById(String id) async {
+    if (isDemoMode) return byId(id);
+    final demoAtStart = isDemoMode;
+    final actorAtStart = InstituteAccess.uid;
+    error = null;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('institutes').doc(id).get();
+      if (demoAtStart != isDemoMode || actorAtStart != InstituteAccess.uid) return null;
+      if (!doc.exists) {
+        _realItems.removeWhere((item) => item.id == id);
+        notifyListeners();
+        return null;
+      }
+      final data = Map<String, dynamic>.from(doc.data()!);
+      if (data['status'] == 'verified') data['status'] = 'approved';
+      final item = Institute.fromMap(id, data);
+      _realItems.removeWhere((record) => record.id == id);
+      _realItems.add(item);
+      notifyListeners();
+      return item;
+    } catch (e) {
+      _realItems.removeWhere((item) => item.id == id);
+      error = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
+  void applyDemoOwnership(String instituteId, String ownerId) {
+    if (!isDemoMode || !InstituteAccess.canReviewClaims) throw StateError('Claim review access required.');
+    final index = _demoItems.indexWhere((item) => item.id == instituteId);
+    if (index < 0) throw StateError('Institute not found.');
+    final current = _demoItems[index];
+    _demoItems[index] = Institute.fromMap(instituteId, {
+      ...current.toMap(), 'ownerId': ownerId, 'representativeId': ownerId,
+    });
+    notifyListeners();
   }
 
   Future<void> load() async {
@@ -204,6 +236,11 @@ class InstituteRepository extends ChangeNotifier {
   Future<bool> update(Institute institute) async {
     error = null;
     try {
+      final current = byId(institute.id);
+      if (current == null || !InstituteAccess.canManage(current)) throw StateError('Only the owner or an authorized admin can edit this institute.');
+      final scoreError = InstituteScore.validate(institute.minScore == 0 ? '' : institute.minScore.toString(), institute.scoreScale);
+      if (scoreError != null && !(institute.scoreScale == 'unspecified' && institute.scoreScale == current.scoreScale && institute.minScore == current.minScore)) throw ArgumentError(scoreError);
+      if (institute.ownerId != current.ownerId || institute.representativeId != current.representativeId || institute.createdBy != current.createdBy || institute.status != current.status) throw StateError('Ownership and moderation fields cannot be edited here.');
       if (isDemoMode) {
         final index = _demoItems.indexWhere((item) => item.id == institute.id);
         if (index < 0) {
@@ -216,7 +253,11 @@ class InstituteRepository extends ChangeNotifier {
       }
 
       // Moderation status is deliberately not editable through the normal form.
-      final data = institute.toMap()..remove('status');
+      final data = institute.toMap()
+        ..remove('status')
+        ..remove('ownerId')
+        ..remove('representativeId')
+        ..remove('createdBy');
       await FirebaseFirestore.instance
           .collection('institutes')
           .doc(institute.id)
@@ -235,6 +276,9 @@ class InstituteRepository extends ChangeNotifier {
   Future<Institute?> add(Institute institute) async {
     error = null;
     try {
+      if (InstituteAccess.uid == null) throw StateError('Activate a demo profile or sign in before submitting.');
+      final scoreError = InstituteScore.validate(institute.minScore == 0 ? '' : institute.minScore.toString(), institute.scoreScale);
+      if (scoreError != null) throw ArgumentError(scoreError);
       final pending = Institute.fromMap(
         institute.id.isEmpty
             ? 'demo-institute-${DateTime.now().millisecondsSinceEpoch}'
@@ -277,6 +321,7 @@ class InstituteRepository extends ChangeNotifier {
       return false;
     }
     try {
+      if (!InstituteAccess.canModerate) throw StateError('Institute moderation access required.');
       if (isDemoMode) {
         final index = _demoItems.indexWhere((item) => item.id == instituteId);
         if (index < 0) return false;

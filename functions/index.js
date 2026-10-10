@@ -5,6 +5,37 @@ admin.initializeApp();
 const db = admin.firestore();
 const messaging = admin.messaging();
 
+// A trusted backend can read private bookmarks; client institute screens cannot.
+// Deterministic notification IDs make repeated trigger delivery safe.
+exports.onInstituteOpportunityCreated = onDocumentCreated('institutes/{instituteId}/opportunities/{opportunityId}', async (event) => {
+  const item = event.data?.data();
+  if (!item || item.published !== true) return;
+  const { instituteId, opportunityId } = event.params;
+  const institute = await db.collection('institutes').doc(instituteId).get();
+  if (!institute.exists || !['approved', 'verified'].includes(institute.data().status)) return;
+  const kind = item.kind === 'scholarship' ? 'scholarship' : item.kind === 'course' ? 'program / course' : 'admission update';
+  const text = `New ${kind}: ${item.title} at ${institute.data().name}`;
+  const query = db.collectionGroup('instituteBookmarks').where('instituteId', '==', instituteId).limit(400);
+  let cursor;
+  while (true) {
+    const page = await (cursor ? query.startAfter(cursor) : query).get();
+    if (page.empty) break;
+    const writes = [];
+    for (const bookmark of page.docs) {
+      const user = bookmark.ref.parent.parent;
+      if (!user) continue;
+      writes.push(user.collection('notifications').doc(`institute-update-${instituteId}-${opportunityId}`).create({
+        type: 'institute_update', text, instituteId, opportunityId,
+        fromId: item.createdBy || 'talib-institutes',
+        createdAt: event.data.createTime, read: false,
+      }).catch((error) => { if (error.code !== 6) throw error; }));
+    }
+    await Promise.all(writes);
+    cursor = page.docs[page.docs.length - 1];
+    if (page.size < 400) break;
+  }
+});
+
 async function sendPush(tokenDocs, title, body, data) {
   const tokens = [];
   for (const doc of tokenDocs) {

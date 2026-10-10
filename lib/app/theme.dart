@@ -10,6 +10,7 @@ abstract final class AppColors {
   static const cream = Color(0xFFFAF9F2);
   static const legacyCream = Color(0xFFF8F8F2);
   static const softGreen = Color(0xFFEAF8F2);
+  static const statusWarning = Color(0xFFFF9800);
   static const mutedText = Color(0xFF8B8F8C);
   static const homeGreen = Color(0xFF00A878);
   static const homeAccent = Color(0xFF22F1A5);

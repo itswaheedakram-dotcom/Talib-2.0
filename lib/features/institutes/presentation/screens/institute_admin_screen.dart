@@ -1,8 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
+import '../../data/institute_access.dart';
+import '../../data/institute_claim_repository.dart';
+import '../../data/institute_repository.dart';
+import '../../../models/institute.dart';
 
 class InstituteAdminScreen extends StatefulWidget {
   final String claimId;
@@ -56,40 +58,31 @@ class _InstituteAdminScreenState extends State<InstituteAdminScreen> {
     }
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw StateError('Please sign in with the approved representative account.');
-      final claimRef = FirebaseFirestore.instance.collection('instituteClaims').doc(widget.claimId);
-      final claim = await claimRef.get();
-      final data = claim.data() ?? <String, dynamic>{};
-      if (!claim.exists ||
-          data['representativeId'] != user.uid ||
-          data['status'] != 'approved') {
-        throw StateError('This approved institute claim is not assigned to your account.');
+      final data = await InstituteClaimRepository.instance.get(widget.claimId);
+      if (data == null || data['representativeId'] != InstituteAccess.uid || data['status'] != 'approved') {
+        throw StateError('This approved claim is not assigned to your account.');
       }
       final instituteId = (data['instituteId'] ?? '').toString();
-      if (instituteId.isEmpty) throw StateError('The claim is missing its institute ID.');
-      final instituteRef = FirebaseFirestore.instance.collection('institutes').doc(instituteId);
+      final institute = await InstituteRepository.instance.loadById(instituteId);
+      if (!mounted) return;
+      if (institute == null || !InstituteAccess.canManage(institute)) throw StateError('Institute management access required.');
 
       if (save) {
-        await instituteRef.update({
-          'name': _name.text.trim(),
-          'address': _address.text.trim(),
-          'contact': _contact.text.trim(),
-          'description': _description.text.trim(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
+        final ok = await InstituteRepository.instance.update(Institute.fromMap(institute.id, {
+          ...institute.toMap(), 'name': _name.text.trim(), 'address': _address.text.trim(),
+          'contact': _contact.text.trim(), 'description': _description.text.trim(),
+        }));
+        if (!ok) throw StateError(InstituteRepository.instance.error ?? 'Could not save institute.');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Institute profile updated.')),
           );
         }
       } else {
-        final doc = await instituteRef.get();
-        final data = doc.data() ?? <String, dynamic>{};
-        _name.text = (data['name'] ?? claim.data()?['instituteName'] ?? '').toString();
-        _address.text = (data['address'] ?? '').toString();
-        _contact.text = (data['contact'] ?? data['phone'] ?? '').toString();
-        _description.text = (data['description'] ?? '').toString();
+        _name.text = institute.name;
+        _address.text = institute.address;
+        _contact.text = institute.contact;
+        _description.text = institute.description;
       }
     } catch (error) {
       if (mounted) {

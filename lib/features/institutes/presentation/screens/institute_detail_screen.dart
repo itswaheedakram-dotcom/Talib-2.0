@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme.dart';
@@ -8,6 +7,9 @@ import '../../data/institute_catalog.dart';
 import '../widgets/institute_image_preview.dart';
 import '../../../models/institute.dart';
 import '../../data/institute_repository.dart';
+import '../../data/institute_access.dart';
+import '../../data/institute_claim_repository.dart';
+import '../../data/institute_score.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/database_service.dart';
@@ -31,7 +33,7 @@ class InstituteDetailScreen extends StatelessWidget {
         leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), onPressed: () => context.pop()),
         title: Text(typeLabel),
         actions: [
-          if (ActiveProfileController.instance.isDemo || (FirebaseService.initialized && FirebaseAuth.instance.currentUser?.uid == institute.ownerId && institute.ownerId.isNotEmpty))
+          if (InstituteAccess.canManage(institute))
             IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () => context.push('/institute/${institute.id}/edit')),
           const SizedBox(width: 8),
         ],
@@ -48,12 +50,12 @@ class InstituteDetailScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Row(children: [
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(institute.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: darkGreen)),
+              Text(institute.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 4),
               Row(children: [
                 const Icon(Icons.location_on_outlined, size: 17, color: green),
                 const SizedBox(width: 3),
-                Expanded(child: Text(institute.address, style: const TextStyle(color: Colors.black54))),
+                Expanded(child: Text(institute.address, style: const TextStyle(color: AppColors.mutedText))),
               ]),
             ])),
             IconButton(
@@ -126,8 +128,8 @@ class InstituteDetailScreen extends StatelessWidget {
                 const Expanded(child: Text('Admissions', style: TextStyle(fontWeight: FontWeight.w700, color: darkGreen))),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(color: institute.admissionStatus.toLowerCase() == 'open' ? green : Colors.orange, borderRadius: BorderRadius.circular(14)),
-                  child: Text(institute.admissionStatus.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                  decoration: BoxDecoration(color: institute.admissionStatus.toLowerCase() == 'open' ? green : AppColors.statusWarning, borderRadius: BorderRadius.circular(14)),
+                  child: Text(institute.admissionStatus.toUpperCase(), style: const TextStyle(color: AppColors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                 ),
               ]),
             ),
@@ -180,7 +182,7 @@ class InstituteDetailScreen extends StatelessWidget {
               if (institute.feeRange.isNotEmpty) _admissionBadge('Fee', institute.feeRange),
               _admissionBadge('Entry Test', institute.entryTestRequired ? 'Required' : 'Not required'),
               _admissionBadge('Apply', institute.submissionMode),
-              if (institute.minScore > 0) _admissionBadge('Minimum Score', institute.minScore.toString()),
+              if (institute.minScore > 0) _admissionBadge('Minimum Score', InstituteScore.display(institute.minScore, institute.scoreScale)),
               if (institute.eligibility.isNotEmpty) _admissionBadge('Eligibility', institute.eligibility),
             ]),
             const SizedBox(height: 12),
@@ -235,24 +237,23 @@ class InstituteDetailScreen extends StatelessWidget {
               ? const Text('No facilities added yet.')
               : Column(children: institute.facilities.map((f) => _Facility(Icons.check_circle_outline, f)).toList())),
           const SizedBox(height: 10),
-          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: FirebaseService.initialized && !ActiveProfileController.instance.isDemo && FirebaseAuth.instance.currentUser != null
-                ? FirebaseFirestore.instance.collection('instituteClaims').where('instituteId', isEqualTo: institute.id).where('representativeId', isEqualTo: FirebaseAuth.instance.currentUser!.uid).where('status', isEqualTo: 'pending').limit(1).snapshots()
-                : const Stream.empty(),
-            builder: (context, snap) {
-              final pending = snap.data?.docs.isNotEmpty == true;
-              final demoActive = ActiveProfileController.instance.isDemo;
-              final signedIn = demoActive || (FirebaseService.initialized && FirebaseAuth.instance.currentUser != null);
+          StreamBuilder<List<Map<String, dynamic>>>(
+            stream: InstituteClaimRepository.instance.watch(),
+            builder: (context, snapshot) {
+              final pending = (snapshot.data ?? const []).any((claim) => claim['instituteId'] == institute.id && claim['status'] == 'pending');
+              final owns = InstituteAccess.uid != null && InstituteAccess.uid == institute.ownerId;
+              final owned = institute.ownerId.isNotEmpty;
               return Card(child: ListTile(
                 leading: Icon(pending ? Icons.hourglass_top : Icons.business_outlined, color: green),
-                title: Text(pending ? 'Claim under review' : 'Manage this institute'),
-                subtitle: Text(pending ? 'Waiting for admin verification.' : 'Institute representatives can claim this profile.'),
-                trailing: pending ? null : FilledButton(
-                  onPressed: signedIn
-                      ? () async { if (ActiveProfileController.instance.isDemo) { await DatabaseService().claimDemoInstitute(ActiveProfileController.instance.effectiveUid!,institute.id,instituteName:institute.name); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Demo claim recorded for the active test profile.'))); } else { context.push('/institute/' + institute.id + '/claim?name=' + Uri.encodeComponent(institute.name)); } }
-                      : () => context.push('/signin'),
-                  style: FilledButton.styleFrom(backgroundColor: green),
-                  child: Text(signedIn ? 'Claim' : 'Sign In'),
+                title: Text(owns ? 'You manage this institute' : pending ? 'Claim under review' : owned ? 'Institute ownership verified' : 'Claim this institute'),
+                subtitle: Text(pending ? 'Waiting for admin verification.' : owns ? 'Manage your institute details and programs.' : owned ? 'This institute has a verified representative.' : 'Submit verification details for admin review.'),
+                trailing: pending || (owned && !owns) ? null : FilledButton(
+                  onPressed: InstituteAccess.uid == null
+                    ? () => context.push('/signin')
+                    : owns
+                      ? () => context.push('/institute/${institute.id}/edit')
+                      : () => context.push('/institute/${institute.id}/claim'),
+                  child: Text(InstituteAccess.uid == null ? 'Sign In' : owns ? 'Manage' : 'Claim'),
                 ),
               ));
             },
@@ -290,22 +291,22 @@ class InstituteDetailScreen extends StatelessWidget {
     }
   }
 
-  static Widget _section(String title, Widget child) => Card(
+  static Widget _section(String title, Widget child) => Builder(builder: (context) => Card(
     margin: EdgeInsets.zero,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: darkGreen)),
+      Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
       const SizedBox(height: 9),
       child,
     ])),
-  );
+  ));
 
   static Widget _admissionBadge(String label, String value) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
     decoration: BoxDecoration(color: lightGreen, borderRadius: BorderRadius.circular(10)),
     child: RichText(text: TextSpan(children: [
       TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w700, color: darkGreen)),
-      TextSpan(text: value, style: const TextStyle(color: Colors.black87)),
+      TextSpan(text: value, style: const TextStyle(color: AppColors.darkGreen)),
     ])),
   );
 

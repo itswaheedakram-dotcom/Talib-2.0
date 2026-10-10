@@ -1,8 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/institute_repository.dart';
+import '../../data/institute_claim_repository.dart';
+import '../../data/institute_access.dart';
 
 class ClaimInstituteScreen extends StatefulWidget {
   final String instituteId;
@@ -21,50 +21,30 @@ class _ClaimInstituteScreenState extends State<ClaimInstituteScreen> {
   @override void dispose() { _designation.dispose(); _details.dispose(); super.dispose(); }
 
   Future<void> _submit() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) { context.push('/signin'); return; }
+    if (InstituteAccess.uid == null) { context.push('/signin'); return; }
     if (_designation.text.trim().isEmpty || _details.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please complete all verification details.')));
       return;
     }
     setState(() => _busy = true);
     try {
-      final db = FirebaseFirestore.instance;
-      final existing = await db.collection('instituteClaims')
-          .where('instituteId', isEqualTo: widget.instituteId)
-          .where('representativeId', isEqualTo: user.uid)
-          .where('status', whereIn: ['pending', 'approved']).limit(1).get();
-      if (existing.docs.isNotEmpty) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You already have a claim for this institute.')));
-        return;
-      }
       final institute = InstituteRepository.instance.byId(widget.instituteId);
-      await db.collection('instituteClaims').add({
-        'instituteId': widget.instituteId,
-        'instituteName': widget.instituteName,
-        if (institute != null) 'instituteSnapshot': institute.toMap(),
-        'representativeId': user.uid,
-        'representativeName': user.displayName?.trim().isNotEmpty == true ? user.displayName!.trim() : 'Representative',
-        'representativeEmail': user.email ?? '',
-        'designation': _designation.text.trim(),
-        'verificationMethod': _method,
-        'verificationDetails': _details.text.trim(),
-        'status': 'pending',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      if (institute == null) throw StateError('Institute not found.');
+      await InstituteClaimRepository.instance.submit(institute,
+        designation: _designation.text, method: _method, details: _details.text);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Claim submitted for admin verification.')));
         context.pop();
       }
-    } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not submit the claim. Please try again.')));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not submit claim: $error')));
     } finally { if (mounted) setState(() => _busy = false); }
   }
 
   @override Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Claim Institute')),
     body: ListView(padding: const EdgeInsets.all(20), children: [
-      Text(widget.instituteName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+      Text(InstituteRepository.instance.byId(widget.instituteId)?.name ?? widget.instituteName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
       const SizedBox(height: 8),
       const Text('Create/Use your Talib account and submit proof that you represent this institute. Your claim will be reviewed by Talib admin.'),
       const SizedBox(height: 22),

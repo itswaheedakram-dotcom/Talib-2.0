@@ -25,6 +25,7 @@ class Institute {
   final String contact;
   final String status;
   final double minScore;
+  final String scoreScale;
   final String nextProgram;
   final String admissionStatus;
   final String admissionDeadline;
@@ -60,6 +61,7 @@ class Institute {
     this.contact = '',
     this.status = 'approved',
     this.minScore = 0,
+    this.scoreScale = 'unspecified',
     this.nextProgram = '',
     this.admissionStatus = 'Open',
     this.admissionDeadline = '',
@@ -73,7 +75,7 @@ class Institute {
     'name': name, 'type': type, 'subcategory': subcategory, 'ownerId': ownerId, 'representativeId': representativeId, 'createdBy': createdBy, 'campus': campus, 'country': country, 'province': province,
     'district': district, 'city': city, 'area': area, 'board': board, 'town': town, 'sector': sector, 'address': address, 'description': description,
     'website': website, 'applicationUrl': applicationUrl, 'submissionMode': submissionMode, 'eligibility': eligibility,
-    'programs': programs, 'contact': contact, 'status': status, 'minScore': minScore, 'nextProgram': nextProgram,
+    'programs': programs, 'contact': contact, 'status': status, 'minScore': minScore, 'scoreScale': scoreScale, 'nextProgram': nextProgram,
     'admissionStatus': admissionStatus, 'admissionDeadline': admissionDeadline, 'feeRange': feeRange, 'entryTestRequired': entryTestRequired,
     'imageUrl': imageUrl, 'facilities': facilities,
   };
@@ -123,6 +125,7 @@ class Institute {
     programs: _readStringList(map['programs']),
     contact: (map['contact'] ?? '').toString(),
     status: (map['status'] ?? 'approved').toString(),
+    scoreScale: (map['scoreScale'] ?? 'unspecified').toString(),
     minScore: double.tryParse((map['minScore'] ?? 0).toString()) ?? 0,
     nextProgram: (map['nextProgram'] ?? '').toString(),
     admissionStatus: (map['admissionStatus'] ?? 'Open').toString(),

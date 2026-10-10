@@ -1,11 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
-import '../../../../core/services/active_profile_controller.dart';
 import '../../../models/institute.dart';
 import '../../data/institute_repository.dart';
+import '../../data/institute_access.dart';
 
 class DisciplineInfoScreen extends StatefulWidget {
   final String instituteId;
@@ -38,11 +37,7 @@ class _DisciplineInfoScreenState extends State<DisciplineInfoScreen> {
     super.dispose();
   }
 
-  bool _canEdit(Institute institute) {
-    if (ActiveProfileController.instance.isDemo) return true;
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    return uid != null && uid.isNotEmpty && institute.ownerId == uid;
-  }
+  bool _canEdit(Institute institute) => InstituteAccess.canManage(institute);
 
   Future<void> _addProgram(Institute institute) async {
     final name = _subject.text.trim();

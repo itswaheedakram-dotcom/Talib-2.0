@@ -26,6 +26,24 @@ service cloud.firestore {
       return signedIn() && participants.size() == 2 && participants.hasAny([request.auth.uid]);
     }
 
+    function validInstituteScore(data) {
+      return data.get('minScore', 0) is number && data.get('minScore', 0) >= 0
+        && (data.get('minScore', 0) == 0
+          || (data.get('scoreScale', 'unspecified') == 'percentage' && data.minScore <= 100)
+          || (data.get('scoreScale', 'unspecified') == 'cgpa4' && data.minScore <= 4)
+          || (data.get('scoreScale', 'unspecified') == 'cgpa5' && data.minScore <= 5));
+    }
+
+    // Required for collection-group discovery; unpublished data is never public.
+    match /{path=**}/opportunities/{opportunityId} {
+      allow read: if resource.data.published == true;
+    }
+
+    match /locationCatalog/{locationId} {
+      allow read: if resource.data.enabled == true || admin() || managerAdminPermission('manage_institutes');
+      allow create, update, delete: if admin() || managerAdminPermission('manage_institutes');
+    }
+
     match /adminRoles/{adminUid} {
       allow read: if admin() || (signedIn() && request.auth.uid == adminUid);
       allow create, update, delete: if admin();
@@ -221,7 +239,8 @@ service cloud.firestore {
       allow create: if (signedIn()
           && request.resource.data.status == 'pending'
           && request.resource.data.createdBy == request.auth.uid
-          && request.resource.data.ownerId == '')
+          && request.resource.data.ownerId == ''
+          && validInstituteScore(request.resource.data))
         || (admin()
           || managerAdminPermission('ownership_claim_review'))
           && request.resource.data.status == 'approved'
@@ -241,18 +260,40 @@ service cloud.firestore {
         || (signedIn()
           && resource.data.ownerId == request.auth.uid
           && request.resource.data.ownerId == resource.data.ownerId
-          && request.resource.data.representativeId == resource.data.representativeId
-          && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.get('representativeId', '') == resource.data.get('representativeId', '')
+          && request.resource.data.get('createdBy', '') == resource.data.get('createdBy', '')
           && request.resource.data.status == resource.data.status
+          && (validInstituteScore(request.resource.data) || (request.resource.data.get('minScore', 0) == resource.data.get('minScore', 0) && request.resource.data.get('scoreScale', 'unspecified') == resource.data.get('scoreScale', 'unspecified')))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'name', 'type', 'subcategory', 'campus', 'province', 'city', 'town',
+            'name', 'type', 'subcategory', 'campus', 'country', 'province', 'district', 'city', 'area', 'board', 'town',
             'sector', 'address', 'description', 'website', 'applicationUrl',
-            'submissionMode', 'eligibility', 'programs', 'contact', 'minScore',
+            'submissionMode', 'eligibility', 'programs', 'contact', 'minScore', 'scoreScale',
             'nextProgram', 'admissionStatus', 'admissionDeadline', 'feeRange',
             'entryTestRequired', 'imageUrl', 'facilities', 'updatedAt'
           ]));
 
       allow delete: if admin() || managerAdminPermission('manage_institutes');
+
+      match /opportunities/{opportunityId} {
+        function canManageOpportunity() {
+          return signedIn() && (admin() || managerAdminPermission('manage_institutes')
+            || get(/databases/$(database)/documents/institutes/$(instituteId)).data.ownerId == request.auth.uid);
+        }
+        function validOpportunity() {
+          return request.resource.data.instituteId == instituteId
+            && request.resource.data.published == true
+            && request.resource.data.kind in ['admission', 'course', 'scholarship']
+            && request.resource.data.title is string
+            && request.resource.data.title.size() > 0
+            && request.resource.data.title.size() <= 200
+            && get(/databases/$(database)/documents/institutes/$(instituteId)).data.status in ['approved', 'verified'];
+        }
+        allow create: if canManageOpportunity() && validOpportunity()
+          && request.resource.data.createdBy == request.auth.uid;
+        allow update: if canManageOpportunity() && validOpportunity()
+          && request.resource.data.createdBy == resource.data.createdBy;
+        allow delete: if canManageOpportunity();
+      }
     }
 
     match /instituteTypes/{typeId} {
@@ -355,6 +396,8 @@ service cloud.firestore {
       }
     }
     match /instituteClaims/{claimId} {
+      // Claim submission transactions must be able to check an absent document.
+      allow get: if signedIn() && !exists(/databases/$(database)/documents/instituteClaims/$(claimId));
       allow create: if signedIn()
         && request.resource.data.representativeId == request.auth.uid
         && request.resource.data.status == 'pending';
