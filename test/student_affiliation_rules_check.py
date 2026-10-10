@@ -85,18 +85,17 @@ check(403, call('PATCH', ROOT + '/institutes/affiliation-rules-university/studen
                 {'fields': fields({'status': 'approved'})}, uid='unrelated-user'), 'unrelated user cannot approve requests')
 
 request = f'projects/{PROJECT}/databases/(default)/documents/institutes/affiliation-rules-university/studentAffiliations/affiliation-student'
-verification = f'projects/{PROJECT}/databases/(default)/documents/institutes/affiliation-rules-university/studentVerifications/affiliation-student'
 check(200, call('POST', ROOT + ':commit', {'writes': [
     {'update': {'name': request, 'fields': fields({'studentId': 'affiliation-student',
-        'studentName': 'Student', 'instituteId': 'affiliation-rules-university',
-        'program': 'BS Computer Science', 'status': 'approved', 'reviewedBy': 'affiliation-owner'})},
-     'updateTransforms': [{'fieldPath': 'reviewedAt', 'setToServerValue': 'REQUEST_TIME'}]},
-    {'update': {'name': verification, 'fields': fields({'studentId': 'affiliation-student',
         'instituteId': 'affiliation-rules-university', 'status': 'approved'})},
      'updateTransforms': [{'fieldPath': 'verifiedAt', 'setToServerValue': 'REQUEST_TIME'}]},
-]}, uid='affiliation-owner'), 'university approves request and grants profile badge')
-check(200, call('GET', ROOT + '/institutes/affiliation-rules-university/studentVerifications/affiliation-student', uid='unrelated-user'), 'public verification summary contains only minimal affiliation fields')
-check(403, call('PATCH', ROOT + '/institutes/affiliation-rules-university/studentVerifications/forged-student',
+]}, uid='affiliation-owner'), 'university approves pending request and redacts student details')
+public_record = call('GET', ROOT + '/institutes/affiliation-rules-university/studentAffiliations/affiliation-student', uid='unrelated-user')
+check(200, public_record, 'public reads approved minimal verification record')
+public_fields = json.loads(public_record[1])['fields']
+assert set(public_fields) == {'studentId', 'instituteId', 'status', 'verifiedAt'}
+print('PASS: approved verification record reveals no student name or program')
+check(403, call('PATCH', ROOT + '/institutes/affiliation-rules-university/studentAffiliations/forged-student',
                 {'fields': fields({'studentId': 'forged-student', 'instituteId': 'affiliation-rules-university', 'status': 'approved'})}, uid='affiliation-student'), 'student cannot forge a public verification badge')
 check(403, call('DELETE', ROOT + '/institutes/affiliation-rules-university/studentAffiliations/affiliation-student', uid='affiliation-student'), 'student cannot remove verified affiliation to alter count')
 print('All student affiliation rules checks passed; no production services contacted.')
