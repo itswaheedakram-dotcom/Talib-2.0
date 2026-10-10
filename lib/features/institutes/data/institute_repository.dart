@@ -6,7 +6,7 @@ import '../../../core/services/active_profile_controller.dart';
 import '../../models/institute.dart';
 
 class InstituteRepository extends ChangeNotifier {
-  InstituteRepository._() : _demoItems = List<Institute>.of(_seedItems);
+  InstituteRepository._() : _demoItems = _seedItems.map(_withDemoDetails).toList();
   static final instance = InstituteRepository._();
 
   static const List<Institute> _seedItems = [
@@ -53,6 +53,68 @@ class InstituteRepository extends ChangeNotifier {
     const Institute(id:'university-37',name:'University of Education, DG Khan Campus',type:'universities',city:'Dera Ghazi Khan',province:'Punjab',sector:'Government',address:'Dera Ghazi Khan, Punjab',description:'Public university campus.',programs:['Education','Undergraduate','Graduate']),
   ];
 
+  /// Enriches built-in catalogue records with realistic sample lists so the
+  /// institute detail screen can be tested without manually entering every field.
+  static Institute _withDemoDetails(Institute item) {
+    final facilities = item.facilities.isNotEmpty
+        ? item.facilities
+        : switch (item.type) {
+            'schools' => const ['Library', 'Science Lab', 'Computer Lab', 'Playground', 'Cafeteria', 'Transport'],
+            'colleges' => const ['Library', 'Computer Lab', 'Science Labs', 'Sports Ground', 'Cafeteria', 'Student Parking'],
+            'universities' => const ['Central Library', 'Computer Labs', 'Research Labs', 'Hostels', 'Sports Complex', 'Cafeteria', 'Transport', 'Scholarship Office'],
+            'madaris' => const ['Prayer Hall', 'Library', 'Residence', 'Dining Hall', 'Study Rooms'],
+            'academies' => const ['Classrooms', 'Test Preparation Lab', 'Study Area', 'Wi-Fi', 'Practice Tests'],
+            'technical' => const ['Practical Workshops', 'Computer Lab', 'Equipment Lab', 'Career Counselling', 'Internship Support'],
+            _ => const ['Library', 'Computer Lab', 'Cafeteria', 'Wi-Fi', 'Student Support'],
+          };
+    final programs = item.programs.isNotEmpty
+        ? item.programs
+        : switch (item.type) {
+            'schools' => const ['Primary', 'Middle', 'Matric', 'O-Level'],
+            'colleges' => const ['FA', 'FSc Pre-Medical', 'FSc Pre-Engineering', 'ICS', 'I.Com'],
+            'universities' => const ['Undergraduate', 'Graduate', 'MS / MPhil', 'PhD'],
+            'madaris' => const ['Nazra Quran', 'Hifz-ul-Quran', 'Dars-e-Nizami', 'Tajweed'],
+            'academies' => const ['Entry Test Preparation', 'Matric Tuition', 'FSc Tuition', 'Language Courses'],
+            'technical' => const ['Electrical Technology', 'Civil Technology', 'IT / Computing', 'Mechanical Technology'],
+            _ => const ['General Studies', 'Computer Skills'],
+          };
+    return Institute(
+      id: item.id,
+      name: item.name,
+      type: item.type,
+      subcategory: item.subcategory,
+      ownerId: item.ownerId,
+      representativeId: item.representativeId,
+      createdBy: item.createdBy,
+      campus: item.campus,
+      country: item.country,
+      province: item.province,
+      district: item.district,
+      city: item.city,
+      area: item.area,
+      board: item.board,
+      town: item.town,
+      sector: item.sector,
+      address: item.address,
+      description: item.description,
+      website: item.website,
+      applicationUrl: item.applicationUrl,
+      submissionMode: item.submissionMode,
+      eligibility: item.eligibility,
+      programs: programs,
+      contact: item.contact,
+      status: item.status,
+      minScore: item.minScore,
+      nextProgram: item.nextProgram,
+      admissionStatus: item.admissionStatus,
+      admissionDeadline: item.admissionDeadline,
+      feeRange: item.feeRange,
+      entryTestRequired: item.entryTestRequired,
+      imageUrl: item.imageUrl,
+      facilities: facilities,
+    );
+  }
+
   final List<Institute> _demoItems;
   final List<Institute> _realItems = [];
   bool loading = false;
@@ -66,8 +128,8 @@ class InstituteRepository extends ChangeNotifier {
   List<Institute> get items {
     final records = <String, Institute>{
       if (!isDemoMode)
-        for (final item in _seedItems)
-          if (item.status.toLowerCase() == 'approved') item.id: item,
+        for (final rawItem in _seedItems)
+          if (rawItem.status.toLowerCase() == 'approved') rawItem.id: _withDemoDetails(rawItem),
       for (final item in (isDemoMode ? _demoItems : _realItems))
         if (item.status.toLowerCase() == 'approved') item.id: item,
     };
@@ -85,7 +147,7 @@ class InstituteRepository extends ChangeNotifier {
     }
     if (!isDemoMode) {
       for (final item in _seedItems) {
-        if (item.id == id) return item;
+        if (item.id == id) return _withDemoDetails(item);
       }
     }
     return null;
