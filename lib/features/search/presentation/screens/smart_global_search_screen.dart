@@ -131,12 +131,17 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
         }
         final parent=ir.byId(o.instituteId);
         if(parent==null)continue;
+        if(q.category==GlobalSearchCategory.institutes) {
+          if(RegExp(r'\bschool\b').hasMatch(q.normalized)&&parent.type!='schools')continue;
+          if(RegExp(r'\bcollege\b').hasMatch(q.normalized)&&parent.type!='colleges')continue;
+          if(RegExp(r'\buniversity\b').hasMatch(q.normalized)&&q.instituteName==null&&parent.type!='universities')continue;
+        }
         if(q.area!=null && !' ${parent.area} ${parent.town} ${parent.address}'.toLowerCase().contains(q.area!.toLowerCase()))continue;
         if(q.instituteName!=null && !_namedInstitute(parent,q.instituteName!))continue;
-        if(q.program!=null && !_programMatches(q.program!,[...parent.programs,...parent.programGroups.values.expand((names)=>names),...o.programKeys,o.title]))continue;
+        if(q.program!=null && !_programMatches(q.program!,[...o.programKeys,o.title,o.eligibility,o.description]))continue;
         if(_filterAdmissionStatus!='All'&&o.displayStatus!=_filterAdmissionStatus)continue;
         if(_filterInstituteType!='All'&&parent!=null&&parent.type!=_filterInstituteType)continue;
-        if(_filterProgram!='All'&&parent!=null&&!_programMatches(_filterProgram,[...parent.programs,...parent.programGroups.values.expand((names)=>names),...o.programKeys]))continue;
+        if(_filterProgram!='All'&&parent!=null&&!_programMatches(_filterProgram,[...o.programKeys,o.title,o.eligibility,o.description]))continue;
         if(_filterSector!='All'&&parent!=null&&parent.sector!=_filterSector)continue;
         if(_filterFeeRange!='All'&&parent!=null&&parent.feeRange!=_filterFeeRange)continue;
         if(q.location!=null&&parent!=null&&!' ${parent.city} ${parent.province} ${parent.address}'.toLowerCase().contains(q.location!.toLowerCase()))continue;
