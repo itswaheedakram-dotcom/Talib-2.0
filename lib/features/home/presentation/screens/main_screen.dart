@@ -57,13 +57,13 @@ class _MainScreenState extends State<MainScreen> {
           const BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline_rounded),
             activeIcon: Icon(Icons.chat_bubble_rounded),
-            label: 'Messages & Groups',
+            label: 'Messages',
           ),
           if (access.canOpenPanel)
             const BottomNavigationBarItem(
               icon: Icon(Icons.admin_panel_settings_outlined),
               activeIcon: Icon(Icons.admin_panel_settings_rounded),
-              label: 'Admin Panel',
+              label: 'Admin',
             ),
         ];
         final safeIndex = index < pages.length ? index : 0;
@@ -79,7 +79,7 @@ class _MainScreenState extends State<MainScreen> {
               borderRadius: BorderRadius.circular(22),
               clipBehavior: Clip.antiAlias,
               child: SizedBox(
-                height: 64,
+                height: 76,
                 child: BottomNavigationBar(
                   currentIndex: safeIndex,
                   onTap: (value) => setState(() => index = value),
@@ -88,9 +88,11 @@ class _MainScreenState extends State<MainScreen> {
                   elevation: 0,
                   selectedItemColor: Theme.of(context).colorScheme.primary,
                   unselectedItemColor: Theme.of(context).colorScheme.onSurface.withOpacity(.65),
-                  showSelectedLabels: false,
-                  showUnselectedLabels: false,
+                  showSelectedLabels: true,
+                  showUnselectedLabels: true,
                   iconSize: 25,
+                  selectedFontSize: 11,
+                  unselectedFontSize: 11,
                   items: items,
                 ),
               ),
