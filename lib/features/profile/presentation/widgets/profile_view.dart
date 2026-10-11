@@ -118,15 +118,18 @@ class _ProfileViewState extends State<ProfileView> {
     }) : DatabaseService().followingStream(uid, profile.uid);
     return StreamBuilder<bool>(stream: follow, builder: (context, snapshot) {
       final following = snapshot.data == true;
-      final mutual = demo ? Stream.value(DemoDataService.instance.isMutual(uid, profile.uid)) : DatabaseService().mutualFollowStream(uid, profile.uid);
+      final mutual = DatabaseService().mutualFollowStream(uid, profile.uid);
       return Wrap(spacing: 8, runSpacing: 8, children: [
         FilledButton.icon(onPressed: () async {
           if (demo) { DemoDataService.instance.toggleFollow(uid, profile.uid, !following); }
           else { await DatabaseService().toggleFollow(uid, profile.uid, !following); }
         }, icon: Icon(following ? Icons.person_remove_outlined : Icons.person_add_outlined), label: Text(following ? 'Following' : 'Follow')),
-        StreamBuilder<bool>(stream: mutual, builder: (_, s) => s.data != true ? const SizedBox.shrink() : OutlinedButton.icon(
+        StreamBuilder<bool>(stream: mutual, builder: (_, s) {
+          if (s.hasError) return const Text('Could not check chat availability. Please retry.');
+          return s.data != true ? const SizedBox.shrink() : OutlinedButton.icon(
           onPressed: () => context.push('/chat/${demo ? ([uid, profile.uid]..sort()).join('|') : DatabaseService().conversationId(uid, profile.uid)}?uid=${profile.uid}&name=${Uri.encodeComponent(profile.name)}'),
-          icon: const Icon(Icons.chat_bubble_outline), label: const Text('Message'))),
+          icon: const Icon(Icons.chat_bubble_outline), label: const Text('Message'));
+        }),
       ]);
     });
   }
