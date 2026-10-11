@@ -7,10 +7,11 @@ import 'package:talib_2/core/services/firebase_service.dart';
 import 'package:talib_2/features/institutes/data/institute_repository.dart';
 import 'package:talib_2/features/institutes/data/student_affiliation_repository.dart';
 import 'package:talib_2/features/profile/presentation/widgets/student_affiliation_card.dart';
+import 'package:talib_2/features/institutes/data/education_repository.dart';
 
 void main() {
   final affiliations = StudentAffiliationRepository.instance;
-  setUp(() => affiliations.resetDemoForTest());
+  setUp(() { affiliations.resetDemoForTest(); EducationRepository.instance.resetDemo(); });
   tearDown(() {
     affiliations.resetDemoForTest();
     ActiveProfileController.instance.clear();
@@ -25,18 +26,18 @@ void main() {
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: const Scaffold(body: StudentAffiliationCard(uid: 'demo-user-1'))));
     await tester.pumpAndSettle();
     expect(find.text('University of the Punjab'), findsOneWidget);
-    expect(find.text('University student'), findsOneWidget);
+    expect(find.text('Current verified student'), findsOneWidget);
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: const Scaffold(body: StudentAffiliationCard(uid: 'demo-user-4'))));
     await tester.pumpAndSettle();
     expect(find.text('University of Agriculture Faisalabad'), findsOneWidget);
-    expect(find.text('University student'), findsNothing);
-    expect(find.text('Verification request sent. Waiting for the university.'), findsNothing);
+    expect(find.text('Current verified student'), findsNothing);
+    expect(find.text('Verification request sent. Waiting for the institute.'), findsNothing);
     ActiveProfileController.instance.activate(temporaryProfiles[5]);
     final university = InstituteRepository.instance.byId('university-14')!;
     expect((await affiliations.requests(university).first).single['studentId'], 'demo-user-4');
     await affiliations.review(university, 'demo-user-4', 'approved');
     await tester.pumpAndSettle();
-    expect(find.text('University student'), findsOneWidget);
+    expect(find.text('Current verified student'), findsOneWidget);
     expect(await affiliations.verifiedStudentCount('university-14'), 1);
     expect(FirebaseService.initialized, isFalse);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -82,8 +83,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: Scaffold(body: StudentAffiliationCard(uid: 'demo-user-1', editable: true))));
     await tester.pumpAndSettle();
     expect(find.text(university.name), findsOneWidget);
-    expect(find.text('Verification request sent. Waiting for the university.'), findsOneWidget);
-    expect(find.text('University student'), findsNothing);
+    expect(find.text('Move existing institute into education history'), findsOneWidget);
+    expect(find.text('Current verified student'), findsNothing);
 
     ActiveProfileController.instance.activate(temporaryProfiles[5]);
     final managerRequests = await affiliations.requests(university).first;
@@ -93,7 +94,7 @@ void main() {
     profile = await affiliations.profile('demo-user-1');
     expect(profile['studentVerificationStatus'], 'approved');
     await tester.pumpAndSettle();
-    expect(find.text('University student'), findsOneWidget);
+    expect(find.text('Current verified student'), findsOneWidget);
     expect(DemoDataService.instance.notifications('demo-user-1').any((n) => n['type'] == 'student_affiliation_result'), isTrue);
     expect(FirebaseService.initialized, isFalse);
     expect(tester.takeException(), isNull);

@@ -89,6 +89,9 @@ jobs:
         continue-on-error: true
         run: flutter analyze
 
+      - name: Check education history and affiliation flows
+        run: flutter test test/education_history_test.dart test/student_affiliation_test.dart
+
       - name: Build release APK
         run: flutter build apk --release
 

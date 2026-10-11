@@ -125,12 +125,12 @@ class StudentAffiliationRepository extends ChangeNotifier {
 
   Future<void> select(Institute institute, String program) async {
     final uid = _uid;
-    if (uid == null || uid.isEmpty) throw StateError('Sign in to add your university.');
-    if (institute.type != 'universities') throw ArgumentError('Choose a university.');
+    if (uid == null || uid.isEmpty) throw StateError('Sign in to add your institute.');
+
 
     final availablePrograms = institute.programGroups.values.expand((items) => items).toSet();
     final validPrograms = availablePrograms.isNotEmpty ? availablePrograms : institute.programs.toSet();
-    if (program.trim().isNotEmpty && !validPrograms.contains(program.trim())) throw ArgumentError('Choose a program listed by this university.');
+    if (program.trim().isNotEmpty && !validPrograms.contains(program.trim())) throw ArgumentError('Choose a program listed by this institute.');
     final current = await profile(uid);
     if (current[ProfileFields.instituteId] == institute.id && (current[ProfileFields.course] ?? '') == program.trim()) return;
     final previousInstituteId = (current[ProfileFields.instituteId] ?? '').toString();
@@ -222,7 +222,7 @@ class StudentAffiliationRepository extends ChangeNotifier {
   }
 
   Future<void> review(Institute institute, String studentId, String status) async {
-    if (!InstituteAccess.canManage(institute)) throw StateError('Only this university’s authorized representative can review requests.');
+    if (!InstituteAccess.canManage(institute)) throw StateError('Only this institute’s authorized representative can review requests.');
     if (!const {'approved', 'rejected'}.contains(status)) throw ArgumentError('Invalid verification decision.');
     if (InstituteAccess.isDemo) {
       final request = _demoRequests[institute.id]?[studentId];
@@ -248,7 +248,7 @@ class StudentAffiliationRepository extends ChangeNotifier {
       if (data == null || data['status'] != 'pending') throw StateError('This request has already been reviewed.');
       final profile = await tx.get(user);
       if (profile.data()?[ProfileFields.instituteId] != institute.id || profile.data()?[ProfileFields.affiliationStatus] != 'pending') {
-        throw StateError('The student changed their selected university before review. Ask them to submit the request again.');
+        throw StateError('The student changed their selected institute before review. Ask them to submit the request again.');
       }
       if (status == 'approved') {
         tx.set(request, {
@@ -269,6 +269,12 @@ class StudentAffiliationRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Set<String>> verifiedStudentIds(String instituteId) async {
+    if (InstituteAccess.isDemo) return (_demoRequests[instituteId]?.values ?? const <Map<String, dynamic>>[]).where((r) => r['status'] == 'approved').map((r) => r['studentId'].toString()).toSet();
+    final snapshot = await FirebaseFirestore.instance.collection('institutes').doc(instituteId).collection('studentAffiliations').where('status', isEqualTo: 'approved').get();
+    return snapshot.docs.map((d) => d.id).toSet();
+  }
+
   Future<int> verifiedStudentCount(String instituteId) async {
     if (InstituteAccess.isDemo) {
       return (_demoRequests[instituteId]?.values ?? const <Map<String, dynamic>>[])
@@ -277,6 +283,13 @@ class StudentAffiliationRepository extends ChangeNotifier {
     final result = await FirebaseFirestore.instance.collection('institutes').doc(instituteId)
         .collection('studentAffiliations').where('status', isEqualTo: 'approved').count().get();
     return result.count ?? 0;
+  }
+
+  void retireDemoAffiliation(String uid) {
+    if (!InstituteAccess.isDemo || InstituteAccess.uid != uid) throw StateError('Cannot migrate another student.');
+    _demoProfiles.remove(uid);
+    for (final requests in _demoRequests.values) { requests.remove(uid); }
+    notifyListeners();
   }
 
   Map<String, dynamic> demoProfileData(String uid) => Map<String, dynamic>.from(_demoProfiles[uid] ?? const {});

@@ -14,7 +14,7 @@ import '../widgets/institute_detail_components.dart';
 import '../widgets/institute_detail_listings.dart';
 import '../widgets/institute_reviews_section.dart';
 import '../widgets/institute_image_preview.dart';
-import '../../../profile/presentation/widgets/student_affiliation_card.dart';
+import '../../../profile/presentation/widgets/education_history_card.dart';
 
 class InstituteDetailScreen extends StatefulWidget {
   final String id;
@@ -310,7 +310,7 @@ class _InstituteDetailScreenState extends State<InstituteDetailScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      if (institute.type == 'universities') ...[
+                      ...[
                         VerifiedStudentCount(instituteId: institute.id),
                         if (canManage) ...[
                           const SizedBox(height: 6),

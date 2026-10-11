@@ -165,7 +165,7 @@ class _ProfileViewState extends State<ProfileView> {
       ]))),
       StudentAffiliationCard(uid: p.uid, editable: owner && !widget.publicView),
       if (p.educationLevel.isNotEmpty || p.semester.isNotEmpty || p.graduationYear.isNotEmpty)
-        _card('Education', [
+        _card('Previous education details', [
           if (p.educationLevel.isNotEmpty) Text(p.educationLevel),
           if (p.semester.isNotEmpty) Text('Semester / study year: ${p.semester}'),
           if (p.graduationYear.isNotEmpty) Text('Graduation: ${p.graduationYear}'),

@@ -68,7 +68,7 @@ service cloud.firestore {
     function selectedAffiliationValid(data, userId) {
       let instituteId = data.get('studentInstituteId', '');
       let course = data.get('studentProgram', '');
-      return instituteId != '' && (
+      return (instituteId == '' && course == '' && data.get('studentVerificationStatus', '') == 'not_requested') || instituteId != '' && (
         (data.get('studentVerificationStatus', '') == 'pending'
           && getAfter(/databases/$(database)/documents/institutes/$(instituteId)/studentAffiliations/$(userId)).data.status == 'pending'
           && getAfter(/databases/$(database)/documents/institutes/$(instituteId)/studentAffiliations/$(userId)).data.program == course)
@@ -93,6 +93,61 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == username;
       allow delete: if signedIn() && resource.data.uid == request.auth.uid
         && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('username', '') != username;
+    }
+
+    function educationShape(data, userId, recordId) {
+      return data.keys().hasOnly(['educationRecordId', 'userId', 'instituteId', 'instituteName',
+        'programId', 'program', 'educationLevelId', 'educationStatus', 'verificationStatus',
+        'isPrimary', 'startDate', 'completionDate', 'createdAt', 'updatedAt'])
+        && data.educationRecordId == recordId && data.userId == userId
+        && data.instituteId is string && data.instituteId.size() > 0
+        && data.instituteName == get(/databases/$(database)/documents/institutes/$(data.instituteId)).data.name
+        && data.programId is string && data.program is string && data.program.size() <= 200
+        && data.educationLevelId in ['school', 'college', 'diploma', 'bachelors', 'masters', 'doctorate', 'other']
+        && data.educationStatus in ['current', 'completed', 'left']
+        && data.verificationStatus in ['not_requested', 'pending', 'approved', 'rejected']
+        && data.isPrimary is bool
+        && (data.isPrimary || !existsAfter(/databases/$(database)/documents/users/$(userId)/private/educationState)
+          || getAfter(/databases/$(database)/documents/users/$(userId)/private/educationState).data.primaryEducationRecordId != recordId)
+        && (!data.isPrimary || (data.educationStatus == 'current'
+          && getAfter(/databases/$(database)/documents/users/$(userId)/private/educationState).data.primaryEducationRecordId == recordId))
+        && (data.startDate == null || data.startDate is timestamp && data.startDate <= request.time)
+        && (data.completionDate == null || data.completionDate is timestamp && data.completionDate <= request.time)
+        && (data.startDate == null || data.completionDate == null || data.completionDate >= data.startDate)
+        && (data.educationStatus != 'current' || data.completionDate == null)
+        && data.createdAt is timestamp && data.updatedAt == request.time
+        && get(/databases/$(database)/documents/institutes/$(data.instituteId)).data.status in ['approved', 'verified'];
+    }
+    function educationMembershipData(data) {
+      return {'educationRecordId': data.educationRecordId, 'userId': data.userId, 'instituteId': data.instituteId,
+        'educationStatus': data.educationStatus, 'verificationStatus': data.verificationStatus};
+    }
+    function educationMembershipMatches(data) {
+      return getAfter(/databases/$(database)/documents/institutes/$(data.instituteId)/educationMemberships/$(data.educationRecordId)).data
+        == {'educationRecordId': data.educationRecordId, 'userId': data.userId, 'instituteId': data.instituteId,
+          'educationStatus': data.educationStatus, 'verificationStatus': data.verificationStatus};
+    }
+    function educationStudentCreate(data, userId, recordId) {
+      return signedIn() && request.auth.uid == userId && educationShape(data, userId, recordId)
+        && data.createdAt == request.time
+        && (data.verificationStatus == (data.educationStatus == 'current' && data.program != '' ? 'pending' : 'not_requested')
+          || (recordId == 'legacy-' + userId && data.educationStatus == 'current' && data.verificationStatus == 'approved'
+            && get(/databases/$(database)/documents/users/$(userId)).data.studentInstituteId == data.instituteId
+            && get(/databases/$(database)/documents/users/$(userId)).data.studentProgram == data.program
+            && get(/databases/$(database)/documents/institutes/$(data.instituteId)/studentAffiliations/$(userId)).data.status == 'approved'));
+    }
+    function educationStudentUpdate(data, old, userId, recordId) {
+      return signedIn() && request.auth.uid == userId && educationShape(data, userId, recordId)
+        && data.createdAt == old.createdAt
+        && ((data.instituteId == old.instituteId && data.program == old.program && data.programId == old.programId && data.educationLevelId == old.educationLevelId && data.educationStatus == old.educationStatus
+            && data.verificationStatus == old.verificationStatus)
+          || data.verificationStatus == (data.educationStatus == 'current' && data.program != '' ? 'pending' : 'not_requested'));
+    }
+    function educationReview(data, old) {
+      return canManageInstitute(old.instituteId) && old.educationStatus == 'current'
+        && old.verificationStatus == 'pending' && data.verificationStatus in ['approved', 'rejected']
+        && data.updatedAt == request.time
+        && data.diff(old).affectedKeys().hasOnly(['verificationStatus', 'updatedAt']);
     }
 
     match /users/{userId} {
@@ -135,8 +190,33 @@ service cloud.firestore {
             'role', 'instituteAdmin', 'instituteId', 'instituteName', 'designation'
           ]));
 
+      match /educationRecords/{recordId} {
+        allow read: if signedIn() && (request.auth.uid == userId
+          || get(/databases/$(database)/documents/users/$(userId)).data.get('privateProfile', false) != true
+          || canManageInstitute(resource.data.instituteId));
+        allow create: if educationStudentCreate(request.resource.data, userId, recordId)
+          && getAfter(/databases/$(database)/documents/institutes/$(request.resource.data.instituteId)/educationRecords/$(recordId)).data == request.resource.data
+          && educationMembershipMatches(request.resource.data);
+        allow update: if (educationStudentUpdate(request.resource.data, resource.data, userId, recordId)
+            || educationReview(request.resource.data, resource.data))
+          && educationMembershipMatches(request.resource.data)
+          && getAfter(/databases/$(database)/documents/institutes/$(request.resource.data.instituteId)/educationRecords/$(recordId)).data == request.resource.data
+          && (request.resource.data.instituteId == resource.data.instituteId
+            || (!existsAfter(/databases/$(database)/documents/institutes/$(resource.data.instituteId)/educationRecords/$(recordId))
+              && !existsAfter(/databases/$(database)/documents/institutes/$(resource.data.instituteId)/educationMemberships/$(recordId))));
+      }
+
       match /private/{documentId} {
-        allow read, write: if signedIn() && request.auth.uid == userId;
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow write: if signedIn() && request.auth.uid == userId && (documentId != 'educationState'
+          || (request.resource.data.keys().hasOnly(['primaryEducationRecordId'])
+            && request.resource.data.primaryEducationRecordId is string
+            && (request.resource.data.primaryEducationRecordId == ''
+              || getAfter(/databases/$(database)/documents/users/$(userId)/educationRecords/$(request.resource.data.primaryEducationRecordId)).data.isPrimary == true)
+            && (!exists(/databases/$(database)/documents/users/$(userId)/private/educationState)
+              || resource.data.primaryEducationRecordId == ''
+              || resource.data.primaryEducationRecordId == request.resource.data.primaryEducationRecordId
+              || getAfter(/databases/$(database)/documents/users/$(userId)/educationRecords/$(resource.data.primaryEducationRecordId)).data.isPrimary == false)));
       }
       match /bookmarks/{postId} {
         allow read, write: if signedIn() && request.auth.uid == userId;
@@ -355,6 +435,37 @@ service cloud.firestore {
         allow create, update: if signedIn() && validReview();
         allow delete: if (signedIn() && reviewId == request.auth.uid)
           || admin() || managerAdminPermission('manage_institutes');
+      }
+
+      match /educationRecords/{recordId} {
+        // Enrollment history is profile data; institute staff may review pending records.
+        allow read: if signedIn() && (request.auth.uid == resource.data.userId
+          || canManageInstitute(instituteId));
+        allow create: if request.resource.data.instituteId == instituteId
+          && (educationStudentCreate(request.resource.data, request.resource.data.userId, recordId)
+            || (exists(/databases/$(database)/documents/users/$(request.resource.data.userId)/educationRecords/$(recordId))
+              && educationStudentUpdate(request.resource.data,
+                get(/databases/$(database)/documents/users/$(request.resource.data.userId)/educationRecords/$(recordId)).data,
+                request.resource.data.userId, recordId)))
+          && getAfter(/databases/$(database)/documents/users/$(request.resource.data.userId)/educationRecords/$(recordId)).data == request.resource.data;
+        allow update: if request.resource.data.instituteId == instituteId
+          && (educationStudentUpdate(request.resource.data, resource.data, resource.data.userId, recordId)
+            || educationReview(request.resource.data, resource.data))
+          && educationMembershipMatches(request.resource.data)
+          && getAfter(/databases/$(database)/documents/users/$(resource.data.userId)/educationRecords/$(recordId)).data == request.resource.data;
+        allow delete: if signedIn() && request.auth.uid == resource.data.userId
+          && getAfter(/databases/$(database)/documents/users/$(resource.data.userId)/educationRecords/$(recordId)).data.instituteId != instituteId;
+      }
+
+      match /educationMemberships/{recordId} {
+        allow read: if signedIn();
+        allow create, update: if signedIn()
+          && request.resource.data.instituteId == instituteId
+          && (request.auth.uid == request.resource.data.userId || canManageInstitute(instituteId))
+          && request.resource.data.educationRecordId == recordId
+          && request.resource.data == educationMembershipData(getAfter(/databases/$(database)/documents/users/$(request.resource.data.userId)/educationRecords/$(recordId)).data);
+        allow delete: if signedIn() && request.auth.uid == resource.data.userId
+          && getAfter(/databases/$(database)/documents/users/$(resource.data.userId)/educationRecords/$(recordId)).data.instituteId != instituteId;
       }
 
       match /studentAffiliations/{studentId} {
