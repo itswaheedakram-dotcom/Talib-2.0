@@ -190,7 +190,7 @@ abstract final class SmartSearchParser {
       }
     }
     if (instituteName != null) stopWords.addAll(normalize(instituteName).split(' '));
-    final terms = normalized.split(' ').where((t) => t.length > 1 && !stopWords.contains(t) && !RegExp(r'^\d+(?:k)?).toSet().toList();
+    final terms = normalized.split(' ').where((t) => t.length > 1 && !stopWords.contains(t) && !RegExp(r'^\d+(?:k)?$').hasMatch(t)).toSet().toList();
     if (understood.isEmpty) understood.add('Searching across available Talib-2.0 listings');
     return ParsedGlobalQuery(
       original: input, normalized: normalized, category: category,
@@ -228,28 +228,6 @@ abstract final class SmartSearchParser {
     final match = RegExp(r'\b(\d+(?:,\d{3})*(?:\.\d+)?)\s*(k|hazaar|hazar|thousand|lakh|lac)?\b',
         caseSensitive: false).firstMatch(input);
     return match == null ? null : _amount(match.group(1)!, match.group(2)?.toLowerCase());
-  }
-
-  static String _categoryLabel(GlobalSearchCategory c) => switch (c) {
-    GlobalSearchCategory.institutes => 'Institutes',
-    GlobalSearchCategory.admissions => 'Admissions',
-    GlobalSearchCategory.hostels => 'Hostels',
-    GlobalSearchCategory.scholarships => 'Scholarships',
-    GlobalSearchCategory.resources => 'Resources',
-    GlobalSearchCategory.community => 'Community',
-    GlobalSearchCategory.people => 'People',
-    GlobalSearchCategory.all => 'All categories',
-  };
-  static String _titleCase(String value) => value.split(' ').map((word) => word.isEmpty ? word : '${word[0].toUpperCase()}${word.substring(1)}').join(' ');
-}
-).hasMatch(t)).toSet().toList();
-    if (understood.isEmpty) understood.add('Searching across available Talib-2.0 listings');
-    return ParsedGlobalQuery(
-      original: input, normalized: normalized, category: category,
-      location: location, area: area, program: program, instituteName: instituteName,
-      gender: gender, maxBudget: budget, wantsOpenAdmissions: openAdmissions,
-      wantsBestRated: bestRated, terms: terms, understood: understood, isRomanUrdu: isRomanUrdu,
-    );
   }
 
   static String _categoryLabel(GlobalSearchCategory c) => switch (c) {
