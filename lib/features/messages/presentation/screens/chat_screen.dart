@@ -93,6 +93,74 @@ Future<void> _send()async{
     otherName,
   );
 }
- Widget _shell(BuildContext context,Stream stream,String uid,String otherName)=>Scaffold(appBar:AppBar(toolbarHeight:88,title:UserIdentity(uid: ActiveProfileController.instance.isDemo ? (_demoOtherUid(uid) ?? widget.otherUid) : widget.otherUid, name: otherName, color: AppColors.white)),body:Column(children:[Expanded(child:StreamBuilder(stream:stream,builder:(context,s){if(s.hasError)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Text('Unable to load this conversation.'),TextButton(onPressed:()=>setState((){}),child:const Text('Retry'))]));if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());final raw=s.data;if(raw is QuerySnapshot){_markRead(raw,uid);}final nearBottom=!scroll.hasClients||scroll.position.maxScrollExtent-scroll.offset<100;if(nearBottom)_scrollDown();final docs=raw is List?raw:raw is QuerySnapshot?raw.docs.map((x)=>x.data()).toList():const [];if(docs.isEmpty)return const Center(child:Text('No messages yet. Say hello!'));return ListView.builder(controller:scroll,padding:const EdgeInsets.all(12),itemCount:docs.length,itemBuilder:(context,i){final d=docs[i] as Map<String,dynamic>;final mine=d[ProfileFields.senderId]==uid;return Align(alignment:mine?Alignment.centerRight:Alignment.centerLeft,child:Container(constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),decoration:BoxDecoration(color:mine?AppColors.primaryGreen:AppPalette.of(context).softSurface,borderRadius:BorderRadius.circular(16)),child:Column(crossAxisAlignment:mine?CrossAxisAlignment.end:CrossAxisAlignment.start,children:[UserIdentity(uid:(d[ProfileFields.senderId]??'').toString(),name:mine ? 'You' : otherName,color:mine?AppColors.white:AppPalette.of(context).ink),const SizedBox(height:4),Text((d['text']??'').toString(),style:TextStyle(color:mine?AppColors.white:AppPalette.of(context).ink)),if(mine&&!ActiveProfileController.instance.isDemo) Text(d['read']==true?'Read':raw is QuerySnapshot&&raw.docs[i].metadata.hasPendingWrites?'Sending…':'Sent',style:const TextStyle(fontSize:10,color:Colors.white70)),Text(_time(d['createdAt']),style:TextStyle(fontSize:10,color:mine?AppColors.white.withOpacity(.75):AppPalette.of(context).muted))])));});})),if(sendError!=null) Padding(padding:const EdgeInsets.symmetric(horizontal:12),child:Row(children:[Expanded(child:Text(sendError!,style:TextStyle(color:Theme.of(context).colorScheme.error))),TextButton(onPressed:sending?null:_send,child:const Text('Retry'))])),SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(10,6,10,10),child:Row(children:[Expanded(child:TextField(controller:controller,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:const InputDecoration(hintText:'Write a message...',border:OutlineInputBorder()))),const SizedBox(width:8),IconButton(onPressed:sending?null:_send,icon:sending?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send))])))]));
+ Widget _shell(BuildContext context, Stream stream, String uid, String otherName) {
+   final colors=AppPalette.of(context);
+   return Scaffold(
+     appBar:AppBar(toolbarHeight:60,titleSpacing:0,title:UserIdentity(
+       uid:ActiveProfileController.instance.isDemo?(_demoOtherUid(uid)??widget.otherUid):widget.otherUid,
+       name:otherName,color:Colors.white,compact:true,showUsername:false)),
+     body:Column(children:[
+       Expanded(child:StreamBuilder(stream:stream,builder:(context,snapshot){
+         if(snapshot.hasError)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+           const Text('Unable to load this conversation.'),
+           TextButton(onPressed:()=>setState((){}),child:const Text('Retry'))]));
+         if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
+         final raw=snapshot.data;
+         if(raw is QuerySnapshot)_markRead(raw,uid);
+         final nearBottom=!scroll.hasClients||scroll.position.maxScrollExtent-scroll.offset<100;
+         if(nearBottom)_scrollDown();
+         final docs=raw is List?raw:raw is QuerySnapshot?raw.docs.map((x)=>x.data()).toList():const [];
+         if(docs.isEmpty)return Center(child:Text('No messages yet. Say hello!',style:TextStyle(color:colors.muted)));
+         return ListView.builder(controller:scroll,padding:const EdgeInsets.symmetric(horizontal:16,vertical:16),
+           itemCount:docs.length,itemBuilder:(context,index){
+             final message=docs[index] as Map<String,dynamic>;
+             final mine=message[ProfileFields.senderId]==uid;
+             final pending=raw is QuerySnapshot&&raw.docs[index].metadata.hasPendingWrites;
+             final read=message['read']==true;
+             final textColor=mine?Colors.white:colors.ink;
+             return Align(alignment:mine?Alignment.centerRight:Alignment.centerLeft,child:Container(
+               constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.78),
+               margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.fromLTRB(14,10,12,8),
+               decoration:BoxDecoration(color:mine?AppColors.primaryGreen:colors.softSurface,
+                 borderRadius:BorderRadius.only(topLeft:const Radius.circular(18),topRight:const Radius.circular(18),
+                   bottomLeft:Radius.circular(mine?18:5),bottomRight:Radius.circular(mine?5:18))),
+               child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.end,children:[
+                 Text((message['text']??'').toString(),style:TextStyle(fontSize:16,height:1.35,color:textColor)),
+                 const SizedBox(height:5),
+                 Row(mainAxisSize:MainAxisSize.min,children:[
+                   Text(_time(message['createdAt']),style:TextStyle(fontSize:11,color:mine?Colors.white70:colors.muted)),
+                   if(mine&&!ActiveProfileController.instance.isDemo)...[
+                     const SizedBox(width:5),
+                     Semantics(label:pending?'Sending':read?'Read':'Sent',child:Icon(
+                       pending?Icons.schedule:read?Icons.done_all:Icons.done,
+                       size:16,color:read?Colors.white:Colors.white70)),
+                   ],
+                 ]),
+               ]),
+             ));
+           });
+       })),
+       if(sendError!=null) Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:Row(children:[
+         Expanded(child:Text(sendError!,style:TextStyle(color:Theme.of(context).colorScheme.error))),
+         TextButton(onPressed:sending?null:_send,child:const Text('Retry'))])),
+       Container(decoration:BoxDecoration(color:colors.surface,border:Border(top:BorderSide(color:colors.border))),
+         child:SafeArea(top:false,child:Padding(padding:const EdgeInsets.fromLTRB(12,10,12,10),child:Row(
+           crossAxisAlignment:CrossAxisAlignment.end,children:[
+             Expanded(child:TextField(controller:controller,minLines:1,maxLines:5,
+               textCapitalization:TextCapitalization.sentences,
+               textInputAction:TextInputAction.newline,
+               decoration:InputDecoration(hintText:'Message',filled:true,fillColor:colors.softSurface,
+                 contentPadding:const EdgeInsets.symmetric(horizontal:18,vertical:12),
+                 border:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none),
+                 enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none)))),
+             const SizedBox(width:8),
+             SizedBox(width:48,height:48,child:Material(color:AppColors.primaryGreen,shape:const CircleBorder(),
+               child:IconButton(tooltip:'Send message',onPressed:sending?null:_send,
+                 icon:sending?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):
+                   const Icon(Icons.send_rounded,color:Colors.white,size:23)))),
+           ])))),
+     ]),
+   );
+ }
  @override void dispose(){WidgetsBinding.instance.removeObserver(this);controller.dispose();scroll.dispose();super.dispose();}
 }

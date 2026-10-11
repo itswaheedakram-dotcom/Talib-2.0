@@ -94,8 +94,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   Widget _contactTile(BuildContext sheetContext, String uid, String other,
       String name, bool eligible) {
     return ListTile(
-      leading: const CircleAvatar(child: Icon(Icons.person_outline)),
-      title: UserIdentity(uid: other, name: name),
+      title: UserIdentity(uid: other, name: name, compact: true, showUsername: false),
       subtitle: Text(eligible ? 'You follow each other' : 'Waiting for them to follow you back'),
       trailing: eligible ? const Icon(Icons.chat_bubble_outline) : const Icon(Icons.hourglass_empty),
       onTap: () {
@@ -145,9 +144,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
         final name = item['otherName'].toString();
         final last = (item['lastMessage'] ?? '').toString();
         return ListTile(
-          leading: CircleAvatar(child: Text(name.isEmpty ? '?' : name.substring(0, 1).toUpperCase())),
-          title: UserIdentity(uid: other, name: name),
-          subtitle: Text(last.isEmpty ? 'Say hello' : last, maxLines: 1, overflow: TextOverflow.ellipsis),
+          contentPadding:const EdgeInsets.symmetric(horizontal:16,vertical:8),
+          title: UserIdentity(uid: other, name: name, compact: true, showUsername: false),
+          subtitle: Padding(padding:const EdgeInsets.only(left:44,top:4),child:Text(last.isEmpty ? 'Say hello' : last,maxLines:1,overflow:TextOverflow.ellipsis)),
           trailing: Column(mainAxisAlignment:MainAxisAlignment.center,children:[Text(_time(item['updatedAt']),style:const TextStyle(fontSize:12)),if(!ActiveProfileController.instance.isDemo) UnreadChatBadge(conversationId:item['id'].toString(),uid:uid)]),
           onTap: () => _openChat(item['id'].toString(), other, name),
         );
@@ -207,8 +206,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
               bottom: const TabBar(
                 labelColor: Colors.white, unselectedLabelColor: Colors.white70,
                 indicatorColor: Colors.white,
-                tabs: [Tab(text: 'Chats', icon: Icon(Icons.chat_bubble_outline)),
-                  Tab(text: 'Study Groups', icon: Icon(Icons.groups_outlined))],
+                tabs: [Tab(text: 'Chats'), Tab(text: 'Study Groups')],
               ),
             ),
             body: uid == null

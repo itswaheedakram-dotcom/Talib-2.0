@@ -11,16 +11,16 @@ import '../services/active_profile_controller.dart';
 class UserIdentity extends StatelessWidget {
   final String uid, name;
   final Color? color;
-  final bool resolveName;
-  const UserIdentity({super.key, required this.uid, required this.name, this.color, this.resolveName = true});
+  final bool resolveName, compact, showUsername;
+  const UserIdentity({super.key, required this.uid, required this.name, this.color, this.resolveName = true, this.compact = false, this.showUsername = true});
   @override Widget build(BuildContext context) {
-    Widget content(String display, [String photoUrl = '', String username = '']) => Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Widget content(String display, [String photoUrl = '', String username = '']) => Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: compact ? CrossAxisAlignment.center : CrossAxisAlignment.start, children: [
       ProfileAvatar(name: display, photoUrl: photoUrl, radius: 18),
       const SizedBox(width: 8),
       Flexible(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-      Text(display.isEmpty ? 'Student' : display, softWrap: true,
+      Text(display.isEmpty ? 'Student' : display, softWrap: !compact, maxLines: compact ? 1 : null, overflow: compact ? TextOverflow.ellipsis : null,
         style: TextStyle(fontWeight: FontWeight.w700, color: color)),
-      if (uid.isNotEmpty) UserIdLabel(uid: username.isEmpty ? uid : username, color: color, showLabel: false),
+      if (showUsername && uid.isNotEmpty) UserIdLabel(uid: username.isEmpty ? uid : username, color: color, showLabel: false),
     ])),
     ]);
     if (!resolveName || uid.isEmpty || (!FirebaseService.initialized && !temporaryProfiles.any((p) => p.id == uid))) return content(name);
