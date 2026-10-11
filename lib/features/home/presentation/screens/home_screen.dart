@@ -149,7 +149,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 IconButton(
-                  onPressed: () {},
+                  tooltip: 'Notifications',
+                  onPressed: () => context.push('/notifications'),
                   icon: Icon(Icons.notifications_rounded, color: AppColors.white, size: 27),
                 ),
               ],

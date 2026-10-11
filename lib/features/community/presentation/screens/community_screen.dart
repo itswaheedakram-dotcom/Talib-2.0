@@ -106,7 +106,6 @@ class _CommunityScreenState extends State<CommunityScreen>{
 
     return Scaffold(
       appBar:AppBar(title:Text(widget.authorId!=null?'My Posts':widget.instituteName==null?'Community':'${widget.instituteName} Community'),actions:[
-        IconButton(tooltip:'Notifications',icon:Icon(Icons.notifications_none),onPressed:()=>context.push('/notifications')),
         PopupMenuButton<bool>(onSelected:(v)=>setState(()=>popular=v),itemBuilder:(_)=>const[
           PopupMenuItem(value:false,child:Text('Latest')),PopupMenuItem(value:true,child:Text('Popular')),
         ]),
