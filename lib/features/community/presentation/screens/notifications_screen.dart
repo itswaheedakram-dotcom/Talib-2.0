@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
+import '../widgets/saved_institute_updates.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/database_service.dart';
 import '../../../../core/services/firebase_service.dart';
@@ -75,21 +76,18 @@ class NotificationsScreen extends StatelessWidget {
   }
 
   Widget _firebaseList(BuildContext context, List docs, DatabaseService db, String uid) {
-    if (docs.isEmpty) return const Center(child: Text('No notifications yet.'));
-    return ListView.separated(
-      padding: const EdgeInsets.all(12),
-      itemCount: docs.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 6),
-      itemBuilder: (context, index) {
-        final doc = docs[index];
+    final activity = docs.where((doc) => doc.data()['type'] != 'institute_update').toList();
+    return ListView(padding: const EdgeInsets.all(12), children: [
+      SavedInstituteUpdates(uid: uid),
+      const ListTile(title: Text('Community & account activity',
+          style: TextStyle(fontWeight: FontWeight.w700))),
+      if (activity.isEmpty) const ListTile(title: Text('No activity notifications yet.')),
+      ...activity.map((doc) {
         final item = Map<String, dynamic>.from(doc.data() as Map);
-        return _notificationTile(
-          context,
-          item,
-          onTap: () => _openNotification(context, item, db, uid, doc.id),
-        );
-      },
-    );
+        return _notificationTile(context, item,
+            onTap: () => _openNotification(context, item, db, uid, doc.id));
+      }),
+    ]);
   }
 
   Widget _notificationTile(
@@ -99,11 +97,11 @@ class NotificationsScreen extends StatelessWidget {
   }) {
     final read = item['read'] == true;
     return Card(
-      color: read ? null : AppColors.softGreen,
+      color: read ? null : AppPalette.of(context).softSurface,
       child: ListTile(
-        leading: const CircleAvatar(
-          backgroundColor: AppColors.softGreen,
-          child: Icon(Icons.notifications_none, color: AppColors.darkGreen),
+        leading: CircleAvatar(
+          backgroundColor: AppPalette.of(context).softSurface,
+          child: Icon(Icons.notifications_none, color: AppPalette.of(context).accent),
         ),
         title: Text(
           item['text']?.toString() ?? 'Activity',
