@@ -51,5 +51,37 @@ void main() {
     test('does not mutate words when replacing Roman Urdu me', () {
       expect(SmartSearchParser.normalize('women in Lahore'), contains('female'));
     });
+    test('supports comma budgets, shorthand and decimal lakhs', () {
+      expect(SmartSearchParser.parse('girls hostel under 15,000').maxBudget, 15000);
+      expect(SmartSearchParser.parse('hostel budget 15k').maxBudget, 15000);
+      expect(SmartSearchParser.parse('hostel under 1.5 lakh').maxBudget, 150000);
+      expect(SmartSearchParser.parse('hostel 15 hazaar tak').maxBudget, 15000);
+      expect(SmartSearchParser.parse('admission 2026').maxBudget, isNull);
+    });
+
+    test('recognizes Depalpur and DG Khan aliases', () {
+      expect(SmartSearchParser.parse('Depalpur me colleges').location, 'Depalpur');
+      expect(SmartSearchParser.parse('Dipalpur school').location, 'Depalpur');
+      expect(SmartSearchParser.parse('D.G. Khan me university').location, 'Dera Ghazi Khan');
+      expect(SmartSearchParser.parse('Dera Ghazi Khan hostel').terms, isEmpty);
+    });
+
+    test('recognizes exact science programs', () {
+      expect(SmartSearchParser.parse('BS Chemistry Depalpur').program, 'Chemistry');
+      expect(SmartSearchParser.parse('BS Botany college').program, 'Botany');
+      expect(SmartSearchParser.parse('BS Mathematics').program, 'Mathematics');
+    });
+
+    test('normalizes longer phrases before shorter aliases', () {
+      expect(SmartSearchParser.normalize('sab se acha hostel'), contains('best'));
+      expect(SmartSearchParser.normalize('kahan par hostel'), contains('where'));
+    });
+
+    test('parses advertised price ranges and excludes unknown prices', () {
+      expect(SmartSearchParser.minimumPrice('PKR 12,000 - 18,000/month'), 12000);
+      expect(SmartSearchParser.minimumPrice('15k monthly'), 15000);
+      expect(SmartSearchParser.minimumPrice('Contact for price'), isNull);
+    });
+
   });
 }

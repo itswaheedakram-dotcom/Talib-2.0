@@ -64,6 +64,10 @@ class ParsedGlobalQuery {
 abstract final class SmartSearchParser {
   static const _locations = <String, List<String>>{
     'Lahore': ['lahore', 'lahor'],
+    'Depalpur': ['depalpur', 'dipalpur', 'depal pur', 'deepalpur'],
+    'Dera Ghazi Khan': ['dera ghazi khan', 'd g khan', 'dg khan', 'd.g. khan'],
+    'Okara': ['okara'],
+    'Jeddah': ['jeddah', 'jedda'],
     'Islamabad': ['islamabad', 'islambad', 'islam abad'],
     'Rawalpindi': ['rawalpindi', 'pindi'],
     'Multan': ['multan'],
@@ -83,11 +87,12 @@ abstract final class SmartSearchParser {
   };
 
   static String normalize(String input) {
-    var value = input.toLowerCase().trim();
+    var value = input.toLowerCase().trim()
+        .replaceAll(RegExp(r'f\s*\.\s*sc\.?'), 'fsc');
     const replacements = {
       'where are': 'where', 'kahan': 'where', 'kaha': 'where', 'kahan par': 'where', 'kidhar': 'where', 'kis jagah': 'where',
       'mein': 'in', 'main': 'in', 'me': 'in', 'ke andar': 'in', 'ke qareeb': 'near', 'qareeb': 'near', 'nearby': 'near',
-      'achy': 'good', 'acha': 'good', 'achi': 'good', 'ache': 'good', 'behtareen': 'best', 'sab se acha': 'best', 'top rated': 'best rated', 'highly rated': 'best rated',
+      'achay': 'good', 'achy': 'good', 'acha': 'good', 'achi': 'good', 'ache': 'good', 'behtareen': 'best', 'sab se acha': 'best', 'top rated': 'best rated', 'highly rated': 'best rated',
       'girls': 'female', 'girl': 'female', 'ladies': 'female', 'women': 'female', 'larkiyon': 'female', 'larkio': 'female', 'larki': 'female', 'boys': 'male', 'boy': 'male', 'men': 'male', 'larkon': 'male', 'larko': 'male', 'larka': 'male',
       'admissions': 'admission', 'dakhla': 'admission', 'dakhle': 'admission', 'scholarships': 'scholarship', 'wazifa': 'scholarship', 'wazaif': 'scholarship', 'financial support': 'financial aid',
       'universities': 'university', 'colleges': 'college', 'schools': 'school', 'idaray': 'institute', 'institute': 'institute', 'madaris': 'school',
@@ -99,7 +104,11 @@ abstract final class SmartSearchParser {
       'bachelors': 'bs', 'bachelor': 'bs', 'undergraduate': 'bs', 'masters': 'ms', 'master': 'ms', 'computer science': 'computer science', 'software eng': 'software engineering', 'cs degree': 'computer science', 'notes': 'notes', 'past papers': 'past paper', 'study material': 'study material',
       'hn': 'hain', 'han': 'hain', 'hain na': 'hain', 'he': 'hai', 'hai na': 'hai', 'btao': 'show', 'batao': 'show', 'bata dein': 'show', 'dikhao': 'show', 'dhoondo': 'find', 'talash': 'find', 'chahiye': 'need', 'chaheye': 'need', 'mujhe': 'me', 'mujhy': 'me', 'mere liye': 'for me', 'koi achi': 'good', 'koi acha': 'good', 'available hain': 'available', 'mil sakti': 'available', 'mil sakta': 'available',
     };
-    replacements.forEach((from, to) => value = value.replaceAll(RegExp(r'\b' + RegExp.escape(from) + r'\b'), to));
+    final aliases = replacements.keys.toList()..sort((a,b) => b.length.compareTo(a.length));
+    for (final from in aliases) {
+      value = value.replaceAll(RegExp(r'\b' + RegExp.escape(from) + r'\b'), replacements[from]!);
+    }
+    value = value.replaceAllMapped(RegExp(r'(\d),(?=\d)'), (m) => m[1]!);
     value = value.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
     return value.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
@@ -129,7 +138,7 @@ abstract final class SmartSearchParser {
     String? location;
     String? area;
     for (final entry in _locations.entries) {
-      if (entry.value.any((alias) => normalized.contains(alias))) {
+      if (entry.value.any((alias) => RegExp(r'\b' + RegExp.escape(normalize(alias)) + r'\b').hasMatch(normalized))) {
         if (entry.key == 'Johar Town' || entry.key == 'Gulberg' || entry.key == 'Bosan Road' || entry.key == 'New Campus' || entry.key == 'Baghdad-ul-Jadeed') {
           area = entry.key;
         } else {
@@ -140,14 +149,7 @@ abstract final class SmartSearchParser {
     if (location != null) understood.add('Location: $location');
     if (area != null) understood.add('Area: $area');
 
-    final thousandMatch = RegExp(r'\b(\d{1,3})\s*(?:hazaar|hazar|thousand)\b', caseSensitive: false).firstMatch(input);
-    final lakhMatch = RegExp(r'\b(\d{1,2})\s*(?:lakh|lac)\b', caseSensitive: false).firstMatch(input);
-    final budgetMatch = RegExp(r'\b(?:under|below|less than|max|maximum|budget|rs)?\s*(\d{1,3}(?:,\d{3})+|\d{4,6})\b').firstMatch(normalized);
-    final budget = thousandMatch != null
-        ? (int.tryParse(thousandMatch.group(1)!) ?? 0) * 1000
-        : lakhMatch != null
-            ? (int.tryParse(lakhMatch.group(1)!) ?? 0) * 100000
-            : budgetMatch == null ? null : int.tryParse(budgetMatch.group(1)!.replaceAll(',', ''));
+    final budget = budgetFrom(input);
     if (budget != null) understood.add('Budget: up to PKR ${budget.toString()}');
 
     String? gender;
@@ -162,7 +164,7 @@ abstract final class SmartSearchParser {
     if (bestRated) understood.add('Preference: Best rated / recommended');
 
     String? program;
-    for (final p in ['computer science', 'cs', 'software engineering', 'engineering', 'business administration', 'fsc', 'ics', 'bs', 'undergraduate', 'ms', 'phd']) {
+    for (final p in ['computer science', 'cs', 'software engineering', 'chemistry', 'botany', 'mathematics', 'english', 'engineering', 'business administration', 'pre medical', 'pre engineering', 'fsc', 'ics', 'i com', 'fa', 'ada', 'ads', 'bs', 'undergraduate', 'ms', 'phd']) {
       if (RegExp(r'\b' + RegExp.escape(p) + r'\b').hasMatch(normalized)) {
         program = p == 'cs' ? 'Computer Science' : p.toUpperCase() == 'BS' ? 'BS' : _titleCase(p);
         understood.add('Program/level: $program');
@@ -180,9 +182,67 @@ abstract final class SmartSearchParser {
     }
 
     final stopWords = <String>{
-      'in','near','where','good','best','top','find','show','need','me','the','a','an','for','of','is','are','open','currently','admission','hostel','scholarship','institute','school','college','university','people','profile','resources','community','deadline','last','date','under','below','less','than','maximum','max','budget','rs','pkr','female','male','girls','boys','students','student','kaha','kahan','hai','hain','mein','main','dakhla','wazifa','wazaif','rupay','kiraya','monthly','available','wi','fi','room','larki','larko','larkon','larkio','larkiyon','batao','btao','dikhao','dhoondo','mujhy','mujhe','chahiye','he','hn','acha','achi','achy','ache','behtareen','tak','kam','khulay','khula','tareekh','akhri','aakhri','lakh','hazaar','idaray','bata','dein'
+      'in','near','where','good','best','top','find','show','need','me','the','a','an','for','of','is','are','open','currently','admission','hostel','scholarship','institute','school','college','university','people','profile','resources','community','deadline','last','date','under','below','less','than','maximum','max','budget','rs','pkr','female','male','girls','boys','students','student','kaha','kahan','hai','hain','mein','main','dakhla','wazifa','wazaif','rupay','kiraya','monthly','available','wi','fi','room','larki','larko','larkon','larkio','larkiyon','batao','btao','dikhao','dhoondo','mujhy','mujhe','chahiye','he','hn','acha','achi','achy','ache','behtareen','tak','kam','khulay','khula','tareekh','akhri','aakhri','lakh','lac','hazaar','hazar','thousand','rated','achay','idaray','bata','dein'
     };
-    final terms = normalized.split(' ').where((t) => t.length > 1 && !stopWords.contains(t) && !RegExp(r'^\d+$').hasMatch(t)).toSet().toList();
+    for (final entry in _locations.entries) {
+      for (final alias in entry.value) {
+        stopWords.addAll(normalize(alias).split(' '));
+      }
+    }
+    if (instituteName != null) stopWords.addAll(normalize(instituteName).split(' '));
+    final terms = normalized.split(' ').where((t) => t.length > 1 && !stopWords.contains(t) && !RegExp(r'^\d+(?:k)?).toSet().toList();
+    if (understood.isEmpty) understood.add('Searching across available Talib-2.0 listings');
+    return ParsedGlobalQuery(
+      original: input, normalized: normalized, category: category,
+      location: location, area: area, program: program, instituteName: instituteName,
+      gender: gender, maxBudget: budget, wantsOpenAdmissions: openAdmissions,
+      wantsBestRated: bestRated, terms: terms, understood: understood, isRomanUrdu: isRomanUrdu,
+    );
+  }
+
+  /// Budget requires a price cue; academic years are not budgets.
+  static int? budgetFrom(String input) {
+    final text = input.toLowerCase();
+    const amount = r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(k|hazaar|hazar|thousand|lakh|lac)?';
+    final prefix = RegExp(r'\b(?:under|below|less than|max(?:imum)?(?: budget)?|budget|rs\.?|pkr|se kam)\s*[:=]?\s*' + amount)
+        .firstMatch(text);
+    if (prefix != null) return _amount(prefix.group(1)!, prefix.group(2));
+    final suffix = RegExp(r'\b' + amount + r'\s*(?:rupay|rupees|rs|pkr|tak|se kam)\b')
+        .firstMatch(text);
+    if (suffix != null) return _amount(suffix.group(1)!, suffix.group(2));
+    final units = RegExp(r'\b(\d+(?:\.\d+)?)\s*(k|hazaar|hazar|thousand|lakh|lac)\b')
+        .firstMatch(text);
+    return units == null ? null : _amount(units.group(1)!, units.group(2));
+  }
+
+  static int? _amount(String number, String? unit) {
+    final value = double.tryParse(number.replaceAll(',', ''));
+    if (value == null || !value.isFinite || value < 0) return null;
+    final multiplier = unit == 'lakh' || unit == 'lac' ? 100000
+        : unit == null || unit.isEmpty ? 1 : 1000;
+    return (value * multiplier).round();
+  }
+
+  /// Minimum advertised price of a range; unknown prices stay unknown.
+  static int? minimumPrice(String input) {
+    final match = RegExp(r'\b(\d+(?:,\d{3})*(?:\.\d+)?)\s*(k|hazaar|hazar|thousand|lakh|lac)?\b',
+        caseSensitive: false).firstMatch(input);
+    return match == null ? null : _amount(match.group(1)!, match.group(2)?.toLowerCase());
+  }
+
+  static String _categoryLabel(GlobalSearchCategory c) => switch (c) {
+    GlobalSearchCategory.institutes => 'Institutes',
+    GlobalSearchCategory.admissions => 'Admissions',
+    GlobalSearchCategory.hostels => 'Hostels',
+    GlobalSearchCategory.scholarships => 'Scholarships',
+    GlobalSearchCategory.resources => 'Resources',
+    GlobalSearchCategory.community => 'Community',
+    GlobalSearchCategory.people => 'People',
+    GlobalSearchCategory.all => 'All categories',
+  };
+  static String _titleCase(String value) => value.split(' ').map((word) => word.isEmpty ? word : '${word[0].toUpperCase()}${word.substring(1)}').join(' ');
+}
+).hasMatch(t)).toSet().toList();
     if (understood.isEmpty) understood.add('Searching across available Talib-2.0 listings');
     return ParsedGlobalQuery(
       original: input, normalized: normalized, category: category,
