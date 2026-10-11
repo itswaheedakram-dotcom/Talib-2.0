@@ -34,18 +34,18 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
 
     if (isDemo) {
       final post = DemoDataService.instance.post(widget.id);
-      if (post == null) return const Scaffold(body: Center(child: Text('Post not found.')));
-      return Scaffold(appBar: AppBar(title: const Text('Post')), body: _content(post, user));
+      if (post == null) return Scaffold(body: Center(child: Text('Post not found.')));
+      return Scaffold(appBar: AppBar(title: Text('Post')), body: _content(post, user));
     }
-    if (!ready) return const Scaffold(body: Center(child: Text('Firebase is not initialized.')));
+    if (!ready) return Scaffold(body: Center(child: Text('Firebase is not initialized.')));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Post')),
+      appBar: AppBar(title: Text('Post')),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance.collection('posts').doc(widget.id).snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) return const Center(child: Text('Post not found.'));
+          if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
+          if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) return Center(child: Text('Post not found.'));
           return _content(Post.fromDoc(snapshot.data!), user);
         },
       ),
@@ -61,22 +61,22 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
     final canInteract = user != null || isDemo;
 
     return Column(children: [
-      Expanded(child: ListView(padding: const EdgeInsets.all(14), children: [
+      Expanded(child: ListView(padding: EdgeInsets.all(14), children: [
         InkWell(
           onTap: () => context.push('/profile/${post.authorId}'),
           child: Row(children: [
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               UserIdentity(uid: post.authorId, name: post.authorName),
-              const Text('View profile', style: TextStyle(color: AppColors.homeMutedText, fontSize: 12)),
+              Text('View profile', style: TextStyle(color: AppPalette.of(context).muted, fontSize: 12)),
             ])),
           ]),
         ),
-        const SizedBox(height: 14),
-        if (post.isQuestion) const Text('QUESTION', style: TextStyle(color: AppColors.primaryGreen, fontWeight: FontWeight.w800, fontSize: 11)),
-        const SizedBox(height: 6),
-        Text(post.text, style: const TextStyle(fontSize: 16, height: 1.45)),
+        SizedBox(height: 14),
+        if (post.isQuestion) Text('QUESTION', style: TextStyle(color: AppColors.primaryGreen, fontWeight: FontWeight.w800, fontSize: 11)),
+        SizedBox(height: 6),
+        Text(post.text, style: TextStyle(fontSize: 16, height: 1.45)),
         if(post.attachments.isNotEmpty) ...[
-          const SizedBox(height:10),
+          SizedBox(height:10),
           ...post.attachments.map((a){
             final type=a['type']??'file'; final url=a['url']??''; final name=a[ProfileFields.name]??'Attachment';
             if(type=='photo'&&url.isNotEmpty) return ClipRRect(
@@ -86,7 +86,7 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
             return _attachmentTile(name,type=='link'?Icons.link:Icons.insert_drive_file_outlined);
           }),
         ],
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Wrap(spacing: 4, children: [
           IconButton(
             onPressed: canInteract ? () async {
@@ -97,7 +97,7 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
             } : null,
             icon: Icon(liked ? Icons.favorite : Icons.favorite_border, color: Colors.red),
           ),
-          Text('${likes} likes', style: const TextStyle(height: 3)),
+          Text('${likes} likes', style: TextStyle(height: 3)),
           IconButton(
             onPressed: canInteract ? () async {
               final next = !_saved;
@@ -110,23 +110,23 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
             } : null,
             icon: Icon(_saved ? Icons.bookmark : Icons.bookmark_border, color: AppColors.primaryGreen),
           ),
-          Text(_saved ? 'Saved' : 'Save', style: const TextStyle(height: 3)),
+          Text(_saved ? 'Saved' : 'Save', style: TextStyle(height: 3)),
           if (!isDemo && user != null && user.uid == post.authorId)
-            IconButton(tooltip: 'Edit', onPressed: () => context.push('/community/create', extra: post), icon: const Icon(Icons.edit_outlined)),
+            IconButton(tooltip: 'Edit', onPressed: () => context.push('/community/create', extra: post), icon: Icon(Icons.edit_outlined)),
           if (!isDemo && user != null && user.uid != post.authorId)
-            IconButton(tooltip: 'Report', onPressed: () => _report(post, user), icon: const Icon(Icons.flag_outlined)),
+            IconButton(tooltip: 'Report', onPressed: () => _report(post, user), icon: Icon(Icons.flag_outlined)),
         ]),
-        const Divider(height: 26),
+        Divider(height: 26),
         Row(children: [
-          const Text('Comments', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          const Spacer(),
+          Text('Comments', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          Spacer(),
           Text(isDemo ? DemoDataService.instance.comments(widget.id).length.toString() : post.commentsCount.toString()),
         ]),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         if (isDemo) _demoComments() else _firebaseComments(post, user),
       ])),
       SafeArea(child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+        padding: EdgeInsets.fromLTRB(12, 6, 12, 10),
         child: Row(children: [
           Expanded(child: TextField(
             controller: _comment,
@@ -135,11 +135,11 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
             decoration: InputDecoration(
               hintText: user == null ? 'Sign in to comment' : 'Write a comment...',
               filled: true,
-              fillColor: AppColors.softGreen,
+              fillColor: AppPalette.of(context).softSurface,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
             ),
           )),
-          IconButton(onPressed: canInteract ? () => _addComment(user) : null, icon: const Icon(Icons.send, color: AppColors.primaryGreen)),
+          IconButton(onPressed: canInteract ? () => _addComment(user) : null, icon: Icon(Icons.send, color: AppColors.primaryGreen)),
         ]),
       )),
     ]);
@@ -168,13 +168,13 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
       stream: _demoCommentsStream(),
       builder: (context, snapshot) {
         final docs = snapshot.data ?? const <Map<String, dynamic>>[];
-        if (docs.isEmpty) return const Text('No comments yet.');
+        if (docs.isEmpty) return Text('No comments yet.');
         return Column(children: docs.map((x) => ListTile(
           contentPadding: EdgeInsets.zero,
           title: Row(children:[
             Expanded(child:UserIdentity(uid: (x[ProfileFields.authorId] ?? '').toString(), name: (x[ProfileFields.authorName] ?? 'Student').toString())),
             if(widget.id.isNotEmpty && DemoDataService.instance.post(widget.id)?.bestAnswerId==x['id'])
-              const Text('BEST ANSWER',style:TextStyle(color:AppColors.primaryGreen,fontSize:10,fontWeight:FontWeight.bold)),
+              Text('BEST ANSWER',style:TextStyle(color:AppColors.primaryGreen,fontSize:10,fontWeight:FontWeight.bold)),
           ]),
           subtitle: Text((x['text'] ?? '').toString()),
           trailing: (DemoDataService.instance.post(widget.id)?.isQuestion==true && DemoDataService.instance.post(widget.id)?.authorId==ActiveProfileController.instance.effectiveUid)
@@ -197,7 +197,7 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
       stream: _db!.commentsStream(widget.id),
       builder: (context, snapshot) {
         final docs = snapshot.data?.docs ?? const <QueryDocumentSnapshot<Map<String, dynamic>>>[];
-        if (docs.isEmpty) return const Text('No comments yet.');
+        if (docs.isEmpty) return Text('No comments yet.');
         return Column(children: docs.map((doc) {
           final data = doc.data();
           final commentId = doc.id;
@@ -206,7 +206,7 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
             contentPadding: EdgeInsets.zero,
               title: Row(children: [
               Expanded(child: UserIdentity(uid: (data[ProfileFields.authorId] ?? '').toString(), name: (data[ProfileFields.authorName] ?? 'Student').toString())),
-              if (accepted) const Text('BEST ANSWER', style: TextStyle(color: AppColors.primaryGreen, fontSize: 10, fontWeight: FontWeight.bold)),
+              if (accepted) Text('BEST ANSWER', style: TextStyle(color: AppColors.primaryGreen, fontSize: 10, fontWeight: FontWeight.bold)),
             ]),
             subtitle: Text((data['text'] ?? '').toString()),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -221,17 +221,17 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
                   final ok = await showDialog<bool>(
                     context: context,
                     builder: (_) => AlertDialog(
-                      title: const Text('Delete comment?'),
-                      content: const Text('This comment will be permanently deleted.'),
+                      title: Text('Delete comment?'),
+                      content: Text('This comment will be permanently deleted.'),
                       actions: [
-                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+                        TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Cancel')),
+                        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text('Delete')),
                       ],
                     ),
                   );
                   if (ok == true) await _db!.deleteComment(postId: post.id, commentId: commentId, uid: user!.uid);
                 },
-                itemBuilder: (_) => const [PopupMenuItem(value: 'delete', child: Text('Delete'))],
+                itemBuilder: (_) => [PopupMenuItem(value: 'delete', child: Text('Delete'))],
               ),
             ]),
           );
@@ -242,12 +242,12 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
 
   Widget _attachmentTile(String name,IconData icon){
     return Padding(
-      padding:const EdgeInsets.only(bottom:8),
+      padding:EdgeInsets.only(bottom:8),
       child:Container(
-        padding:const EdgeInsets.all(12),
-        decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(10)),
+        padding:EdgeInsets.all(12),
+        decoration:BoxDecoration(color:AppPalette.of(context).softSurface,borderRadius:BorderRadius.circular(10)),
         child:Row(children:[
-          Icon(icon,color:AppColors.primaryGreen),const SizedBox(width:10),
+          Icon(icon,color:AppColors.primaryGreen),SizedBox(width:10),
           Expanded(child:Text(name,overflow:TextOverflow.ellipsis)),
         ]),
       ),
@@ -276,7 +276,7 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
       );
       _comment.clear();
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not add comment.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not add comment.')));
     }
   }
 
@@ -284,7 +284,7 @@ class _PostCommentsScreenState extends State<PostCommentsScreen> {
     final reason = await showDialog<String>(
       context: context,
       builder: (_) => SimpleDialog(
-        title: const Text('Report post'),
+        title: Text('Report post'),
         children: ['Spam', 'Harassment', 'Fake information', 'Inappropriate', 'Scam', 'Other']
             .map((reason) => SimpleDialogOption(onPressed: () => Navigator.pop(context, reason), child: Text(reason)))
             .toList(),

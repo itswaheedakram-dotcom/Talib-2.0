@@ -25,17 +25,17 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.legacyCream,
+      color: AppPalette.of(context).background,
       child: Column(
         children: [
           _hero(context),
           Expanded(
             child: Container(
-              decoration: const BoxDecoration(
-                color: AppColors.legacyCream,
+              decoration: BoxDecoration(
+                color: AppPalette.of(context).background,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               ),
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+              padding: EdgeInsets.fromLTRB(14, 8, 14, 10),
               child: Column(
                 children: [
                   GestureDetector(
@@ -45,24 +45,24 @@ class _HomeScreenState extends State<HomeScreen> {
                       height: 26,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: AppColors.white,
+                        color: AppPalette.of(context).surface,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                        color: AppColors.homeGreen,
+                        color: AppPalette.of(context).accent,
                         size: 20,
                       ),
                     ),
                   ),
                   if (expanded) ...[
-                    const SizedBox(height: 3),
+                    SizedBox(height: 3),
                     SizedBox(
                       height: 190,
                       child: GridView.builder(
-                        physics: const NeverScrollableScrollPhysics(),
+                        physics: NeverScrollableScrollPhysics(),
                         itemCount: items.length,
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 4,
                           mainAxisExtent: 78,
                           crossAxisSpacing: 5,
@@ -80,9 +80,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   width: 50,
                                   height: 50,
                                   decoration: BoxDecoration(
-                                    color: AppColors.white,
+                                    color: AppPalette.of(context).surface,
                                     borderRadius: BorderRadius.circular(14),
-                                    boxShadow: const [
+                                    boxShadow: [
                                       BoxShadow(
                                         color: AppColors.cardShadow,
                                         blurRadius: 7,
@@ -90,17 +90,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ],
                                   ),
-                                  child: Icon(item.icon, color: AppColors.homeGreen, size: 27),
+                                  child: Icon(item.icon, color: AppPalette.of(context).accent, size: 27),
                                 ),
-                                const SizedBox(height: 2),
+                                SizedBox(height: 2),
                                 Text(
                                   item.title,
                                   textAlign: TextAlign.center,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 11,
-                                    color: AppColors.homeMutedText,
+                                    color: AppPalette.of(context).muted,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -111,12 +111,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
                   FractionallySizedBox(
                     widthFactor: 0.94,
                     child: _compactBanners(context),
                   ),
-                  const Spacer(),
+                  Spacer(),
                 ],
               ),
             ),
@@ -129,11 +129,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _hero(BuildContext context) {
     return Container(
       height: 218,
-      decoration: const BoxDecoration(
-        color: AppColors.homeGreen,
+      decoration: BoxDecoration(
+        color: AppPalette.of(context).brandSurface,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Column(
         children: [
           SafeArea(
@@ -145,31 +145,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 Builder(
                   builder: (drawerContext) => IconButton(
                     onPressed: () => Scaffold.of(drawerContext).openDrawer(),
-                    icon: const Icon(Icons.menu_rounded, color: AppColors.white, size: 27),
+                    icon: Icon(Icons.menu_rounded, color: AppColors.white, size: 27),
                   ),
                 ),
                 IconButton(
                   onPressed: () {},
-                  icon: const Icon(Icons.notifications_rounded, color: AppColors.white, size: 27),
+                  icon: Icon(Icons.notifications_rounded, color: AppColors.white, size: 27),
                 ),
               ],
             ),
           ),
-          const Spacer(),
-          const Icon(Icons.format_quote_rounded, color: AppColors.homeAccent, size: 34),
-          const SizedBox(height: 1),
-          const Text(
+          Spacer(),
+          Icon(Icons.format_quote_rounded, color: AppColors.homeAccent, size: 34),
+          SizedBox(height: 1),
+          Text(
             'If you cannot do great things, do small things\nin a great way!',
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.white, fontSize: 15, height: 1.25, fontWeight: FontWeight.w400),
           ),
-          const SizedBox(height: 10),
-          const Align(
+          SizedBox(height: 10),
+          Align(
             alignment: Alignment.centerLeft,
             child: Text('- Napoleon Hill', style: TextStyle(color: AppColors.authorAccent, fontSize: 14, fontWeight: FontWeight.w600)),
           ),
-          const SizedBox(height: 5),
-          const SizedBox(height: 2),
+          SizedBox(height: 5),
+          SizedBox(height: 2),
         ],
       ),
     );
@@ -180,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(height: 92, child: _findBanner(context)),
-        const SizedBox(height: 9),
+        SizedBox(height: 9),
         SizedBox(height: 92, child: _guidanceBanner(context)),
       ],
     );
@@ -191,14 +191,14 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => context.push('/find'),
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(13, 6, 8, 6),
+        padding: EdgeInsets.fromLTRB(13, 6, 8, 6),
         decoration: BoxDecoration(
-          color: AppColors.homeGreen,
+          color: AppPalette.of(context).brandSurface,
           borderRadius: BorderRadius.circular(18),
         ),
         child: Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -227,8 +227,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               width: 70,
               height: 70,
-              decoration: const BoxDecoration(color: AppColors.findBubble, shape: BoxShape.circle),
-              child: const Icon(Icons.person_search_rounded, color: AppColors.white, size: 46),
+              decoration: BoxDecoration(color: AppColors.findBubble, shape: BoxShape.circle),
+              child: Icon(Icons.person_search_rounded, color: AppColors.white, size: 46),
             ),
           ],
         ),
@@ -241,9 +241,9 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => context.push('/community'),
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(8, 6, 12, 6),
+        padding: EdgeInsets.fromLTRB(8, 6, 12, 6),
         decoration: BoxDecoration(
-          color: AppColors.homeGreen,
+          color: AppPalette.of(context).brandSurface,
           borderRadius: BorderRadius.circular(18),
         ),
         child: Row(
@@ -251,14 +251,14 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               width: 70,
               height: 70,
-              decoration: const BoxDecoration(
-                color: AppColors.guidanceBubble,
+              decoration: BoxDecoration(
+                color: AppPalette.of(context).border,
                 borderRadius: BorderRadius.all(Radius.circular(45)),
               ),
-              child: const Icon(Icons.groups_rounded, color: AppColors.darkGreen, size: 45),
+              child: Icon(Icons.groups_rounded, color: AppPalette.of(context).ink, size: 45),
             ),
-            const SizedBox(width: 11),
-            const Expanded(
+            SizedBox(width: 11),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,

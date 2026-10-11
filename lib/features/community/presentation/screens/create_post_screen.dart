@@ -40,7 +40,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
       _controller.text=p.text;
       category=TimelineTopics.byName(p.category)!=null?p.category:'General';
       _selectedTags..clear()..addAll(p.tags);
-      _selectedInstituteIds..clear()..addAll(p.instituteIds.isNotEmpty?p.instituteIds:(p.instituteId==null?const []:[p.instituteId!]));
+      _selectedInstituteIds..clear()..addAll(p.instituteIds.isNotEmpty?p.instituteIds:(p.instituteId==null?[]:[p.instituteId!]));
       _isQuestion=p.isQuestion;_isPoll=p.pollOptions.isNotEmpty;
       for(final option in p.pollOptions)_addPollOption(option);
       _attachments.addAll(p.attachments.map((x)=>Map<String,String>.from(x)));
@@ -59,15 +59,15 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
   @override void dispose(){_controller.dispose();for(final c in _pollOptions)c.dispose();super.dispose();}
 
   String _errorText(Object error){final raw=error.toString().trim();if(raw.isEmpty)return 'Unknown error.';return raw.replaceFirst(RegExp(r'^Exception:\s*'),'');}
-  void _showError(Object error){if(!mounted)return;ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_errorText(error)),duration:const Duration(seconds:5)));}
+  void _showError(Object error){if(!mounted)return;ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_errorText(error)),duration:Duration(seconds:5)));}
 
   Future<void> _showAttachmentMenu()async{
     await showModalBottomSheet<void>(context:context,showDragHandle:true,builder:(sheet)=>SafeArea(child:Padding(
-      padding:const EdgeInsets.fromLTRB(18,8,18,22),child:Wrap(children:[
-        ListTile(leading:const Icon(Icons.photo_outlined,color:AppColors.primaryGreen),title:const Text('Photo'),subtitle:const Text('Add a picture to your post'),onTap:(){Navigator.pop(sheet);_pickPhoto();}),
-        ListTile(leading:const Icon(Icons.insert_drive_file_outlined,color:AppColors.primaryGreen),title:const Text('File'),subtitle:const Text('Attach a document or file'),onTap:(){Navigator.pop(sheet);_pickFile();}),
-        ListTile(leading:const Icon(Icons.link,color:AppColors.primaryGreen),title:const Text('Link'),subtitle:const Text('Add a web link'),onTap:(){Navigator.pop(sheet);_addLink();}),
-        ListTile(leading:const Icon(Icons.poll_outlined,color:AppColors.primaryGreen),title:const Text('Poll'),subtitle:const Text('Create a poll with 2–5 options'),onTap:(){Navigator.pop(sheet);_enablePoll();}),
+      padding:EdgeInsets.fromLTRB(18,8,18,22),child:Wrap(children:[
+        ListTile(leading:Icon(Icons.photo_outlined,color:AppColors.primaryGreen),title:Text('Photo'),subtitle:Text('Add a picture to your post'),onTap:(){Navigator.pop(sheet);_pickPhoto();}),
+        ListTile(leading:Icon(Icons.insert_drive_file_outlined,color:AppColors.primaryGreen),title:Text('File'),subtitle:Text('Attach a document or file'),onTap:(){Navigator.pop(sheet);_pickFile();}),
+        ListTile(leading:Icon(Icons.link,color:AppColors.primaryGreen),title:Text('Link'),subtitle:Text('Add a web link'),onTap:(){Navigator.pop(sheet);_addLink();}),
+        ListTile(leading:Icon(Icons.poll_outlined,color:AppColors.primaryGreen),title:Text('Poll'),subtitle:Text('Create a poll with 2–5 options'),onTap:(){Navigator.pop(sheet);_enablePoll();}),
       ]),
     )));
   }
@@ -104,8 +104,8 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
   Future<void> _addLink()async{
     final c=TextEditingController();
     final url=await showDialog<String>(context:context,builder:(d)=>AlertDialog(
-      title:const Text('Add link'),content:TextField(controller:c,keyboardType:TextInputType.url,autofocus:true,decoration:const InputDecoration(hintText:'https://example.com')),
-      actions:[TextButton(onPressed:()=>Navigator.pop(d),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(d,c.text.trim()),child:const Text('Add'))],
+      title:Text('Add link'),content:TextField(controller:c,keyboardType:TextInputType.url,autofocus:true,decoration:InputDecoration(hintText:'https://example.com')),
+      actions:[TextButton(onPressed:()=>Navigator.pop(d),child:Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(d,c.text.trim()),child:Text('Add'))],
     ));
     c.dispose();if(url==null||url.isEmpty)return;
     final normalized=url.startsWith('http://')||url.startsWith('https://')?url:'https://$url';
@@ -154,9 +154,9 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
               height: MediaQuery.of(context).size.height * .78,
               child: Column(
                 children: [
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
-                    child: Text('Tag Topics', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.darkGreen)),
+                    child: Text('Tag Topics', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppPalette.of(context).ink)),
                   ),
                   Expanded(
                     child: ListView(
@@ -175,8 +175,8 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: FilledButton(onPressed: () => Navigator.pop(sheet, temp), child: const Text('Done')),
+                    padding: EdgeInsets.all(12),
+                    child: FilledButton(onPressed: () => Navigator.pop(sheet, temp), child: Text('Done')),
                   ),
                 ],
               ),
@@ -227,21 +227,21 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
               height: MediaQuery.of(context).size.height * .86,
               child: Column(
                 children: [
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
-                    child: Text('Tag Institutes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.darkGreen)),
+                    child: Text('Tag Institutes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppPalette.of(context).ink)),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                    padding: EdgeInsets.fromLTRB(12, 0, 12, 6),
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: ['All', 'universities', 'colleges', 'schools'].map((type) => Padding(
-                          padding: const EdgeInsets.only(right: 6),
+                          padding: EdgeInsets.only(right: 6),
                           child: ChoiceChip(
                             label: Text(type == 'All' ? 'All' : type[0].toUpperCase() + type.substring(1)),
                             selected: typeFilter == type,
-                            selectedColor: AppColors.softGreen,
+                            selectedColor: AppPalette.of(context).softSurface,
                             onSelected: (_) => setSheet(() => typeFilter = type),
                           ),
                         )).toList(),
@@ -249,14 +249,14 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                    padding: EdgeInsets.fromLTRB(12, 0, 12, 6),
                     child: Row(
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             value: provinceFilter,
                             isExpanded: true,
-                            decoration: const InputDecoration(labelText: 'Province', isDense: true),
+                            decoration: InputDecoration(labelText: 'Province', isDense: true),
                             items: [
                               const DropdownMenuItem<String>(value: null, child: Text('All')),
                               ...provinces.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))),
@@ -268,12 +268,12 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
                             }),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             value: cityFilter,
                             isExpanded: true,
-                            decoration: const InputDecoration(labelText: 'City', isDense: true),
+                            decoration: InputDecoration(labelText: 'City', isDense: true),
                             items: [
                               const DropdownMenuItem<String>(value: null, child: Text('All')),
                               ...cities.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))),
@@ -288,11 +288,11 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
                     child: DropdownButtonFormField<String>(
                       value: townFilter,
                       isExpanded: true,
-                      decoration: const InputDecoration(labelText: 'Town / Area', isDense: true),
+                      decoration: InputDecoration(labelText: 'Town / Area', isDense: true),
                       items: [
                         const DropdownMenuItem<String>(value: null, child: Text('All')),
                         ...towns.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))),
@@ -302,7 +302,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
                   ),
                   Expanded(
                     child: list.isEmpty
-                        ? const Center(child: Text('No institutes match these filters.'))
+                        ? Center(child: Text('No institutes match these filters.'))
                         : ListView(
                             children: list.map((institute) => CheckboxListTile(
                               value: temp.contains(institute.id),
@@ -321,8 +321,8 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
                           ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: FilledButton(onPressed: () => Navigator.pop(sheet, temp), child: const Text('Done')),
+                    padding: EdgeInsets.all(12),
+                    child: FilledButton(onPressed: () => Navigator.pop(sheet, temp), child: Text('Done')),
                   ),
                 ],
               ),
@@ -347,9 +347,9 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
       children: [
         Row(
           children: [
-            const Expanded(child: Text('Tags', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.darkGreen))),
-            TextButton.icon(onPressed: _saving ? null : _pickTopics, icon: const Icon(Icons.sell_outlined), label: const Text('Topics')),
-            TextButton.icon(onPressed: _saving ? null : _pickInstitutes, icon: const Icon(Icons.school_outlined), label: const Text('Institutes')),
+            Expanded(child: Text('Tags', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppPalette.of(context).ink))),
+            TextButton.icon(onPressed: _saving ? null : _pickTopics, icon: Icon(Icons.sell_outlined), label: Text('Topics')),
+            TextButton.icon(onPressed: _saving ? null : _pickInstitutes, icon: Icon(Icons.school_outlined), label: Text('Institutes')),
           ],
         ),
         if (_selectedTags.isNotEmpty)
@@ -367,7 +367,7 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
           ),
         if (instituteNames.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: EdgeInsets.only(top: 6),
             child: Wrap(
               spacing: 6, runSpacing: 6,
               children: instituteNames.map((name) => InputChip(
@@ -380,31 +380,31 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
             ),
           ),
         if (_selectedTags.isEmpty && _selectedInstituteIds.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 4),
-            child: Text('You can post without tags, or add one or more topics/institutes.', style: TextStyle(fontSize: 12, color: AppColors.homeMutedText)),
+            child: Text('You can post without tags, or add one or more topics/institutes.', style: TextStyle(fontSize: 12, color: AppPalette.of(context).muted)),
           ),
       ],
     );
   }
   Widget _attachmentPreview(){
-    if(_attachments.isEmpty)return const SizedBox.shrink();
-    return Padding(padding:const EdgeInsets.only(bottom:10),child:Wrap(spacing:8,runSpacing:8,children:List.generate(_attachments.length,(i){
+    if(_attachments.isEmpty)return SizedBox.shrink();
+    return Padding(padding:EdgeInsets.only(bottom:10),child:Wrap(spacing:8,runSpacing:8,children:List.generate(_attachments.length,(i){
       final a=_attachments[i];final type=a['type']??'file';final icon=type=='photo'?Icons.image_outlined:type=='link'?Icons.link:Icons.insert_drive_file_outlined;
       return InputChip(avatar:Icon(icon,size:18,color:AppColors.primaryGreen),label:SizedBox(width:150,child:Text(a[ProfileFields.name]??'Attachment',overflow:TextOverflow.ellipsis)),onDeleted:_saving?null:()=>setState(()=>_attachments.removeAt(i)));
     })));
   }
   Widget _pollEditor(){
-    if(!_isPoll)return const SizedBox.shrink();
-    return Container(margin:const EdgeInsets.only(bottom:12),padding:const EdgeInsets.all(12),
-      decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(14)),
+    if(!_isPoll)return SizedBox.shrink();
+    return Container(margin:EdgeInsets.only(bottom:12),padding:EdgeInsets.all(12),
+      decoration:BoxDecoration(color:AppPalette.of(context).softSurface,borderRadius:BorderRadius.circular(14)),
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        const Text('Poll',style:TextStyle(fontWeight:FontWeight.w800,color:AppColors.darkGreen)),const SizedBox(height:8),
-        ...List.generate(_pollOptions.length,(i)=>Padding(padding:const EdgeInsets.only(bottom:8),child:Row(children:[
-          Expanded(child:TextField(controller:_pollOptions[i],decoration:InputDecoration(hintText:'Option ${i+1}',filled:true,fillColor:AppColors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(10),borderSide:BorderSide.none)))),
-          if(_pollOptions.length>2)IconButton(onPressed:()=>_removePollOption(i),icon:const Icon(Icons.close)),
+        Text('Poll',style:TextStyle(fontWeight:FontWeight.w800,color:AppPalette.of(context).ink)),SizedBox(height:8),
+        ...List.generate(_pollOptions.length,(i)=>Padding(padding:EdgeInsets.only(bottom:8),child:Row(children:[
+          Expanded(child:TextField(controller:_pollOptions[i],decoration:InputDecoration(hintText:'Option ${i+1}',filled:true,fillColor:AppPalette.of(context).surface,border:OutlineInputBorder(borderRadius:BorderRadius.circular(10),borderSide:BorderSide.none)))),
+          if(_pollOptions.length>2)IconButton(onPressed:()=>_removePollOption(i),icon:Icon(Icons.close)),
         ]))),
-        if(_pollOptions.length<5)TextButton.icon(onPressed:_saving?null:()=>_addPollOption(),icon:const Icon(Icons.add),label:const Text('Add option')),
+        if(_pollOptions.length<5)TextButton.icon(onPressed:_saving?null:()=>_addPollOption(),icon:Icon(Icons.add),label:Text('Add option')),
       ]),
     );
   }
@@ -412,22 +412,22 @@ class _CreatePostScreenState extends State<CreatePostScreen>{
   @override Widget build(BuildContext context){
     final editing=widget.post!=null;
     return Scaffold(appBar:AppBar(title:Text(editing?'Edit post':(widget.instituteName==null?'Create post':'Post in ${widget.instituteName}')),actions:[
-      TextButton(onPressed:_saving?null:_publish,child:Text(_saving?'Posting…':'Post',style:const TextStyle(color:AppColors.white,fontWeight:FontWeight.w800))),
+      TextButton(onPressed:_saving?null:_publish,child:Text(_saving?'Posting…':'Post',style:TextStyle(color:AppColors.white,fontWeight:FontWeight.w800))),
     ]),
-    body:ListView(padding:const EdgeInsets.fromLTRB(14,10,14,24),children:[
-      Row(children:[const CircleAvatar(radius:21,backgroundColor:AppColors.softGreen,child:Icon(Icons.person,color:AppColors.primaryGreen)),const SizedBox(width:10),
-        Expanded(child:Text(editing?'Update your post':(widget.instituteName==null?'Share with the community':'Share with this institute community'),style:const TextStyle(color:AppColors.darkGreen,fontWeight:FontWeight.w700)))]),
-      const SizedBox(height:14),
+    body:ListView(padding:EdgeInsets.fromLTRB(14,10,14,24),children:[
+      Row(children:[CircleAvatar(radius:21,backgroundColor:AppPalette.of(context).softSurface,child:Icon(Icons.person,color:AppColors.primaryGreen)),SizedBox(width:10),
+        Expanded(child:Text(editing?'Update your post':(widget.instituteName==null?'Share with the community':'Share with this institute community'),style:TextStyle(color:AppPalette.of(context).ink,fontWeight:FontWeight.w700)))]),
+      SizedBox(height:14),
       _tagSelector(),
-      const SizedBox(height:10),
-      TextField(controller:_controller,maxLines:8,maxLength:1000,decoration:const InputDecoration(hintText:'What do you want to share?')),
+      SizedBox(height:10),
+      TextField(controller:_controller,maxLines:8,maxLength:1000,decoration:InputDecoration(hintText:'What do you want to share?')),
       _pollEditor(),_attachmentPreview(),
       Row(children:[
-        Expanded(child:Text('Add to your post',style:TextStyle(color:AppColors.homeMutedText,fontWeight:FontWeight.w600))),
-        IconButton(tooltip:'Attachments',onPressed:_saving?null:_showAttachmentMenu,icon:const Icon(Icons.attach_file,color:AppColors.primaryGreen)),
-        FilterChip(label:const Text('Question'),selected:_isQuestion,onSelected:_saving?null:(v)=>setState(()=>_isQuestion=v),selectedColor:AppColors.softGreen),
+        Expanded(child:Text('Add to your post',style:TextStyle(color:AppPalette.of(context).muted,fontWeight:FontWeight.w600))),
+        IconButton(tooltip:'Attachments',onPressed:_saving?null:_showAttachmentMenu,icon:Icon(Icons.attach_file,color:AppColors.primaryGreen)),
+        FilterChip(label:Text('Question'),selected:_isQuestion,onSelected:_saving?null:(v)=>setState(()=>_isQuestion=v),selectedColor:AppPalette.of(context).softSurface),
       ]),
-      if(_isQuestion)const Padding(padding:EdgeInsets.only(top:4),child:Text('After people answer, the author can mark one answer as Best Answer.',style:TextStyle(fontSize:12,color:AppColors.homeMutedText))),
+      if(_isQuestion)Padding(padding:EdgeInsets.only(top:4),child:Text('After people answer, the author can mark one answer as Best Answer.',style:TextStyle(fontSize:12,color:AppPalette.of(context).muted))),
     ]));
   }
 }

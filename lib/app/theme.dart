@@ -45,6 +45,21 @@ abstract final class AppColors {
   });
 }
 
+/// Semantic colors for custom widgets that do not inherit Material defaults.
+class AppPalette {
+  final ThemeData theme;
+  AppPalette.of(BuildContext context) : theme = Theme.of(context);
+  bool get isDark => theme.brightness == Brightness.dark;
+  Color get background => theme.scaffoldBackgroundColor;
+  Color get surface => theme.colorScheme.surface;
+  Color get softSurface => isDark ? AppColors.darkInput : AppColors.softGreen;
+  Color get ink => theme.colorScheme.onSurface;
+  Color get muted => isDark ? const Color(0xFFB5CAC1) : AppColors.homeMutedText;
+  Color get border => isDark ? AppColors.darkDivider : AppColors.guidanceBubble;
+  Color get accent => theme.colorScheme.primary;
+  Color get brandSurface => isDark ? AppColors.darkGreen : AppColors.homeGreen;
+}
+
 class ThemeController extends ChangeNotifier {
   ThemeController._();
   static final instance = ThemeController._();
@@ -60,6 +75,7 @@ class ThemeController extends ChangeNotifier {
 ThemeData buildDarkTheme() {
   return ThemeData(
     useMaterial3: false,
+    brightness: Brightness.dark,
     primarySwatch: AppColors.swatch,
     primaryColor: AppColors.brightGreen,
     scaffoldBackgroundColor: AppColors.darkBackground,
@@ -68,7 +84,10 @@ ThemeData buildDarkTheme() {
     appBarTheme: const AppBarTheme(backgroundColor: AppColors.darkGreen, foregroundColor: AppColors.white, elevation: 0, iconTheme: IconThemeData(color: AppColors.white)),
     colorScheme: const ColorScheme.dark(primary: AppColors.brightGreen, secondary: AppColors.primaryGreen, surface: AppColors.darkSurface, background: AppColors.darkBackground, onPrimary: AppColors.darkGreen, onSecondary: AppColors.white, onSurface: AppColors.white),
     cardTheme: CardThemeData(elevation: 0, margin: const EdgeInsets.all(6), color: AppColors.darkSurface, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-    inputDecorationTheme: const InputDecorationTheme(filled: true, fillColor: AppColors.darkInput, hintStyle: TextStyle(color: AppColors.mutedText)),
+    inputDecorationTheme: const InputDecorationTheme(filled: true, fillColor: AppColors.darkInput, hintStyle: TextStyle(color: Color(0xFFB5CAC1))),
+    chipTheme: const ChipThemeData(backgroundColor: AppColors.darkInput, selectedColor: AppColors.primaryGreen, labelStyle: TextStyle(color: AppColors.white), secondaryLabelStyle: TextStyle(color: AppColors.white)),
+    snackBarTheme: const SnackBarThemeData(backgroundColor: AppColors.darkInput, contentTextStyle: TextStyle(color: AppColors.white)),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(backgroundColor: AppColors.primaryGreen, foregroundColor: AppColors.white),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(backgroundColor: AppColors.darkSurface, selectedItemColor: AppColors.brightGreen, unselectedItemColor: AppColors.mutedText, type: BottomNavigationBarType.fixed, elevation: 8),
     dividerTheme: const DividerThemeData(color: AppColors.darkDivider, thickness: 1),
     textTheme: const TextTheme(bodyLarge: TextStyle(color: AppColors.white), bodyMedium: TextStyle(color: AppColors.white), titleLarge: TextStyle(color: AppColors.white, fontWeight: FontWeight.w700), titleMedium: TextStyle(color: AppColors.white, fontWeight: FontWeight.w600)),

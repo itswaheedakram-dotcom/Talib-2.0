@@ -24,11 +24,11 @@ class _CommunityScreenState extends State<CommunityScreen>{
   int timelineTab=0;
   String? _selectedInstituteId;
   Set<String> _topics=TimelineTopics.defaults.toSet();
-  final cats=const ['All','General','Admission Help','Career','Scholarships','Study Help','Institute Reviews','Jobs/Internships','Announcements'];
+  final cats=['All','General','Admission Help','Career','Scholarships','Study Help','Institute Reviews','Jobs/Internships','Announcements'];
   @override void initState(){super.initState();InstituteRepository.instance.load();}
   @override void dispose(){_search.dispose();super.dispose();}
   String _errorText(Object error){final raw=error.toString().trim();if(raw.isEmpty)return 'Unknown error.';return raw.replaceFirst(RegExp(r'^Exception:\s*'),'');}
-  void _showError(Object error){if(!mounted)return;ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_errorText(error)),duration:const Duration(seconds:5)));}
+  void _showError(Object error){if(!mounted)return;ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_errorText(error)),duration:Duration(seconds:5)));}
   void _login()=>_showError(StateError('Please sign in to create, like or save posts.'));
   
   Widget _timelineButton({
@@ -37,21 +37,21 @@ class _CommunityScreenState extends State<CommunityScreen>{
     required VoidCallback onTap,
   }){
     return Padding(
-      padding:const EdgeInsets.symmetric(horizontal:4,vertical:5),
+      padding:EdgeInsets.symmetric(horizontal:4,vertical:5),
       child:Material(
-        color:selected?AppColors.primaryGreen:AppColors.white,
+        color:selected?AppColors.primaryGreen:AppPalette.of(context).surface,
         borderRadius:BorderRadius.circular(22),
         child:InkWell(
           onTap:onTap,
           borderRadius:BorderRadius.circular(22),
           child:Container(
             height:38,
-            padding:const EdgeInsets.symmetric(horizontal:15),
+            padding:EdgeInsets.symmetric(horizontal:15),
             alignment:Alignment.center,
             decoration:BoxDecoration(
               borderRadius:BorderRadius.circular(22),
               border:Border.all(
-                color:selected?AppColors.primaryGreen:AppColors.guidanceBubble,
+                color:selected?AppColors.primaryGreen:AppPalette.of(context).border,
               ),
             ),
             child:Text(
@@ -61,7 +61,7 @@ class _CommunityScreenState extends State<CommunityScreen>{
               style:TextStyle(
                 fontWeight:FontWeight.w700,
                 fontSize:13,
-                color:selected?AppColors.white:AppColors.homeMutedText,
+                color:selected?AppColors.white:AppPalette.of(context).muted,
               ),
             ),
           ),
@@ -106,23 +106,23 @@ class _CommunityScreenState extends State<CommunityScreen>{
 
     return Scaffold(
       appBar:AppBar(title:Text(widget.authorId!=null?'My Posts':widget.instituteName==null?'Community':'${widget.instituteName} Community'),actions:[
-        IconButton(tooltip:'Notifications',icon:const Icon(Icons.notifications_none),onPressed:()=>context.push('/notifications')),
+        IconButton(tooltip:'Notifications',icon:Icon(Icons.notifications_none),onPressed:()=>context.push('/notifications')),
         PopupMenuButton<bool>(onSelected:(v)=>setState(()=>popular=v),itemBuilder:(_)=>const[
           PopupMenuItem(value:false,child:Text('Latest')),PopupMenuItem(value:true,child:Text('Popular')),
         ]),
       ]),
       floatingActionButton:FloatingActionButton.extended(
         onPressed:!canInteract?_login:()=>context.push('/community/create?instituteId=${Uri.encodeComponent(widget.instituteId??'')}&instituteName=${Uri.encodeComponent(widget.instituteName??'')}'),
-        icon:const Icon(Icons.add),label:const Text('Post'),
+        icon:Icon(Icons.add),label:Text('Post'),
       ),
       body:Column(children:[
-        Container(margin:const EdgeInsets.fromLTRB(12,10,12,6),padding:const EdgeInsets.all(13),
-          decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(12)),
-          child:const Row(children:[
-            Icon(Icons.groups_rounded,color:AppColors.darkGreen,size:28),SizedBox(width:10),
+        Container(margin:EdgeInsets.fromLTRB(12,10,12,6),padding:EdgeInsets.all(13),
+          decoration:BoxDecoration(color:AppPalette.of(context).softSurface,borderRadius:BorderRadius.circular(12)),
+          child:Row(children:[
+            Icon(Icons.groups_rounded,color:AppPalette.of(context).ink,size:28),SizedBox(width:10),
             Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Text('Need Guidance?',style:TextStyle(color:AppColors.darkGreen,fontWeight:FontWeight.w700)),
-              Text('Ask students and professionals for guidance.',style:TextStyle(fontSize:12,color:AppColors.homeMutedText)),
+              Text('Need Guidance?',style:TextStyle(color:AppPalette.of(context).ink,fontWeight:FontWeight.w700)),
+              Text('Ask students and professionals for guidance.',style:TextStyle(fontSize:12,color:AppPalette.of(context).muted)),
             ])),
           ])),
         AnimatedBuilder(
@@ -155,7 +155,7 @@ class _CommunityScreenState extends State<CommunityScreen>{
                       ];
                       return ListView(
                         scrollDirection:Axis.horizontal,
-                        padding:const EdgeInsets.symmetric(horizontal:4),
+                        padding:EdgeInsets.symmetric(horizontal:4),
                         children:tabs,
                       );
                     },
@@ -165,10 +165,10 @@ class _CommunityScreenState extends State<CommunityScreen>{
             );
           },
         ),
-        Padding(padding:const EdgeInsets.fromLTRB(12,0,12,6),child:TextField(
+        Padding(padding:EdgeInsets.fromLTRB(12,0,12,6),child:TextField(
           controller:_search,onChanged:(v)=>setState(()=>query=v.trim()),
-          decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:'Search posts and students',
-            filled:true,fillColor:AppColors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(10),borderSide:BorderSide.none)),
+          decoration:InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search posts and students',
+            filled:true,fillColor:AppPalette.of(context).surface,border:OutlineInputBorder(borderRadius:BorderRadius.circular(10),borderSide:BorderSide.none)),
         )),
         Expanded(child:timelineTab==0
           ?_postFeed(user,demo,ready,_topics,null,null)
@@ -197,7 +197,7 @@ class _CommunityScreenState extends State<CommunityScreen>{
     return StreamBuilder<List<Post>>(stream:stream,builder:(context,s){
       if(s.hasError)return _errorState(s.error!);
       if(!demo&&!ready)return _errorState(StateError(FirebaseService.initializationErrorMessage.isEmpty?'Firebase is not initialized.':FirebaseService.initializationErrorMessage));
-      if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
+      if(s.connectionState==ConnectionState.waiting)return Center(child:CircularProgressIndicator());
       var posts=s.data??const <Post>[];
       final authorId=widget.authorId;
       if(authorId!=null)posts=posts.where((p)=>p.authorId==authorId).toList();
@@ -221,9 +221,9 @@ class _CommunityScreenState extends State<CommunityScreen>{
     });
   }
 
-  Widget _errorState(Object error)=>Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
-    Text(_errorText(error),textAlign:TextAlign.center),const SizedBox(height:12),
-    OutlinedButton(onPressed:()=>setState((){}),child:const Text('Retry')),
+  Widget _errorState(Object error)=>Center(child:Padding(padding:EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
+    Text(_errorText(error),textAlign:TextAlign.center),SizedBox(height:12),
+    OutlinedButton(onPressed:()=>setState((){}),child:Text('Retry')),
   ])));
   
   Stream<List<Post>> _demoPostsStream()async*{
@@ -233,10 +233,10 @@ class _CommunityScreenState extends State<CommunityScreen>{
   }
   
   Widget _postList(List<Post> posts,User? user){
-    if(posts.isEmpty)return const Center(child:Padding(padding:EdgeInsets.all(24),child:Text('No community posts found.')));
+    if(posts.isEmpty)return Center(child:Padding(padding:EdgeInsets.all(24),child:Text('No community posts found.')));
     final identity=ActiveProfileController.instance;final uid=identity.resolveUid(user?.uid??'');final canInteract=user!=null||identity.isDemoActive;
-    return ListView.separated(padding:const EdgeInsets.fromLTRB(12,6,12,90),itemCount:posts.length,
-      separatorBuilder:(_,__)=>const SizedBox(height:8),itemBuilder:(_,i){
+    return ListView.separated(padding:EdgeInsets.fromLTRB(12,6,12,90),itemCount:posts.length,
+      separatorBuilder:(_,__)=>SizedBox(height:8),itemBuilder:(_,i){
         final p=posts[i];final owner=uid==p.authorId;
         return _PostCard(post:p,user:user,onOpen:()=>context.push('/community/post/${p.id}'),
           onAuthor:()=>context.push('/profile/${p.authorId}'),onLike:!canInteract?null:()=>_toggleLike(p,uid),
@@ -246,17 +246,17 @@ class _CommunityScreenState extends State<CommunityScreen>{
       });
   }
   Future<void> _toggleLike(Post p,String uid)async{try{await _db.toggleLike(p,uid);}catch(error){_showError(error);}}
-  Future<void> _toggleBookmark(Post p,String uid)async{try{await _db.toggleBookmark(p.id,uid,true);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Saved to bookmarks')));}catch(error){_showError(error);}}
+  Future<void> _toggleBookmark(Post p,String uid)async{try{await _db.toggleBookmark(p.id,uid,true);if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Saved to bookmarks')));}catch(error){_showError(error);}}
   Future<void> _votePoll(Post p,String uid,int option)async{try{await _db.votePoll(postId:p.id,uid:uid,option:option);}catch(error){_showError(error);}}
   Future<void> _delete(Post p)async{
-    final yes=await showDialog<bool>(context:context,builder:(_)=>AlertDialog(title:const Text('Delete post?'),
-      content:const Text('This post will be permanently deleted.'),actions:[
-        TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),
-        FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Delete'))]));
+    final yes=await showDialog<bool>(context:context,builder:(_)=>AlertDialog(title:Text('Delete post?'),
+      content:Text('This post will be permanently deleted.'),actions:[
+        TextButton(onPressed:()=>Navigator.pop(context,false),child:Text('Cancel')),
+        FilledButton(onPressed:()=>Navigator.pop(context,true),child:Text('Delete'))]));
     if(yes!=true)return;try{await _db.deletePost(p.id);}catch(error){_showError(error);}
   }
   Future<void> _report(Post p,User? user,String uid)async{
-    final reason=await showDialog<String>(context:context,builder:(_)=>SimpleDialog(title:const Text('Report post'),
+    final reason=await showDialog<String>(context:context,builder:(_)=>SimpleDialog(title:Text('Report post'),
       children:['Spam','Harassment','Fake information','Inappropriate','Scam','Other'].map((x)=>SimpleDialogOption(onPressed:()=>Navigator.pop(context,x),child:Text(x))).toList()));
     if(reason==null)return;try{await _db.report(reporterId:user?.uid??uid,targetId:p.id,targetType:'post',reason:reason);}catch(error){_showError(error);}
   }
@@ -268,79 +268,79 @@ class _PostCard extends StatelessWidget{
   const _PostCard({required this.post,required this.user,required this.onOpen,required this.onAuthor,this.onLike,this.onBookmark,this.onDelete,this.onEdit,this.onReport,this.onPoll});
   @override Widget build(BuildContext context){
     final liked=post.likedByUser(ActiveProfileController.instance.resolveUid(user?.uid??''));
-    return Card(child:Padding(padding:const EdgeInsets.fromLTRB(13,12,9,8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    return Card(child:Padding(padding:EdgeInsets.fromLTRB(13,12,9,8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[
         Expanded(child:InkWell(onTap:onAuthor,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           UserIdentity(uid: post.authorId, name: post.authorName),
-          const SizedBox(height:3),
+          SizedBox(height:3),
           if(post.tags.isNotEmpty || post.instituteIds.isNotEmpty || post.instituteId!=null)
             Wrap(spacing:5,runSpacing:4,children:[
-              ...post.tags.map((tag)=>_tagChip(tag)),
+              ...post.tags.map((tag)=>_tagChip(context, tag)),
               ...((post.instituteIds.isNotEmpty?post.instituteIds:(post.instituteId==null?const <String>[]:[post.instituteId!])).map((id){
                 final institute=InstituteRepository.instance.byId(id);
-                return _tagChip(institute?.name ?? id);
+                return _tagChip(context, institute?.name ?? id);
               })),
             ])
           else
-            _tagChip(post.category),
+            _tagChip(context, post.category),
         ]))),
         PopupMenuButton<String>(onSelected:(v){if(v=='edit'&&onEdit!=null)onEdit!();if(v=='delete'&&onDelete!=null)onDelete!();if(v=='report'&&onReport!=null)onReport!();if(v=='save'&&onBookmark!=null)onBookmark!();},
-          itemBuilder:(_)=>[if(onEdit!=null)const PopupMenuItem(value:'edit',child:Text('Edit')),if(onDelete!=null)const PopupMenuItem(value:'delete',child:Text('Delete')),
-            if(onBookmark!=null)const PopupMenuItem(value:'save',child:Text('Save')),if(onReport!=null)const PopupMenuItem(value:'report',child:Text('Report'))]),
+          itemBuilder:(_)=>[if(onEdit!=null)PopupMenuItem(value:'edit',child:Text('Edit')),if(onDelete!=null)PopupMenuItem(value:'delete',child:Text('Delete')),
+            if(onBookmark!=null)PopupMenuItem(value:'save',child:Text('Save')),if(onReport!=null)PopupMenuItem(value:'report',child:Text('Report'))]),
       ]),
-      if(post.isQuestion)const Padding(padding:EdgeInsets.only(top:5),child:Text('QUESTION',style:TextStyle(fontSize:10,color:AppColors.primaryGreen,fontWeight:FontWeight.w800))),
-      const SizedBox(height:8),InkWell(onTap:onOpen,child:Text(post.text,style:const TextStyle(fontSize:14,height:1.4))),
+      if(post.isQuestion)Padding(padding:EdgeInsets.only(top:5),child:Text('QUESTION',style:TextStyle(fontSize:10,color:AppColors.primaryGreen,fontWeight:FontWeight.w800))),
+      SizedBox(height:8),InkWell(onTap:onOpen,child:Text(post.text,style:TextStyle(fontSize:14,height:1.4))),
       if(post.attachments.isNotEmpty) ...[
-        const SizedBox(height:8),
+        SizedBox(height:8),
         ...post.attachments.map((a){
           final type=a['type']??'file'; final url=a['url']??''; final name=a[ProfileFields.name]??'Attachment';
           if(type=='photo'&&url.isNotEmpty) return Padding(
-            padding:const EdgeInsets.only(bottom:7),
+            padding:EdgeInsets.only(bottom:7),
             child:ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.network(
               url,height:190,width:double.infinity,fit:BoxFit.cover,
-              errorBuilder:(_,__,___)=>_attachmentTile(name,Icons.broken_image_outlined),
+              errorBuilder:(_,__,___)=>_attachmentTile(context, name,Icons.broken_image_outlined),
             )),
           );
-          return _attachmentTile(name,type=='link'?Icons.link:Icons.insert_drive_file_outlined);
+          return _attachmentTile(context, name,type=='link'?Icons.link:Icons.insert_drive_file_outlined);
         }),
       ],
-      const SizedBox(height:7),
+      SizedBox(height:7),
       if(post.pollOptions.isNotEmpty)...[
-        const Text('Poll',style:TextStyle(fontWeight:FontWeight.w700,color:AppColors.darkGreen)),const SizedBox(height:6),
+        Text('Poll',style:TextStyle(fontWeight:FontWeight.w700,color:AppPalette.of(context).ink)),SizedBox(height:6),
         ...List.generate(post.pollOptions.length,(i){
           final total=post.pollVotes.values.fold<int>(0,(a,b)=>a+b);final votes=post.pollVotes[i.toString()]??0;final pct=total==0?0:votes/total;
-          return Padding(padding:const EdgeInsets.only(bottom:6),child:InkWell(onTap:onPoll==null?null:()=>onPoll!(i),borderRadius:BorderRadius.circular(8),
-            child:Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:9),decoration:BoxDecoration(border:Border.all(color:AppColors.guidanceBubble),borderRadius:BorderRadius.circular(8)),
-              child:Row(children:[Expanded(child:Text(post.pollOptions[i])),Text('${(pct*100).round()}%  ($votes)',style:const TextStyle(fontSize:11,color:AppColors.homeMutedText))]))));
-        }),const SizedBox(height:4),
+          return Padding(padding:EdgeInsets.only(bottom:6),child:InkWell(onTap:onPoll==null?null:()=>onPoll!(i),borderRadius:BorderRadius.circular(8),
+            child:Container(padding:EdgeInsets.symmetric(horizontal:10,vertical:9),decoration:BoxDecoration(border:Border.all(color:AppPalette.of(context).border),borderRadius:BorderRadius.circular(8)),
+              child:Row(children:[Expanded(child:Text(post.pollOptions[i])),Text('${(pct*100).round()}%  ($votes)',style:TextStyle(fontSize:11,color:AppPalette.of(context).muted))]))));
+        }),SizedBox(height:4),
       ],
       Row(children:[
         IconButton(onPressed:onLike,icon:Icon(liked?Icons.favorite:Icons.favorite_border,color:liked?Colors.red:AppColors.primaryGreen)),TextButton(onPressed: post.likedBy.isEmpty ? null : () => showModalBottomSheet<void>(
           context: context, builder: (_) => ListView(children: [
-            const ListTile(title: Text('Liked by')),
+            ListTile(title: Text('Liked by')),
             ...post.likedBy.map((id) => ListTile(title: UserIdentity(uid: id, name: 'Community member'),
               onTap: () { Navigator.pop(context); context.push('/profile/$id'); })),
           ])), child: Text(post.likesCount.toString())),
-        IconButton(onPressed:onOpen,icon:const Icon(Icons.comment_outlined,color:AppColors.primaryGreen)),Text(post.commentsCount.toString()),
-        const Spacer(),TextButton(onPressed:onOpen,child:const Text('View')),
+        IconButton(onPressed:onOpen,icon:Icon(Icons.comment_outlined,color:AppColors.primaryGreen)),Text(post.commentsCount.toString()),
+        Spacer(),TextButton(onPressed:onOpen,child:Text('View')),
       ]),
     ])));
   }
-  Widget _tagChip(String label)=>Container(
-    padding:const EdgeInsets.symmetric(horizontal:9,vertical:3),
-    decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(20)),
-    child:Text(label,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700,color:AppColors.primaryGreen),maxLines:1,overflow:TextOverflow.ellipsis),
+  Widget _tagChip(BuildContext context, String label)=>Container(
+    padding:EdgeInsets.symmetric(horizontal:9,vertical:3),
+    decoration:BoxDecoration(color:AppPalette.of(context).softSurface,borderRadius:BorderRadius.circular(20)),
+    child:Text(label,style:TextStyle(fontSize:10,fontWeight:FontWeight.w700,color:AppColors.primaryGreen),maxLines:1,overflow:TextOverflow.ellipsis),
   );
 
-  Widget _attachmentTile(String name,IconData icon){
+  Widget _attachmentTile(BuildContext context, String name,IconData icon){
     return Container(
-      margin:const EdgeInsets.only(bottom:7),
-      padding:const EdgeInsets.symmetric(horizontal:10,vertical:9),
-      decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(9)),
+      margin:EdgeInsets.only(bottom:7),
+      padding:EdgeInsets.symmetric(horizontal:10,vertical:9),
+      decoration:BoxDecoration(color:AppPalette.of(context).softSurface,borderRadius:BorderRadius.circular(9)),
       child:Row(children:[
         Icon(icon,size:19,color:AppColors.primaryGreen),
-        const SizedBox(width:8),
-        Expanded(child:Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:12))),
+        SizedBox(width:8),
+        Expanded(child:Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:12))),
       ]),
     );
   }

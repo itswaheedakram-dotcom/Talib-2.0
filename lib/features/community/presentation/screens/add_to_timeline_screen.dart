@@ -50,7 +50,7 @@ class _AddToTimelineScreenState extends State<AddToTimelineScreen> {
     final identity=ActiveProfileController.instance;
     final uid=identity.resolveUid(_user?.uid??'');
     if(uid.isEmpty&&!identity.isDemoActive){
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Please sign in first.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Please sign in first.')));
       return;
     }
     setState(()=>_saving=true);
@@ -79,16 +79,16 @@ class _AddToTimelineScreenState extends State<AddToTimelineScreen> {
 
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(
-      title:const Text('Add to Timeline'),
-      actions:[TextButton(onPressed:_saving?null:_save,child:Text(_saving?'Saving…':'Done',style:const TextStyle(color:AppColors.white,fontWeight:FontWeight.w800)))],
+      title:Text('Add to Timeline'),
+      actions:[TextButton(onPressed:_saving?null:_save,child:Text(_saving?'Saving…':'Done',style:TextStyle(color:AppColors.white,fontWeight:FontWeight.w800)))],
     ),
-    body:_loading?const Center(child:CircularProgressIndicator()):ListView(
-      padding:const EdgeInsets.fromLTRB(14,12,14,30),
+    body:_loading?Center(child:CircularProgressIndicator()):ListView(
+      padding:EdgeInsets.fromLTRB(14,12,14,30),
       children:[
-        const Text('Choose what you want to see',style:TextStyle(fontSize:18,fontWeight:FontWeight.w800,color:AppColors.darkGreen)),
-        const SizedBox(height:6),
-        const Text('Selected topics and institutes will appear on your Community timeline. Unselected institutes stay hidden from the top bar.',style:TextStyle(color:AppColors.homeMutedText)),
-        const SizedBox(height:18),
+        Text('Choose what you want to see',style:TextStyle(fontSize:18,fontWeight:FontWeight.w800,color:AppPalette.of(context).ink)),
+        SizedBox(height:6),
+        Text('Selected topics and institutes will appear on your Community timeline. Unselected institutes stay hidden from the top bar.',style:TextStyle(color:AppPalette.of(context).muted)),
+        SizedBox(height:18),
         ..._section('Education',['Admissions','Entry Tests','Exam Preparation','Study Help','Study Resources','Scholarships','Study Abroad','Degree & Programs']),
         ..._section('Career',['Career','Jobs','Internships','Freelancing','Skills & Courses']),
         ..._section('Institutes',['Institute Reviews','Institute Updates','Admission Deadlines','Fee & Financial Aid','Announcements']),
@@ -96,11 +96,11 @@ class _AddToTimelineScreenState extends State<AddToTimelineScreen> {
         ..._section('Fun & Entertainment',['Gaming','Esports','Sports','Cricket','Movies & Series','Music','Memes & Fun']),
         ..._section('Creative & Tech',['Photography','Art & Creativity','Tech & Gadgets']),
         ..._section('Community',['General Discussion','Questions & Answers']),
-        const SizedBox(height:18),
-        const Text('Institutes',style:TextStyle(fontSize:18,fontWeight:FontWeight.w800,color:AppColors.darkGreen)),
-        const SizedBox(height:5),
-        const Text('Institute tags are created automatically for every institute. Select only the institutes you want on your timeline.',style:TextStyle(color:AppColors.homeMutedText)),
-        const SizedBox(height:12),
+        SizedBox(height:18),
+        Text('Institutes',style:TextStyle(fontSize:18,fontWeight:FontWeight.w800,color:AppPalette.of(context).ink)),
+        SizedBox(height:5),
+        Text('Institute tags are created automatically for every institute. Select only the institutes you want on your timeline.',style:TextStyle(color:AppPalette.of(context).muted)),
+        SizedBox(height:12),
         AnimatedBuilder(
           animation:InstituteRepository.instance,
           builder:(context,_){
@@ -110,30 +110,30 @@ class _AddToTimelineScreenState extends State<AddToTimelineScreen> {
                 label:Text(type=='All'?'All':type[0].toUpperCase()+type.substring(1)),
                 selected:_type==type,
                 selectedColor:AppColors.primaryGreen,
-                labelStyle:TextStyle(color:_type==type?AppColors.white:AppColors.darkGreen,fontWeight:FontWeight.w700),
+                labelStyle:TextStyle(color:_type==type?AppColors.white:AppPalette.of(context).ink,fontWeight:FontWeight.w700),
                 onSelected:(_)=>setState((){_type=type;}),
               )).toList()),
-              const SizedBox(height:12),
+              SizedBox(height:12),
               Row(children:[
                 Expanded(child:_locationDrop('Province',_province,_provinces,(v)=>setState((){_province=v!;_city='All';_town='All';}))),
-                const SizedBox(width:8),
+                SizedBox(width:8),
                 Expanded(child:_locationDrop('City',_city,_cities,(v)=>setState((){_city=v!;_town='All';}))),
               ]),
-              const SizedBox(height:8),
+              SizedBox(height:8),
               _locationDrop('Town',_town,_towns,(v)=>setState(()=>_town=v!)),
-              const SizedBox(height:12),
+              SizedBox(height:12),
               if(list.isEmpty)
-                const Padding(padding:EdgeInsets.all(16),child:Text('No institutes match these filters.',style:TextStyle(color:AppColors.homeMutedText)))
+                Padding(padding:EdgeInsets.all(16),child:Text('No institutes match these filters.',style:TextStyle(color:AppPalette.of(context).muted)))
               else
                 Wrap(spacing:8,runSpacing:8,children:list.map((institute){
                   final selected=_selectedInstitutes.contains(institute.id);
                   return FilterChip(
                     selected:selected,
                     onSelected:(v)=>setState(()=>v?_selectedInstitutes.add(institute.id):_selectedInstitutes.remove(institute.id)),
-                    backgroundColor:AppColors.softGreen,
+                    backgroundColor:AppPalette.of(context).softSurface,
                     selectedColor:AppColors.primaryGreen,
                     checkmarkColor:AppColors.white,
-                    label:Text(institute.name,overflow:TextOverflow.ellipsis,style:TextStyle(color:selected?AppColors.white:AppColors.darkGreen,fontWeight:FontWeight.w700)),
+                    label:Text(institute.name,overflow:TextOverflow.ellipsis,style:TextStyle(color:selected?AppColors.white:AppPalette.of(context).ink,fontWeight:FontWeight.w700)),
                   );
                 }).toList()),
             ]);
@@ -146,23 +146,23 @@ class _AddToTimelineScreenState extends State<AddToTimelineScreen> {
   Widget _locationDrop(String label,String value,List<String> items,ValueChanged<String?> onChanged)=>DropdownButtonFormField<String>(
     initialValue:items.contains(value)?value:'All',
     isExpanded:true,
-    decoration:InputDecoration(labelText:label,prefixIcon:const Icon(Icons.location_on_outlined)),
+    decoration:InputDecoration(labelText:label,prefixIcon:Icon(Icons.location_on_outlined)),
     items:items.map((e)=>DropdownMenuItem(value:e,child:Text(e,overflow:TextOverflow.ellipsis))).toList(),
     onChanged:items.length<=1?null:onChanged,
   );
 
   List<Widget> _section(String title,List<String> names)=>[
-    Padding(padding:const EdgeInsets.only(top:8,bottom:8),child:Text(title,style:const TextStyle(fontWeight:FontWeight.w800,color:AppColors.darkGreen))),
+    Padding(padding:EdgeInsets.only(top:8,bottom:8),child:Text(title,style:TextStyle(fontWeight:FontWeight.w800,color:AppPalette.of(context).ink))),
     Wrap(spacing:8,runSpacing:8,children:names.map((name){
       final topic=TimelineTopics.byName(name)!;
       final selected=_selectedTopics.contains(name);
       return FilterChip(
         selected:selected,
         onSelected:(v)=>setState(()=>v?_selectedTopics.add(name):_selectedTopics.remove(name)),
-        backgroundColor:AppColors.softGreen,
+        backgroundColor:AppPalette.of(context).softSurface,
         selectedColor:AppColors.primaryGreen,
         checkmarkColor:AppColors.white,
-        label:Text(topic.emoji+'  '+topic.name,style:TextStyle(color:selected?AppColors.white:AppColors.darkGreen,fontWeight:FontWeight.w600)),
+        label:Text(topic.emoji+'  '+topic.name,style:TextStyle(color:selected?AppColors.white:AppPalette.of(context).ink,fontWeight:FontWeight.w600)),
       );
     }).toList()),
   ];
