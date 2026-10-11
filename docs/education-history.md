@@ -13,7 +13,8 @@ private review mirror. Save and review transactions update both together.
 `institutes/{instituteId}/educationMemberships/{educationRecordId}` contains only
 immutable relation IDs, education status and verification status. It contains no
 name, program, dates, or profile information. Rules require this public count
-record to match canonical history. Ordinary users cannot read institute review
+record to match canonical history. Only approved current and completed memberships
+are publicly readable; pending and left memberships remain private. Ordinary users cannot read institute review
 mirrors; profile history follows the existing profile privacy setting.
 
 Use `EducationFields`, `EducationStatus`, `EducationVerification`, and

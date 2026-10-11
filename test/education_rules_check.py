@@ -41,6 +41,7 @@ def commit(data, uid=u, create=False, extra=None):
 check(403, commit(record(verification='approved'), create=True), 'student cannot self-verify')
 check(200, commit(record(), create=True), 'school enrollment saved atomically')
 check(403, call('GET', ROOT + f'/institutes/{i}/educationRecords/degree-1', uid='stranger'), 'pending details stay private')
+check(403, call('GET', ROOT + f'/institutes/{i}/educationMemberships/degree-1', uid='stranger'), 'pending membership stays private')
 check(200, call('GET', ROOT + f'/institutes/{i}/educationRecords/degree-1', uid='education-owner'), 'school owner reads request')
 check(403, commit(record(verification='approved'), uid='stranger'), 'unrelated user cannot approve')
 check(200, commit(record(verification='approved'), uid='education-owner'), 'institute approves current enrollment')
