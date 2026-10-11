@@ -9,8 +9,29 @@ import '../../../../core/services/active_profile_controller.dart';
 import '../../../../app/theme.dart';
 
 class ChatScreen extends StatefulWidget{final String conversationId,otherUid,otherName;const ChatScreen({super.key,required this.conversationId,required this.otherUid,required this.otherName});@override State<ChatScreen> createState()=>_ChatScreenState();}
-class _ChatScreenState extends State<ChatScreen>{
+class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver{
  final controller=TextEditingController(); bool sending=false;
+ Future<String?>? ready;
+ @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);_prepare();}
+ void _prepare(){if(ActiveProfileController.instance.isDemo)return;final user=FirebaseAuth.instance.currentUser;if(user!=null){ready=DatabaseService().createConversation(uid:user.uid,otherUid:widget.otherUid,otherName:widget.otherName,uidName:user.displayName);}}
+ @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed&&mounted)setState((){});}
+ final scroll=ScrollController();
+ String? sendError;
+ final Set<String> markingRead={};
+ void _scrollDown(){WidgetsBinding.instance.addPostFrameCallback((_){if(mounted&&scroll.hasClients)scroll.animateTo(scroll.position.maxScrollExtent,duration:const Duration(milliseconds:200),curve:Curves.easeOut);});}
+ Future<void> _markRead(QuerySnapshot snapshot,String uid) async {
+   if(ActiveProfileController.instance.isDemo||WidgetsBinding.instance.lifecycleState!=AppLifecycleState.resumed||ModalRoute.of(context)?.isCurrent==false)return;
+   final pending=snapshot.docs.where((doc){final data=doc.data() as Map<String,dynamic>;return data['receiverId']==uid&&data['read']!=true&&!markingRead.contains(doc.id);}).take(400).toList();
+   if(pending.isEmpty)return;
+   markingRead.addAll(pending.map((doc)=>doc.id));
+   try {
+     final batch=FirebaseFirestore.instance.batch();
+     for(final doc in pending){batch.update(doc.reference,{'read':true});}
+     await batch.commit();
+   } catch (_) { /* A failed receipt is retried on the next snapshot. */ }
+   finally { markingRead.removeAll(pending.map((doc)=>doc.id)); }
+ }
+
  String _time(dynamic v){final d=v is Timestamp?v.toDate():v is DateTime?v:null;if(d==null)return '';return '${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';}
  List<String> _demoParticipants()=>widget.conversationId.split('|').where((x)=>x.isNotEmpty).toList();
 String? _demoOtherUid(String currentUid){final p=_demoParticipants();if(p.length==2&&p.contains(currentUid))return p.firstWhere((x)=>x!=currentUid);if(widget.otherUid!=currentUid)return widget.otherUid;return null;}
@@ -20,13 +41,16 @@ Future<void> _send()async{
   final identity=ActiveProfileController.instance;
   final text=controller.text.trim();
   if(text.isEmpty||sending)return;
+  if(text.length>5000){setState(()=>sendError='Message is too long. Maximum 5000 characters.');return;}
+  setState(()=>sendError=null);
   if(identity.isDemo){
     final id=identity.effectiveUid;
     if(id==null)return;
     setState(()=>sending=true);
     try{
       final to=_demoOtherUid(id);if(to==null||to==id)return;DemoDataService.instance.sendMessage(id,to,text);
-      controller.clear();
+      if(controller.text.trim()==text)controller.clear();
+      _scrollDown();
     }finally{if(mounted)setState(()=>sending=false);}
     return;
   }
@@ -51,10 +75,12 @@ Future<void> _send()async{
     batch.set(message,{ProfileFields.senderId:id,'receiverId':widget.otherUid,'text':text,'createdAt':now,'read':false});
     batch.update(conversation,{'lastMessage':text,'lastMessageAt':now,'updatedAt':now,'unreadCounts.$id':0,'unreadCounts.${widget.otherUid}':FieldValue.increment(1)});
     await batch.commit();
-    controller.clear();
-  }finally{if(mounted)setState(()=>sending=false);}
+    if(controller.text.trim()==text)controller.clear();
+      _scrollDown();
+  }catch(_){if(mounted)setState(()=>sendError='Message could not be sent. Your text is saved below.');}
+  finally{if(mounted)setState(()=>sending=false);}
 }
- @override Widget build(BuildContext context){final identity=ActiveProfileController.instance;if(identity.isDemo){return AnimatedBuilder(animation:identity,builder:(context,_){final currentUid=identity.effectiveUid;if(currentUid==null)return const Scaffold(body:Center(child:Text('Activate a demo profile first.')));final otherUid=_demoOtherUid(currentUid);if(otherUid==null||otherUid==currentUid)return const Scaffold(body:Center(child:Text('This conversation does not match the active profile.')));return _demo(context,currentUid,otherUid,_demoOtherName(otherUid));});}final real=FirebaseAuth.instance.currentUser;if(real==null)return const Scaffold(body:Center(child:Text('Please sign in.')));final stream=FirebaseFirestore.instance.collection('conversations').doc(widget.conversationId).collection('messages').orderBy('createdAt');return _shell(context,stream.snapshots(),real.uid,widget.otherName);}
+ @override Widget build(BuildContext context){final identity=ActiveProfileController.instance;if(identity.isDemo){return AnimatedBuilder(animation:identity,builder:(context,_){final currentUid=identity.effectiveUid;if(currentUid==null)return const Scaffold(body:Center(child:Text('Activate a demo profile first.')));final otherUid=_demoOtherUid(currentUid);if(otherUid==null||otherUid==currentUid)return const Scaffold(body:Center(child:Text('This conversation does not match the active profile.')));return _demo(context,currentUid,otherUid,_demoOtherName(otherUid));});}final real=FirebaseAuth.instance.currentUser;if(real==null)return const Scaffold(body:Center(child:Text('Please sign in.')));final stream=FirebaseFirestore.instance.collection('conversations').doc(widget.conversationId).collection('messages').orderBy('createdAt');return FutureBuilder<String?>(future:ready,builder:(context,prepared){if(prepared.connectionState==ConnectionState.waiting)return Scaffold(appBar:AppBar(title:Text(widget.otherName)),body:const Center(child:CircularProgressIndicator()));if(prepared.hasError||prepared.data==null)return Scaffold(appBar:AppBar(title:Text(widget.otherName)),body:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Text('Chat unavailable. Both people must follow each other.'),TextButton(onPressed:()=>setState(_prepare),child:const Text('Retry'))])));return _shell(context,stream.snapshots(includeMetadataChanges:true),real.uid,widget.otherName);});}
  Widget _demo(BuildContext context,String uid,String otherUid,String otherName){
   return _shell(
     context,
@@ -67,6 +93,6 @@ Future<void> _send()async{
     otherName,
   );
 }
- Widget _shell(BuildContext context,Stream stream,String uid,String otherName)=>Scaffold(appBar:AppBar(toolbarHeight:88,title:UserIdentity(uid: ActiveProfileController.instance.isDemo ? (_demoOtherUid(uid) ?? widget.otherUid) : widget.otherUid, name: otherName, color: AppColors.white)),body:Column(children:[Expanded(child:StreamBuilder(stream:stream,builder:(context,s){if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());final raw=s.data;final docs=raw is List?raw:raw is QuerySnapshot?raw.docs.map((x)=>x.data()).toList():const [];if(docs.isEmpty)return const Center(child:Text('No messages yet. Say hello!'));return ListView.builder(padding:const EdgeInsets.all(12),itemCount:docs.length,itemBuilder:(context,i){final d=docs[i] as Map<String,dynamic>;final mine=d[ProfileFields.senderId]==uid;return Align(alignment:mine?Alignment.centerRight:Alignment.centerLeft,child:Container(constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),decoration:BoxDecoration(color:mine?AppColors.primaryGreen:AppColors.softGreen,borderRadius:BorderRadius.circular(16)),child:Column(crossAxisAlignment:mine?CrossAxisAlignment.end:CrossAxisAlignment.start,children:[UserIdentity(uid:(d[ProfileFields.senderId]??'').toString(),name:mine ? 'You' : otherName,color:mine?AppColors.white:AppColors.darkGreen),const SizedBox(height:4),Text((d['text']??'').toString(),style:TextStyle(color:mine?AppColors.white:AppColors.darkGreen)),Text(_time(d['createdAt']),style:TextStyle(fontSize:10,color:mine?AppColors.white.withOpacity(.75):AppColors.mutedText))])));});})),SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(10,6,10,10),child:Row(children:[Expanded(child:TextField(controller:controller,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:const InputDecoration(hintText:'Write a message...',border:OutlineInputBorder()))),const SizedBox(width:8),IconButton(onPressed:sending?null:_send,icon:const Icon(Icons.send))])))]));
- @override void dispose(){controller.dispose();super.dispose();}
+ Widget _shell(BuildContext context,Stream stream,String uid,String otherName)=>Scaffold(appBar:AppBar(toolbarHeight:88,title:UserIdentity(uid: ActiveProfileController.instance.isDemo ? (_demoOtherUid(uid) ?? widget.otherUid) : widget.otherUid, name: otherName, color: AppColors.white)),body:Column(children:[Expanded(child:StreamBuilder(stream:stream,builder:(context,s){if(s.hasError)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Text('Unable to load this conversation.'),TextButton(onPressed:()=>setState((){}),child:const Text('Retry'))]));if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());final raw=s.data;if(raw is QuerySnapshot){_markRead(raw,uid);}final nearBottom=!scroll.hasClients||scroll.position.maxScrollExtent-scroll.offset<100;if(nearBottom)_scrollDown();final docs=raw is List?raw:raw is QuerySnapshot?raw.docs.map((x)=>x.data()).toList():const [];if(docs.isEmpty)return const Center(child:Text('No messages yet. Say hello!'));return ListView.builder(controller:scroll,padding:const EdgeInsets.all(12),itemCount:docs.length,itemBuilder:(context,i){final d=docs[i] as Map<String,dynamic>;final mine=d[ProfileFields.senderId]==uid;return Align(alignment:mine?Alignment.centerRight:Alignment.centerLeft,child:Container(constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),decoration:BoxDecoration(color:mine?AppColors.primaryGreen:AppPalette.of(context).softSurface,borderRadius:BorderRadius.circular(16)),child:Column(crossAxisAlignment:mine?CrossAxisAlignment.end:CrossAxisAlignment.start,children:[UserIdentity(uid:(d[ProfileFields.senderId]??'').toString(),name:mine ? 'You' : otherName,color:mine?AppColors.white:AppPalette.of(context).ink),const SizedBox(height:4),Text((d['text']??'').toString(),style:TextStyle(color:mine?AppColors.white:AppPalette.of(context).ink)),if(mine&&!ActiveProfileController.instance.isDemo) Text(d['read']==true?'Read':raw is QuerySnapshot&&raw.docs[i].metadata.hasPendingWrites?'Sending…':'Sent',style:const TextStyle(fontSize:10,color:Colors.white70)),Text(_time(d['createdAt']),style:TextStyle(fontSize:10,color:mine?AppColors.white.withOpacity(.75):AppPalette.of(context).muted))])));});})),if(sendError!=null) Padding(padding:const EdgeInsets.symmetric(horizontal:12),child:Row(children:[Expanded(child:Text(sendError!,style:TextStyle(color:Theme.of(context).colorScheme.error))),TextButton(onPressed:sending?null:_send,child:const Text('Retry'))])),SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(10,6,10,10),child:Row(children:[Expanded(child:TextField(controller:controller,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:const InputDecoration(hintText:'Write a message...',border:OutlineInputBorder()))),const SizedBox(width:8),IconButton(onPressed:sending?null:_send,icon:sending?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send))])))]));
+ @override void dispose(){WidgetsBinding.instance.removeObserver(this);controller.dispose();scroll.dispose();super.dispose();}
 }

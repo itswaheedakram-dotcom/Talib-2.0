@@ -1,4 +1,6 @@
 import '../models/user_profile.dart';
+import 'package:flutter/material.dart';
+import '../../app/router.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,6 +15,35 @@ class PushTokenRegistrationService {
   StreamSubscription<User?>? _authSubscription;
   StreamSubscription<String>? _tokenSubscription;
   bool _started = false;
+  // ignore: unused_field
+  StreamSubscription<RemoteMessage>? _openedSubscription;
+  // ignore: unused_field
+  StreamSubscription<RemoteMessage>? _foregroundSubscription;
+
+  void _openChatPush(RemoteMessage message) {
+    final data=message.data;
+    final user=FirebaseAuth.instance.currentUser;
+    if(data['type']!='chat_message'||ActiveProfileController.instance.isDemo||user==null||data['receiverId']!=user.uid)return;
+    final id=data['conversationId'],sender=data['senderId'];
+    if(id==null||sender==null||id.isEmpty||sender.isEmpty)return;
+    final path='/chat/'+Uri.encodeComponent(id)+'?uid='+Uri.encodeComponent(sender)+'&name='+Uri.encodeComponent(data['senderName']??'Student');
+    appRouter.push(path);
+  }
+
+  void _foregroundChatPush(RemoteMessage message) {
+    final data=message.data;
+    final user=FirebaseAuth.instance.currentUser;
+    if(data['type']!='chat_message'||ActiveProfileController.instance.isDemo||user==null||data['receiverId']!=user.uid)return;
+    final id=data['conversationId'];
+    if(id==null||appRouter.routeInformationProvider.value.uri.path=='/chat/'+Uri.encodeComponent(id))return;
+    final context=appRouter.routerDelegate.navigatorKey.currentContext;
+    if(context==null)return;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+      content:Text('New message from '+(data['senderName']??'Student')),
+      action:SnackBarAction(label:'Open chat',onPressed:()=>_openChatPush(message)),
+    ));
+  }
+
 
   void start() {
     if (_started || !FirebaseService.initialized) return;
@@ -20,6 +51,11 @@ class PushTokenRegistrationService {
     try {
       ActiveProfileController.instance.addListener(_sync);
       _authSubscription = FirebaseAuth.instance.authStateChanges().listen((_) => _sync());
+      _openedSubscription=FirebaseMessaging.onMessageOpenedApp.listen(_openChatPush);
+      _foregroundSubscription=FirebaseMessaging.onMessage.listen(_foregroundChatPush);
+      FirebaseMessaging.instance.getInitialMessage().then((message) {
+        if(message!=null) WidgetsBinding.instance.addPostFrameCallback((_)=>_openChatPush(message));
+      });
       _sync();
     } catch (_) {
       _started = false;

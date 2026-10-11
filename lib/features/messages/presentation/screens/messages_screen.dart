@@ -148,7 +148,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           leading: CircleAvatar(child: Text(name.isEmpty ? '?' : name.substring(0, 1).toUpperCase())),
           title: UserIdentity(uid: other, name: name),
           subtitle: Text(last.isEmpty ? 'Say hello' : last, maxLines: 1, overflow: TextOverflow.ellipsis),
-          trailing: Text(_time(item['updatedAt']), style: const TextStyle(fontSize: 12)),
+          trailing: Column(mainAxisAlignment:MainAxisAlignment.center,children:[Text(_time(item['updatedAt']),style:const TextStyle(fontSize:12)),if(!ActiveProfileController.instance.isDemo) UnreadChatBadge(conversationId:item['id'].toString(),uid:uid)]),
           onTap: () => _openChat(item['id'].toString(), other, name),
         );
       },
@@ -237,4 +237,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
       },
     );
   }
+}
+
+class UnreadChatBadge extends StatelessWidget {
+ final String conversationId,uid;
+ const UnreadChatBadge({super.key,required this.conversationId,required this.uid});
+ @override Widget build(BuildContext context)=>StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+ stream:FirebaseFirestore.instance.collection('conversations').doc(conversationId).collection('messages').where('receiverId',isEqualTo:uid).where('read',isEqualTo:false).snapshots(),
+ builder:(context,s){final count=s.data?.size??0;if(count==0)return const SizedBox.shrink();return Container(padding:const EdgeInsets.symmetric(horizontal:7,vertical:2),decoration:BoxDecoration(color:Theme.of(context).colorScheme.primary,borderRadius:BorderRadius.circular(12)),child:Text(count>99?'99+':count.toString(),style:TextStyle(color:Theme.of(context).colorScheme.onPrimary,fontSize:11)));});
 }

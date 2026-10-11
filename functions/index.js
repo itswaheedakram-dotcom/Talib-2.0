@@ -117,3 +117,31 @@ exports.onIssueTicketUpdated = onDocumentUpdated('issueTickets/{ticketId}', asyn
   if (tokenDoc.exists) await sendPush([tokenDoc], 'Talib support update: ' + ticketNumber, text,
     { type: 'issue_update', ticketId, ticketNumber, status: after.status || 'open' });
 });
+
+// Chat alerts go directly to the conversation, never to the bell inbox.
+exports.onChatMessageCreated = onDocumentCreated('conversations/{conversationId}/messages/{messageId}', async (event) => {
+  const message = event.data?.data();
+  if (!message || !message.senderId || !message.receiverId || message.read === true) return;
+  const { conversationId, messageId } = event.params;
+  const conversation = await db.collection('conversations').doc(conversationId).get();
+  if (!conversation.exists) return;
+  const chat = conversation.data();
+  if (!Array.isArray(chat.participants) || chat.participants.length !== 2 ||
+      !chat.participants.includes(message.senderId) || !chat.participants.includes(message.receiverId) ||
+      message.senderId === message.receiverId) return;
+  const sender = db.collection('users').doc(message.senderId);
+  const recipient = db.collection('users').doc(message.receiverId);
+  const [following, reverseFollowing, blocked, reverseBlocked, tokenDoc] = await Promise.all([
+    sender.collection('following').doc(message.receiverId).get(),
+    recipient.collection('following').doc(message.senderId).get(),
+    sender.collection('blockedUsers').doc(message.receiverId).get(),
+    recipient.collection('blockedUsers').doc(message.senderId).get(),
+    db.collection('pushTokens').doc(message.receiverId).get(),
+  ]);
+  if (!following.exists || !reverseFollowing.exists || blocked.exists || reverseBlocked.exists || !tokenDoc.exists) return;
+  const name = chat.participantNames?.[message.senderId] || 'Student';
+  await sendPush([tokenDoc], 'New message from ' + name, 'Open Talib to read your message.', {
+    type: 'chat_message', conversationId, messageId,
+    senderId: message.senderId, receiverId: message.receiverId, senderName: name,
+  });
+});

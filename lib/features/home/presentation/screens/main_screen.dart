@@ -8,6 +8,7 @@ import '../../../community/presentation/screens/community_screen.dart';
 import '../../../common/presentation/widgets/custom_scaffold.dart';
 import '../../../messages/presentation/screens/messages_screen.dart';
 import 'home_screen.dart';
+import '../../../messages/presentation/screens/unread_messages_icon.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -55,8 +56,8 @@ class _MainScreenState extends State<MainScreen> {
             label: 'Community',
           ),
           const BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline_rounded),
-            activeIcon: Icon(Icons.chat_bubble_rounded),
+            icon: UnreadMessagesIcon(),
+            activeIcon: UnreadMessagesIcon(selected:true),
             label: 'Messages',
           ),
           if (access.canOpenPanel)

@@ -106,10 +106,14 @@ class DatabaseService {
   Future<String?> createConversation({required String uid,required String otherUid,required String otherName, String? uidName}) async {
     if(uid==otherUid||!await isMutualFollow(uid,otherUid))return null;
     final id=conversationId(uid,otherUid);
-    await _db.collection('conversations').doc(id).set({
+    final conversation=_db.collection('conversations').doc(id);
+    try {if((await conversation.get()).exists)return id;} on FirebaseException catch(error) {
+      // Rules cannot read a conversation which has not been created yet.
+      if(error.code!='permission-denied')rethrow;
+    }
+    await conversation.set({
       'id':id,'participants':[uid,otherUid],
       'participantNames':{uid:(uidName?.trim().isNotEmpty == true ? uidName!.trim() : 'Student'),otherUid:otherName},
-      'lastMessage':'','lastMessageAt':FieldValue.serverTimestamp(),
       'updatedAt':FieldValue.serverTimestamp(),'createdAt':FieldValue.serverTimestamp(),
     },SetOptions(merge:true));
     return id;
