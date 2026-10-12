@@ -1,433 +1,1423 @@
-import '../../../../core/models/user_profile.dart';
+import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../../app/theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/services/database_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/firebase_service.dart';
+import '../../../../core/services/user_profile_repository.dart';
+import '../../../../core/models/user_profile.dart';
 import '../../../models/post.dart';
-import '../../../models/institute.dart';
 import '../../../institutes/data/institute_repository.dart';
 import '../../timeline_topics.dart';
+import '../../domain/post_templates.dart';
+import '../widgets/community_post_card.dart';
 
-class CreatePostScreen extends StatefulWidget{
+class CreatePostScreen extends StatefulWidget {
   final Post? post;
-  final String? instituteId;
-  final String? instituteName;
-  const CreatePostScreen({super.key,this.post,this.instituteId,this.instituteName});
-  @override State<CreatePostScreen> createState()=>_CreatePostScreenState();
+  final String? instituteId, instituteName, initialType;
+  const CreatePostScreen({
+    super.key,
+    this.post,
+    this.instituteId,
+    this.instituteName,
+    this.initialType,
+  });
+  @override
+  State<CreatePostScreen> createState() => _CreatePostScreenState();
 }
-class _CreatePostScreenState extends State<CreatePostScreen>{
-  final _controller=TextEditingController();
-  final _db=DatabaseService();
-  final _picker=ImagePicker();
-  final _pollOptions=<TextEditingController>[];
-  final _attachments=<Map<String,String>>[];
-  bool _saving=false,_isQuestion=false,_isPoll=false;
-  String category='General';
-  final Set<String> _selectedTags={};
-  final Set<String> _selectedInstituteIds={};
-  static final categories=TimelineTopics.all;
 
-  @override void initState(){
+class _CreatePostScreenState extends State<CreatePostScreen> {
+  final _body = TextEditingController();
+  final Map<String, TextEditingController> _fields = {
+    for (final field in PostTemplates.all.expand((t) => t.fields))
+      field.key: TextEditingController(),
+  };
+  final List<TextEditingController> _options = [];
+  final List<Map<String, String>> _attachments = [];
+  final Set<String> _tags = {}, _institutes = {};
+  final _db = DatabaseService();
+  Timer? _draftTimer;
+  StreamSubscription<User?>? _auth;
+  String _scope = '', _uid = '';
+  String? _type;
+  UserProfile? _profile;
+  bool _loadingDraft = true,
+      _saving = false,
+      _uploading = false,
+      _ready = false,
+      _draftDialog = false;
+  bool _previewing = false;
+  double _progress = 0;
+  String? _error;
+  bool get _demo => ActiveProfileController.instance.isDemo;
+  String get _currentUid => _demo
+      ? (ActiveProfileController.instance.effectiveUid ?? '')
+      : (FirebaseService.initialized
+            ? FirebaseAuth.instance.currentUser?.uid ?? ''
+            : '');
+  String get _currentScope => '${_demo ? 'demo' : 'real'}:$_currentUid';
+  String get _draftKey =>
+      'talib.community.draft.$_scope.${widget.post?.id ?? 'new'}';
+  bool get _voteLocked =>
+      widget.post?.pollVotes.values.any((v) => v > 0) == true;
+  bool get _canEdit => widget.post == null || widget.post!.authorId == _uid;
+  PostTemplate get _template => PostTemplates.byId(_type ?? 'general');
+  Map<String, String> get _values => {
+    for (final field in _template.fields)
+      if (_fields[field.key]!.text.trim().isNotEmpty)
+        field.key: _fields[field.key]!.text.trim(),
+  };
+  @override
+  void initState() {
     super.initState();
-    final p=widget.post;
-    if(p!=null){
-      _controller.text=p.text;
-      category=TimelineTopics.byName(p.category)!=null?p.category:'General';
-      _selectedTags..clear()..addAll(p.tags);
-      _selectedInstituteIds..clear()..addAll(p.instituteIds.isNotEmpty?p.instituteIds:(p.instituteId==null?[]:[p.instituteId!]));
-      _isQuestion=p.isQuestion;_isPoll=p.pollOptions.isNotEmpty;
-      for(final option in p.pollOptions)_addPollOption(option);
-      _attachments.addAll(p.attachments.map((x)=>Map<String,String>.from(x)));
+    _body.addListener(_scheduleDraft);
+    for (final field in _fields.values) {
+      field.addListener(_scheduleDraft);
+    }
+    ActiveProfileController.instance.addListener(_identityChanged);
+    if (FirebaseService.initialized)
+      _auth = FirebaseAuth.instance.authStateChanges().listen(
+        (_) => _identityChanged(),
+      );
+    _bind();
+  }
+
+  void _identityChanged() {
+    if (_scope != _currentScope) {
+      if (_ready && _uid.isNotEmpty) _persist(_draftKey, _snapshot());
+      if (_draftDialog || _previewing) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      _bind();
     }
   }
-  void _addPollOption([String value='']){
-    if(_pollOptions.length>=5)return;
-    final c=TextEditingController(text:value);
-    _pollOptions.add(c);
-    if(mounted)setState((){});
-  }
-  void _removePollOption(int index){
-    if(_pollOptions.length<=2)return;
-    final c=_pollOptions.removeAt(index);c.dispose();setState((){});
-  }
-  @override void dispose(){_controller.dispose();for(final c in _pollOptions)c.dispose();super.dispose();}
 
-  String _errorText(Object error){final raw=error.toString().trim();if(raw.isEmpty)return 'Unknown error.';return raw.replaceFirst(RegExp(r'^Exception:\s*'),'');}
-  void _showError(Object error){if(!mounted)return;ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_errorText(error)),duration:Duration(seconds:5)));}
-
-  Future<void> _showAttachmentMenu()async{
-    await showModalBottomSheet<void>(context:context,showDragHandle:true,builder:(sheet)=>SafeArea(child:Padding(
-      padding:EdgeInsets.fromLTRB(18,8,18,22),child:Wrap(children:[
-        ListTile(leading:Icon(Icons.photo_outlined,color:AppColors.primaryGreen),title:Text('Photo'),subtitle:Text('Add a picture to your post'),onTap:(){Navigator.pop(sheet);_pickPhoto();}),
-        ListTile(leading:Icon(Icons.insert_drive_file_outlined,color:AppColors.primaryGreen),title:Text('File'),subtitle:Text('Attach a document or file'),onTap:(){Navigator.pop(sheet);_pickFile();}),
-        ListTile(leading:Icon(Icons.link,color:AppColors.primaryGreen),title:Text('Link'),subtitle:Text('Add a web link'),onTap:(){Navigator.pop(sheet);_addLink();}),
-        ListTile(leading:Icon(Icons.poll_outlined,color:AppColors.primaryGreen),title:Text('Poll'),subtitle:Text('Create a poll with 2–5 options'),onTap:(){Navigator.pop(sheet);_enablePoll();}),
-      ]),
-    )));
-  }
-
-  Future<void> _pickPhoto()async{
-    try{
-      final x=await _picker.pickImage(source:ImageSource.gallery,imageQuality:85,maxWidth:1800);
-      if(x==null)return;
-      await _stageAttachment(bytes:await x.readAsBytes(),fileName:x.name,type:'photo',localPath:x.path);
-    }catch(error){_showError(error);}
-  }
-  Future<void> _pickFile()async{
-    try{
-      final result=await FilePicker.platform.pickFiles(withData:true);
-      if(result==null||result.files.isEmpty)return;
-      final f=result.files.single;
-      if(f.bytes==null){_showError(StateError('Could not read the selected file.'));return;}
-      await _stageAttachment(bytes:f.bytes!,fileName:f.name,type:'file');
-    }catch(error){_showError(error);}
-  }
-  Future<void> _stageAttachment({required Uint8List bytes,required String fileName,required String type,String? localPath})async{
-    if(FirebaseService.initialized){
-      final user=FirebaseAuth.instance.currentUser;
-      if(user!=null){
-        try{
-          final url=await _db.uploadCommunityAttachment(bytes:bytes,fileName:fileName,type:type);
-          if(mounted)setState(()=>_attachments.add({'type':type,ProfileFields.name:fileName,'url':url}));
-          return;
-        }catch(error){_showError(error);return;}
-      }
+  void _bind() {
+    _ready = false;
+    _draftTimer?.cancel();
+    _scope = _currentScope;
+    _uid = _currentUid;
+    _loadingDraft = true;
+    _error = null;
+    _profile = null;
+    _saving = false;
+    _uploading = false;
+    _body.text = widget.post?.text ?? '';
+    for (final c in _fields.values) {
+      c.clear();
     }
-    if(mounted)setState(()=>_attachments.add({'type':type,ProfileFields.name:fileName,'url':localPath??''}));
-  }
-  Future<void> _addLink()async{
-    final c=TextEditingController();
-    final url=await showDialog<String>(context:context,builder:(d)=>AlertDialog(
-      title:Text('Add link'),content:TextField(controller:c,keyboardType:TextInputType.url,autofocus:true,decoration:InputDecoration(hintText:'https://example.com')),
-      actions:[TextButton(onPressed:()=>Navigator.pop(d),child:Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(d,c.text.trim()),child:Text('Add'))],
-    ));
-    c.dispose();if(url==null||url.isEmpty)return;
-    final normalized=url.startsWith('http://')||url.startsWith('https://')?url:'https://$url';
-    setState(()=>_attachments.add({'type':'link',ProfileFields.name:normalized,'url':normalized}));
-  }
-  void _enablePoll(){
-    setState(()=>_isPoll=true);
-    if(_pollOptions.isEmpty){_addPollOption();_addPollOption();}else if(_pollOptions.length==1)_addPollOption();
+    _attachments
+      ..clear()
+      ..addAll(
+        widget.post?.attachments.map((a) => Map<String, String>.from(a)) ?? [],
+      );
+    _tags
+      ..clear()
+      ..addAll(widget.post?.tags ?? []);
+    _institutes
+      ..clear()
+      ..addAll(widget.post?.instituteIds ?? []);
+    if (widget.post?.instituteId != null)
+      _institutes.add(widget.post!.instituteId!);
+    if (widget.instituteId?.isNotEmpty == true)
+      _institutes.add(widget.instituteId!);
+    _type = widget.post == null
+        ? (PostTemplates.all.any((t) => t.id == widget.initialType)
+              ? widget.initialType
+              : null)
+        : (widget.post!.pollOptions.isNotEmpty
+              ? 'poll'
+              : widget.post!.postType);
+    for (final entry
+        in widget.post?.educationalData.entries ??
+            <MapEntry<String, String>>[]) {
+      _fields[entry.key]?.text = entry.value;
+    }
+    for (final c in _options) {
+      c.dispose();
+    }
+    _options.clear();
+    for (final option in widget.post?.pollOptions ?? <String>[]) {
+      _addOption(option);
+    }
+    if (_type == 'poll' && _options.length < 2) {
+      _addOption();
+      _addOption();
+    }
+    if (_fields['duration']!.text.isEmpty) _fields['duration']!.text = '3 days';
+    _restore();
+    if (mounted) setState(() {});
   }
 
-  Future<void> _publish()async{
-    if(_saving)return;
-    final identity=ActiveProfileController.instance;final demoActive=identity.isDemoActive;
-    User? user;
-    try{user=FirebaseService.initialized?FirebaseAuth.instance.currentUser:null;}catch(error){_showError(error);return;}
-    if(user==null&&!demoActive){_showError(StateError('Please sign in first. Firebase authentication has no active user.'));return;}
-    final text=_controller.text.trim();if(text.isEmpty){_showError(ArgumentError('Write something before publishing.'));return;}
-    final postTags=_selectedTags.toSet();
-    final instituteIds=_selectedInstituteIds.toList();
-    final primaryInstituteId=instituteIds.isNotEmpty?instituteIds.first:widget.instituteId;
-    final options=_isPoll?_pollOptions.map((c)=>c.text.trim()).where((x)=>x.isNotEmpty).take(5).toList():<String>[];
-    if(_isPoll&&options.length<2){_showError(ArgumentError('Add at least 2 poll options.'));return;}
-    setState(()=>_saving=true);
-    try{
-      final authorId=identity.resolveUid(user?.uid??'');
-      final name=identity.effectiveName ?? (user?.displayName?.trim().isNotEmpty==true?user!.displayName!.trim():(user?.email??'Student'));
-      if(widget.post==null){
-        final postId=await _db.createPost(text:text,authorId:authorId,authorName:name,category:category,isQuestion:_isQuestion,pollOptions:options,instituteId:primaryInstituteId,attachments:_attachments,tags:postTags.toList(),instituteIds:instituteIds);
-        if(!demoActive&&user!=null){try{await _db.notifyMentions(text:text,fromId:user.uid,postId:postId);}catch(error){debugPrint('Mention notification failed: $error');}}
-      }else{
-        await _db.updatePost(postId:widget.post!.id,text:text,category:category,isQuestion:_isQuestion,pollOptions:options,instituteId:widget.post!.instituteId??primaryInstituteId,attachments:_attachments,tags:postTags.toList(),instituteIds:instituteIds);
+  @override
+  void dispose() {
+    _draftTimer?.cancel();
+    _auth?.cancel();
+    ActiveProfileController.instance.removeListener(_identityChanged);
+    if (_ready && _uid.isNotEmpty && !_saving) _persist(_draftKey, _snapshot());
+    _body.dispose();
+    for (final c in _fields.values) {
+      c.dispose();
+    }
+    for (final c in _options) {
+      c.dispose();
+    }
+    for (final f in _focus.values) {
+      f.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addOption([String value = '']) {
+    final c = TextEditingController(text: value)..addListener(_scheduleDraft);
+    _options.add(c);
+  }
+
+  void _selectType(String id) {
+    final previous = _type;
+    setState(() {
+      _type = id;
+      if (id == 'study_group' && _fields['mode']!.text.isEmpty)
+        _fields['mode']!.text = 'Online';
+      if (id == 'career' && _fields['purpose']!.text.isEmpty)
+        _fields['purpose']!.text = 'Career advice';
+      if (previous != null) _tags.remove(PostTemplates.byId(previous).topic);
+      _tags.add(_template.topic);
+      if (id == 'poll' && _options.length < 2) {
+        _addOption();
+        _addOption();
       }
-      if(mounted)context.pop(true);
-    }catch(error){_showError(error);}finally{if(mounted)setState(()=>_saving=false);}
+      _error = null;
+    });
+    _scheduleDraft();
   }
 
-  Future<void> _pickTopics() async {
-    final temp = Set<String>.from(_selectedTags);
-    final result = await showModalBottomSheet<Set<String>>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheet) => StatefulBuilder(
-        builder: (context, setSheet) {
-          return SafeArea(
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * .78,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
-                    child: Text('Tag Topics', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppPalette.of(context).ink)),
-                  ),
-                  Expanded(
-                    child: ListView(
-                      children: TimelineTopics.all.map((topic) {
-                        return CheckboxListTile(
-                          value: temp.contains(topic.name),
-                          title: Text(topic.emoji + '  ' + topic.name),
-                          activeColor: AppColors.primaryGreen,
-                          onChanged: (value) {
-                            setSheet(() {
-                              if (value == true) { temp.add(topic.name); } else { temp.remove(topic.name); }
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.all(12),
-                    child: FilledButton(onPressed: () => Navigator.pop(sheet, temp), child: Text('Done')),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+  Map<String, dynamic> _snapshot() => {
+    'type': _type,
+    'body': _body.text,
+    'fields': {for (final e in _fields.entries) e.key: e.value.text},
+    'tags': _tags.toList(),
+    'institutes': _institutes.toList(),
+    'options': _options.map((c) => c.text).toList(),
+    'attachments': _attachments
+        .map(
+          (a) => {
+            ...a,
+            if ((a['url'] ?? '').startsWith('data:')) 'url': '',
+            if ((a['url'] ?? '').startsWith('data:')) 'reattach': 'true',
+          },
+        )
+        .toList(),
+  };
+  Future<void> _persist(String key, Map<String, dynamic> value) async {
+    if (value['type'] == null &&
+        (value['body'] ?? '').toString().isEmpty &&
+        (value['attachments'] as List).isEmpty)
+      return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(key, jsonEncode(value));
+    } catch (_) {
+      /* Publishing does not depend on local draft storage. */
+    }
+  }
+
+  void _scheduleDraft() {
+    if (!_ready || _saving || _uid.isEmpty) return;
+    _draftTimer?.cancel();
+    final key = _draftKey, value = _snapshot();
+    _draftTimer = Timer(
+      const Duration(milliseconds: 500),
+      () => _persist(key, value),
     );
-    if (result != null) {
-      setState(() { _selectedTags..clear()..addAll(result); });
-    }
   }
 
-  Future<void> _pickInstitutes() async {
+  Future<void> _restore() async {
+    final scope = _scope, key = _draftKey;
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted || scope != _currentScope) return;
+    final raw = prefs.getString(key);
+    if (raw != null && _canEdit) {
+      _draftDialog = true;
+      final restore = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: const Text('Restore your draft?'),
+          content: const Text(
+            'Continue the post you were writing on this account.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Discard'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Restore'),
+            ),
+          ],
+        ),
+      );
+      _draftDialog = false;
+      if (!mounted || scope != _currentScope) return;
+      if (restore == true) {
+        try {
+          final d = jsonDecode(raw) as Map<String, dynamic>;
+          _type = d['type'] as String?;
+          _body.text = (d['body'] ?? '').toString();
+          for (final e in (d['fields'] as Map? ?? {}).entries) {
+            _fields[e.key]?.text = e.value.toString();
+          }
+          _tags
+            ..clear()
+            ..addAll(List<String>.from(d['tags'] ?? []));
+          _institutes
+            ..clear()
+            ..addAll(List<String>.from(d['institutes'] ?? []));
+          for (final c in _options) {
+            c.dispose();
+          }
+          _options.clear();
+          for (final option in List<String>.from(d['options'] ?? [])) {
+            _addOption(option);
+          }
+          _attachments
+            ..clear()
+            ..addAll(
+              (d['attachments'] as List? ?? []).map(
+                (a) => Map<String, String>.from(a),
+              ),
+            );
+        } catch (_) {
+          _error =
+              'The saved draft could not be restored. Please start a new post.';
+        }
+      } else if (restore == false) {
+        await prefs.remove(key);
+      }
+    }
     await InstituteRepository.instance.load();
-    final temp = Set<String>.from(_selectedInstituteIds);
+    if (!mounted || scope != _currentScope) return;
+    if (_uid.isNotEmpty) {
+      try {
+        _profile = await UserProfileRepository.instance.watch(_uid).first;
+        if (!mounted || scope != _currentScope) return;
+        if (widget.post == null) {
+          for (final subject in PostTemplates.subjects) {
+            if (_profile!.course.toLowerCase().contains(
+                  subject.toLowerCase(),
+                ) &&
+                _fields['subject']!.text.isEmpty)
+              _fields['subject']!.text = subject;
+          }
+          if (_fields['program']!.text.isEmpty)
+            _fields['program']!.text = _profile!.course;
+          if (_fields['semester']!.text.isEmpty)
+            _fields['semester']!.text = _profile!.semester;
+        }
+      } catch (_) {}
+    }
+    if (mounted && scope == _currentScope)
+      setState(() {
+        _loadingDraft = false;
+        _ready = true;
+      });
+  }
 
-    String typeFilter = 'All';
-    String? provinceFilter;
-    String? cityFilter;
-    String? townFilter;
+  void _message(String message) {
+    if (mounted)
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+  }
 
+  Future<void> _pickPhoto() async {
+    try {
+      final scope = _scope;
+      final image = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 1600,
+      );
+      if (image == null || !mounted || scope != _currentScope) return;
+      await _attach(await image.readAsBytes(), image.name, 'photo', scope);
+    } catch (_) {
+      _message('Photo could not be attached. Please retry.');
+    }
+  }
+
+  Future<void> _pickFile() async {
+    try {
+      final scope = _scope;
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'txt', 'doc', 'docx', 'ppt', 'pptx'],
+        withData: true,
+      );
+      if (result == null || !mounted || scope != _currentScope) return;
+      final file = result.files.single;
+      if (file.bytes == null) {
+        _message('The file could not be read. Try another file.');
+        return;
+      }
+      await _attach(file.bytes!, file.name, 'file', scope);
+    } catch (_) {
+      _message('Document could not be attached. Please retry.');
+    }
+  }
+
+  Future<void> _attach(
+    Uint8List bytes,
+    String name,
+    String type,
+    String scope,
+  ) async {
+    if (_attachments.length >= 8) {
+      _message('You can attach up to 8 items.');
+      return;
+    }
+    if (bytes.length > 10 * 1024 * 1024) {
+      _message('Choose a file smaller than 10 MB.');
+      return;
+    }
+    setState(() {
+      _uploading = true;
+      _progress = 0;
+    });
+    try {
+      String url;
+      if (_demo) {
+        url = type == 'photo'
+            ? 'data:image/${name.toLowerCase().endsWith('.png') ? 'png' : 'jpeg'};base64,${base64Encode(bytes)}'
+            : '';
+      } else {
+        url = await _db.uploadCommunityAttachment(
+          bytes: bytes,
+          fileName: name,
+          type: type,
+          onProgress: (value) {
+            if (mounted && scope == _currentScope)
+              setState(() => _progress = value);
+          },
+        );
+      }
+      if (!mounted || scope != _currentScope) return;
+      setState(
+        () => _attachments.add({'type': type, 'name': name, 'url': url}),
+      );
+      _scheduleDraft();
+    } catch (_) {
+      if (mounted && scope == _currentScope)
+        _message(
+          'Upload failed. Your post is still saved as a draft. Try again.',
+        );
+    } finally {
+      if (mounted && scope == _currentScope) setState(() => _uploading = false);
+    }
+  }
+
+  Future<void> _link() async {
+    final c = TextEditingController();
+    final scope = _scope;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Add website link'),
+        content: TextField(
+          controller: c,
+          keyboardType: TextInputType.url,
+          decoration: const InputDecoration(hintText: 'https://example.com'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (PostTemplates.validUrl(c.text))
+                Navigator.pop(dialog, c.text.trim());
+              else
+                _message('Enter a valid http or https website link.');
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+    c.dispose();
+    if (result != null && mounted && scope == _currentScope) {
+      if (_attachments.length >= 8) {
+        _message('You can attach up to 8 items.');
+        return;
+      }
+      setState(
+        () => _attachments.add({
+          'type': 'link',
+          'name': Uri.parse(result).host,
+          'url': result,
+        }),
+      );
+      _scheduleDraft();
+    }
+  }
+
+  Future<void> _date(PostField field) async {
+    final now = DateTime.now(), scope = _scope;
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: DateTime.tryParse(_fields[field.key]!.text) ?? now,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(now.year + 5),
+    );
+    if (selected != null && mounted && scope == _currentScope)
+      setState(
+        () => _fields[field.key]!.text =
+            '${selected.year}-${selected.month.toString().padLeft(2, '0')}-${selected.day.toString().padLeft(2, '0')}',
+      );
+  }
+
+  Future<void> _time(PostField field) async {
+    final scope = _scope,
+        selected = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay.now(),
+        );
+    if (selected != null && mounted && scope == _currentScope)
+      setState(() => _fields[field.key]!.text = selected.format(context));
+  }
+
+  DateTime? get _closesAt => _voteLocked
+      ? widget.post?.pollClosesAt
+      : _type == 'poll'
+      ? DateTime.now().add(
+          Duration(
+            days: _fields['duration']!.text == '1 day'
+                ? 1
+                : _fields['duration']!.text == '7 days'
+                ? 7
+                : 3,
+          ),
+        )
+      : null;
+  Map<String, String> get _publishValues {
+    final values = _values;
+    if (_voteLocked) {
+      if (widget.post?.educationalData['duration'] == null) {
+        values.remove('duration');
+      } else {
+        values['duration'] = widget.post!.educationalData['duration']!;
+      }
+    }
+    return values;
+  }
+
+  List<String> get _pollOptions =>
+      _type == 'poll' ? _options.map((c) => c.text.trim()).toList() : [];
+  String? _validate() => PostTemplates.validate(
+    type: _type ?? 'general',
+    values: _values,
+    body: _body.text,
+    attachments: _attachments.length,
+    institutes: _institutes.length,
+    options: _pollOptions,
+  );
+  Future<void> _preview() async {
+    FocusScope.of(context).unfocus();
+    final error = _validate();
+    if (error != null) {
+      setState(() => _error = error);
+      return;
+    }
+    final post = Post(
+      id: 'preview',
+      text: PostTemplates.compose(_type!, _values, _body.text),
+      authorId: _uid,
+      authorName:
+          _profile?.name ??
+          ActiveProfileController.instance.effectiveName ??
+          'Student',
+      createdAt: widget.post?.createdAt ?? DateTime.now(),
+      postType: _type!,
+      educationalData: _publishValues,
+      isQuestion:
+          _template.question ||
+          (_type == 'career' && _values['purpose'] == 'Career advice'),
+      attachments: _attachments,
+      tags: _tags.toList(),
+      instituteIds: _institutes.toList(),
+      pollOptions: _pollOptions,
+      pollClosesAt: _closesAt,
+    );
+    _previewing = true;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * .8,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              const Text(
+                'Public community preview',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+              ),
+              CommunityPostCard(
+                post: post,
+                uid: _uid,
+                full: true,
+                preview: true,
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(sheet),
+                child: const Text('Back to editing'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    _previewing = false;
+  }
+
+  Future<void> _publish() async {
+    if (_saving || _uploading || _type == null || !_canEdit || _uid.isEmpty)
+      return;
+    final error = _validate();
+    if (error != null) {
+      setState(() => _error = error);
+      return;
+    }
+    if (_tags.length > 12) {
+      setState(() => _error = 'Choose up to 12 topics.');
+      return;
+    }
+    if (!_demo &&
+        _attachments.any((a) => !PostTemplates.validUrl(a['url'] ?? ''))) {
+      setState(
+        () =>
+            _error = 'Remove or reattach files that do not have a valid link.',
+      );
+      return;
+    }
+    if (_attachments.any((a) => a['reattach'] == 'true')) {
+      setState(
+        () =>
+            _error = 'Reattach the local Demo photos restored from your draft.',
+      );
+      return;
+    }
+    final scope = _scope, key = _draftKey, uid = _uid;
+    final text = PostTemplates.compose(_type!, _values, _body.text),
+        values = _publishValues,
+        options = _pollOptions,
+        close = _closesAt;
+    final authorName =
+        _profile?.name ??
+        ActiveProfileController.instance.effectiveName ??
+        'Student';
+    final type = _voteLocked ? widget.post!.postType : _type!;
+    final tags = {..._tags, _template.topic}.toList();
+    _draftTimer?.cancel();
+    await _persist(key, _snapshot());
+    if (!mounted || scope != _currentScope) return;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      if (widget.post == null) {
+        final id = await _db.createPost(
+          text: text,
+          authorId: uid,
+          authorName: authorName,
+          category: _template.topic,
+          isQuestion:
+              _template.question ||
+              (_type == 'career' && _values['purpose'] == 'Career advice'),
+          pollOptions: options,
+          instituteId: _institutes.firstOrNull,
+          attachments: _attachments
+              .map((a) => {...a}..remove('reattach'))
+              .toList(),
+          tags: tags,
+          instituteIds: _institutes.toList(),
+          postType: type,
+          educationalData: values,
+          pollClosesAt: close,
+        );
+        if (!_demo && scope == _currentScope) {
+          try {
+            await _db.notifyMentions(text: text, fromId: uid, postId: id);
+          } catch (_) {}
+        }
+      } else {
+        await _db.updatePost(
+          postId: widget.post!.id,
+          text: text,
+          category: _template.topic,
+          isQuestion:
+              _template.question ||
+              (widget.post!.postType == 'general' && widget.post!.isQuestion),
+          pollOptions: options,
+          instituteId: _institutes.firstOrNull,
+          attachments: _attachments,
+          tags: tags,
+          instituteIds: _institutes.toList(),
+          postType: type,
+          educationalData: values,
+          pollClosesAt: close,
+        );
+      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(key);
+      if (mounted && scope == _currentScope) {
+        _ready = false;
+        context.pop(true);
+      }
+    } catch (_) {
+      if (mounted && scope == _currentScope)
+        setState(
+          () => _error =
+              'Publishing failed. Your draft is safe—check your connection and retry.',
+        );
+    } finally {
+      if (mounted && scope == _currentScope) setState(() => _saving = false);
+    }
+  }
+
+  final Map<String, FocusNode> _focus = {};
+  Widget _field(PostField field) {
+    final controller = _fields[field.key]!,
+        label = '${field.label}${field.required ? ' *' : ''}',
+        locked = _voteLocked && field.key == 'duration';
+    if (field.kind == 'days') {
+      const days = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday',
+      ];
+      final selected = controller.text
+          .split(', ')
+          .where((v) => v.isNotEmpty)
+          .toSet();
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                for (final day in days)
+                  FilterChip(
+                    label: Text(day.substring(0, 3)),
+                    selected: selected.contains(day),
+                    onSelected: _saving
+                        ? null
+                        : (v) {
+                            if (v)
+                              selected.add(day);
+                            else
+                              selected.remove(day);
+                            setState(
+                              () => controller.text = days
+                                  .where(selected.contains)
+                                  .join(', '),
+                            );
+                          },
+                  ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+    if (field.kind == 'date' || field.kind == 'time')
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: TextField(
+          controller: controller,
+          readOnly: true,
+          onTap: _saving
+              ? null
+              : () => field.kind == 'date' ? _date(field) : _time(field),
+          decoration: InputDecoration(
+            labelText: label,
+            suffixIcon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (controller.text.isNotEmpty && !field.required)
+                  IconButton(
+                    tooltip: 'Clear date',
+                    onPressed: () => setState(controller.clear),
+                    icon: const Icon(Icons.close, size: 18),
+                  ),
+                Icon(
+                  field.kind == 'date'
+                      ? Icons.calendar_today_outlined
+                      : Icons.schedule,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    if (const ['mode', 'purpose', 'milestone', 'duration'].contains(field.key))
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: DropdownButtonFormField<String>(
+          value: field.choices.contains(controller.text)
+              ? controller.text
+              : null,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: label,
+            helperText: locked
+                ? 'Poll duration stays unchanged after voting starts.'
+                : null,
+          ),
+          items: field.choices
+              .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+              .toList(),
+          onChanged: _saving || locked
+              ? null
+              : (v) => setState(() => controller.text = v ?? ''),
+        ),
+      );
+    if (field.choices.isNotEmpty) {
+      final choices = {
+        ...field.choices,
+        if (field.key == 'program')
+          ...InstituteRepository.instance.items
+              .where((i) => _institutes.contains(i.id))
+              .expand(
+                (i) => [
+                  ...i.programs,
+                  ...i.programGroups.values.expand((v) => v),
+                ],
+              ),
+      };
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: RawAutocomplete<String>(
+          textEditingController: controller,
+          focusNode: _focus.putIfAbsent(field.key, FocusNode.new),
+          optionsBuilder: (value) => choices.where(
+            (option) => option.toLowerCase().contains(value.text.toLowerCase()),
+          ),
+          onSelected: (_) => setState(() {}),
+          fieldViewBuilder: (context, text, focus, submit) => TextField(
+            controller: text,
+            focusNode: focus,
+            enabled: !_saving,
+            decoration: InputDecoration(
+              labelText: label,
+              helperText: 'Choose a suggestion or type your own.',
+            ),
+          ),
+          optionsViewBuilder: (context, select, options) => Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              elevation: 4,
+              borderRadius: BorderRadius.circular(10),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxHeight: 200,
+                  maxWidth: 300,
+                ),
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: EdgeInsets.zero,
+                  children: [
+                    for (final value in options)
+                      ListTile(title: Text(value), onTap: () => select(value)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        enabled: !_saving,
+        maxLines: field.key == 'eligibility' ? 3 : 1,
+        maxLength: 600,
+        keyboardType: field.kind == 'url'
+            ? TextInputType.url
+            : TextInputType.text,
+        decoration: InputDecoration(
+          labelText: label,
+          counterText: '',
+          hintText: field.kind == 'url' ? 'https://…' : null,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _topics() async {
+    final selected = {..._tags}, scope = _scope;
     final result = await showModalBottomSheet<Set<String>>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (sheet) => StatefulBuilder(
-        builder: (context, setSheet) {
-          final all = InstituteRepository.instance.items;
-          final provinces = all.map((i) => i.province.trim()).where((v) => v.isNotEmpty).toSet().toList()..sort();
-          final cities = all
-              .where((i) => provinceFilter == null || i.province == provinceFilter)
-              .map((i) => i.city.trim()).where((v) => v.isNotEmpty).toSet().toList()..sort();
-          final towns = all
-              .where((i) => (provinceFilter == null || i.province == provinceFilter) &&
-                  (cityFilter == null || i.city == cityFilter))
-              .map((i) => i.town.trim()).where((v) => v.isNotEmpty).toSet().toList()..sort();
-
-          final list = all.where((institute) {
-            final typeOk = typeFilter == 'All' || institute.type.toLowerCase() == typeFilter.toLowerCase();
-            final provinceOk = provinceFilter == null || institute.province == provinceFilter;
-            final cityOk = cityFilter == null || institute.city == cityFilter;
-            final townOk = townFilter == null || institute.town == townFilter;
-            return typeOk && provinceOk && cityOk && townOk;
-          }).toList();
-
-          return SafeArea(
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * .86,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
-                    child: Text('Tag Institutes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppPalette.of(context).ink)),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(12, 0, 12, 6),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: ['All', 'universities', 'colleges', 'schools'].map((type) => Padding(
-                          padding: EdgeInsets.only(right: 6),
-                          child: ChoiceChip(
-                            label: Text(type == 'All' ? 'All' : type[0].toUpperCase() + type.substring(1)),
-                            selected: typeFilter == type,
-                            selectedColor: AppPalette.of(context).softSurface,
-                            onSelected: (_) => setSheet(() => typeFilter = type),
-                          ),
-                        )).toList(),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(12, 0, 12, 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: provinceFilter,
-                            isExpanded: true,
-                            decoration: InputDecoration(labelText: 'Province', isDense: true),
-                            items: [
-                              const DropdownMenuItem<String>(value: null, child: Text('All')),
-                              ...provinces.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))),
-                            ],
-                            onChanged: (value) => setSheet(() {
-                              provinceFilter = value;
-                              cityFilter = null;
-                              townFilter = null;
-                            }),
-                          ),
+        builder: (context, update) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * .7,
+            child: Column(
+              children: [
+                const Text(
+                  'Choose topics',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+                Expanded(
+                  child: ListView(
+                    children: [
+                      for (final topic in TimelineTopics.all)
+                        CheckboxListTile(
+                          title: Text('${topic.emoji} ${topic.name}'),
+                          value: selected.contains(topic.name),
+                          onChanged: (v) => update(() {
+                            if (v == true)
+                              selected.add(topic.name);
+                            else
+                              selected.remove(topic.name);
+                          }),
                         ),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: cityFilter,
-                            isExpanded: true,
-                            decoration: InputDecoration(labelText: 'City', isDense: true),
-                            items: [
-                              const DropdownMenuItem<String>(value: null, child: Text('All')),
-                              ...cities.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))),
-                            ],
-                            onChanged: (value) => setSheet(() {
-                              cityFilter = value;
-                              townFilter = null;
-                            }),
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
-                    child: DropdownButtonFormField<String>(
-                      value: townFilter,
-                      isExpanded: true,
-                      decoration: InputDecoration(labelText: 'Town / Area', isDense: true),
-                      items: [
-                        const DropdownMenuItem<String>(value: null, child: Text('All')),
-                        ...towns.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))),
-                      ],
-                      onChanged: (value) => setSheet(() => townFilter = value),
-                    ),
-                  ),
-                  Expanded(
-                    child: list.isEmpty
-                        ? Center(child: Text('No institutes match these filters.'))
-                        : ListView(
-                            children: list.map((institute) => CheckboxListTile(
-                              value: temp.contains(institute.id),
-                              title: Text(institute.name),
-                              subtitle: Text(institute.type + ' • ' + institute.city + ', ' + institute.province +
-                                  (institute.town.trim().isEmpty ? '' : ' • ' + institute.town)),
-                              activeColor: AppColors.primaryGreen,
-                              onChanged: (value) => setSheet(() {
-                                if (value == true) {
-                                  temp.add(institute.id);
-                                } else {
-                                  temp.remove(institute.id);
-                                }
-                              }),
-                            )).toList(),
-                          ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.all(12),
-                    child: FilledButton(onPressed: () => Navigator.pop(sheet, temp), child: Text('Done')),
-                  ),
-                ],
-              ),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(sheet, selected),
+                  child: const Text('Done'),
+                ),
+              ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
-    if (result != null) {
+    if (result != null && mounted && scope == _currentScope) {
       setState(() {
-        _selectedInstituteIds
+        _tags
           ..clear()
           ..addAll(result);
       });
+      _scheduleDraft();
     }
   }
 
-  Widget _tagSelector() {
-    final instituteNames = InstituteRepository.instance.items.where((institute) => _selectedInstituteIds.contains(institute.id)).map((institute) => institute.name).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(child: Text('Tags', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppPalette.of(context).ink))),
-            TextButton.icon(onPressed: _saving ? null : _pickTopics, icon: Icon(Icons.sell_outlined), label: Text('Topics')),
-            TextButton.icon(onPressed: _saving ? null : _pickInstitutes, icon: Icon(Icons.school_outlined), label: Text('Institutes')),
-          ],
-        ),
-        if (_selectedTags.isNotEmpty)
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: _selectedTags.map((tag) {
-              return InputChip(
-                label: Text(tag),
-                onDeleted: _saving ? null : () {
-                  setState(() => _selectedTags.remove(tag));
-                },
-              );
-            }).toList(),
-          ),
-        if (instituteNames.isNotEmpty)
-          Padding(
-            padding: EdgeInsets.only(top: 6),
-            child: Wrap(
-              spacing: 6, runSpacing: 6,
-              children: instituteNames.map((name) => InputChip(
-                label: Text(name),
-                onDeleted: _saving ? null : () {
-                  final institute = InstituteRepository.instance.items.firstWhere((item) => item.name == name);
-                  setState(() => _selectedInstituteIds.remove(institute.id));
-                },
-              )).toList(),
+  Future<void> _chooseInstitutes() async {
+    await InstituteRepository.instance.load();
+    if (!mounted) return;
+    final scope = _scope, selected = {..._institutes};
+    String query = '';
+    final result = await showModalBottomSheet<Set<String>>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheet) => StatefulBuilder(
+        builder: (context, update) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * .72,
+            child: Column(
+              children: [
+                const Text(
+                  'Choose institutes',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      hintText: 'Search institute or city',
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                    onChanged: (v) => update(() => query = v.toLowerCase()),
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    children: [
+                      for (final i in InstituteRepository.instance.items.where(
+                        (i) =>
+                            '${i.name} ${i.city}'.toLowerCase().contains(query),
+                      ))
+                        CheckboxListTile(
+                          title: Text(i.name),
+                          subtitle: Text(i.city),
+                          value: selected.contains(i.id),
+                          onChanged: (v) => update(() {
+                            if (v == true)
+                              selected.add(i.id);
+                            else
+                              selected.remove(i.id);
+                          }),
+                        ),
+                    ],
+                  ),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(sheet, selected),
+                  child: const Text('Done'),
+                ),
+              ],
             ),
           ),
-        if (_selectedTags.isEmpty && _selectedInstituteIds.isEmpty)
-          Padding(
-            padding: EdgeInsets.only(top: 4),
-            child: Text('You can post without tags, or add one or more topics/institutes.', style: TextStyle(fontSize: 12, color: AppPalette.of(context).muted)),
-          ),
-      ],
+        ),
+      ),
     );
-  }
-  Widget _attachmentPreview(){
-    if(_attachments.isEmpty)return SizedBox.shrink();
-    return Padding(padding:EdgeInsets.only(bottom:10),child:Wrap(spacing:8,runSpacing:8,children:List.generate(_attachments.length,(i){
-      final a=_attachments[i];final type=a['type']??'file';final icon=type=='photo'?Icons.image_outlined:type=='link'?Icons.link:Icons.insert_drive_file_outlined;
-      return InputChip(avatar:Icon(icon,size:18,color:AppColors.primaryGreen),label:SizedBox(width:150,child:Text(a[ProfileFields.name]??'Attachment',overflow:TextOverflow.ellipsis)),onDeleted:_saving?null:()=>setState(()=>_attachments.removeAt(i)));
-    })));
-  }
-  Widget _pollEditor(){
-    if(!_isPoll)return SizedBox.shrink();
-    return Container(margin:EdgeInsets.only(bottom:12),padding:EdgeInsets.all(12),
-      decoration:BoxDecoration(color:AppPalette.of(context).softSurface,borderRadius:BorderRadius.circular(14)),
-      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Text('Poll',style:TextStyle(fontWeight:FontWeight.w800,color:AppPalette.of(context).ink)),SizedBox(height:8),
-        ...List.generate(_pollOptions.length,(i)=>Padding(padding:EdgeInsets.only(bottom:8),child:Row(children:[
-          Expanded(child:TextField(controller:_pollOptions[i],decoration:InputDecoration(hintText:'Option ${i+1}',filled:true,fillColor:AppPalette.of(context).surface,border:OutlineInputBorder(borderRadius:BorderRadius.circular(10),borderSide:BorderSide.none)))),
-          if(_pollOptions.length>2)IconButton(onPressed:()=>_removePollOption(i),icon:Icon(Icons.close)),
-        ]))),
-        if(_pollOptions.length<5)TextButton.icon(onPressed:_saving?null:()=>_addPollOption(),icon:Icon(Icons.add),label:Text('Add option')),
-      ]),
-    );
+    if (result != null && mounted && scope == _currentScope) {
+      setState(() {
+        _institutes
+          ..clear()
+          ..addAll(result);
+      });
+      _scheduleDraft();
+    }
   }
 
-  @override Widget build(BuildContext context){
-    final editing=widget.post!=null;
-    return Scaffold(appBar:AppBar(title:Text(editing?'Edit post':(widget.instituteName==null?'Create post':'Post in ${widget.instituteName}')),actions:[
-      TextButton(onPressed:_saving?null:_publish,child:Text(_saving?'Posting…':'Post',style:TextStyle(color:AppColors.white,fontWeight:FontWeight.w800))),
-    ]),
-    body:ListView(padding:EdgeInsets.fromLTRB(14,10,14,24),children:[
-      Row(children:[CircleAvatar(radius:21,backgroundColor:AppPalette.of(context).softSurface,child:Icon(Icons.person,color:AppColors.primaryGreen)),SizedBox(width:10),
-        Expanded(child:Text(editing?'Update your post':(widget.instituteName==null?'Share with the community':'Share with this institute community'),style:TextStyle(color:AppPalette.of(context).ink,fontWeight:FontWeight.w700)))]),
-      SizedBox(height:14),
-      _tagSelector(),
-      SizedBox(height:10),
-      TextField(controller:_controller,maxLines:8,maxLength:1000,decoration:InputDecoration(hintText:'What do you want to share?')),
-      _pollEditor(),_attachmentPreview(),
-      Row(children:[
-        Expanded(child:Text('Add to your post',style:TextStyle(color:AppPalette.of(context).muted,fontWeight:FontWeight.w600))),
-        IconButton(tooltip:'Attachments',onPressed:_saving?null:_showAttachmentMenu,icon:Icon(Icons.attach_file,color:AppColors.primaryGreen)),
-        FilterChip(label:Text('Question'),selected:_isQuestion,onSelected:_saving?null:(v)=>setState(()=>_isQuestion=v),selectedColor:AppPalette.of(context).softSurface),
-      ]),
-      if(_isQuestion)Padding(padding:EdgeInsets.only(top:4),child:Text('After people answer, the author can mark one answer as Best Answer.',style:TextStyle(fontSize:12,color:AppPalette.of(context).muted))),
-    ]));
+  Widget _institutePicker() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Expanded(
+            child: Text(
+              _template.communityAnnouncement
+                  ? 'Institute *'
+                  : 'Related institute',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: _saving ? null : _chooseInstitutes,
+            icon: const Icon(Icons.school_outlined, size: 18),
+            label: const Text('Choose'),
+          ),
+        ],
+      ),
+      Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (final id in _institutes)
+            InputChip(
+              label: Text(
+                InstituteRepository.instance.byId(id)?.name ??
+                    widget.instituteName ??
+                    'Selected institute',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              onDeleted: _saving
+                  ? null
+                  : () {
+                      setState(() => _institutes.remove(id));
+                      _scheduleDraft();
+                    },
+            ),
+        ],
+      ),
+      if (_institutes.isEmpty && _profile != null)
+        Wrap(
+          children: [
+            for (final i
+                in InstituteRepository.instance.items
+                    .where(
+                      (i) =>
+                          i.id == _profile!.instituteId ||
+                          i.name.toLowerCase() ==
+                              _profile!.instituteName.toLowerCase(),
+                    )
+                    .take(1))
+              ActionChip(
+                label: Text('Use ${i.name}'),
+                onPressed: () {
+                  setState(() => _institutes.add(i.id));
+                  _scheduleDraft();
+                },
+              ),
+          ],
+        ),
+      const SizedBox(height: 10),
+    ],
+  );
+  @override
+  Widget build(BuildContext context) {
+    final template = _template;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.post == null ? 'Create post' : 'Edit post'),
+        actions: [
+          if (_type != null)
+            TextButton(
+              onPressed: _saving || _uploading || _loadingDraft
+                  ? null
+                  : _preview,
+              child: const Text('Preview'),
+            ),
+        ],
+      ),
+      body: _loadingDraft
+          ? const Center(child: CircularProgressIndicator())
+          : !_canEdit
+          ? const Center(child: Text('You can only edit your own posts.'))
+          : ListView(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                12,
+                16,
+                MediaQuery.of(context).viewInsets.bottom + 28,
+              ),
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.public, size: 18),
+                    SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Public Talib community',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (_type == null) ...[
+                  Text(
+                    'What would you like to share?',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Choose a ready format. We will guide you through the details.',
+                  ),
+                  const SizedBox(height: 16),
+                  LayoutBuilder(
+                    builder: (context, size) => Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final t in PostTemplates.all)
+                          SizedBox(
+                            width: (size.maxWidth - 8) / 2,
+                            child: Card(
+                              margin: EdgeInsets.zero,
+                              child: InkWell(
+                                onTap: () => _selectType(t.id),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        t.emoji,
+                                        style: const TextStyle(fontSize: 24),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        t.label,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  Row(
+                    children: [
+                      Text(
+                        template.emoji,
+                        style: const TextStyle(fontSize: 28),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          template.label,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ),
+                      if (widget.post == null)
+                        TextButton(
+                          onPressed: _saving
+                              ? null
+                              : () => setState(() => _type = null),
+                          child: const Text('Change'),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (template.communityAnnouncement)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Community shared. A green account tick does not verify this announcement. Include the official source.',
+                      ),
+                    ),
+                  if (template.communityAnnouncement || _type == 'achievement')
+                    _institutePicker(),
+                  for (final field in template.fields)
+                    if (_type != 'career' ||
+                        _fields['purpose']!.text != 'Career advice' ||
+                        !const [
+                          'organization',
+                          'deadline',
+                          'sourceUrl',
+                        ].contains(field.key))
+                      _field(field),
+                  TextField(
+                    controller: _body,
+                    enabled: !_saving,
+                    minLines: 4,
+                    maxLines: 9,
+                    maxLength: 10000,
+                    decoration: InputDecoration(
+                      labelText: template.question
+                          ? 'Your question *'
+                          : _type == 'poll'
+                          ? 'Poll question *'
+                          : _type == 'general'
+                          ? 'Your post *'
+                          : 'Caption / details',
+                      hintText: template.prompt,
+                      border: const OutlineInputBorder(),
+                      counterText: '',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (_type == 'poll') ...[
+                    const Text(
+                      'Poll options',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    if (_voteLocked)
+                      const Text(
+                        'Options stay unchanged after voting starts.',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    for (var i = 0; i < _options.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _options[i],
+                                enabled: !_saving && !_voteLocked,
+                                maxLength: 120,
+                                decoration: InputDecoration(
+                                  labelText: 'Option ${i + 1}',
+                                  counterText: '',
+                                ),
+                              ),
+                            ),
+                            if (_options.length > 2 && !_voteLocked)
+                              IconButton(
+                                tooltip: 'Remove option',
+                                onPressed: () {
+                                  final c = _options.removeAt(i);
+                                  c.dispose();
+                                  setState(() {});
+                                  _scheduleDraft();
+                                },
+                                icon: const Icon(Icons.close),
+                              ),
+                          ],
+                        ),
+                      ),
+                    if (_options.length < 5 && !_voteLocked)
+                      TextButton.icon(
+                        onPressed: () {
+                          setState(() => _addOption());
+                          _scheduleDraft();
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add option'),
+                      ),
+                    const SizedBox(height: 12),
+                  ],
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _saving || _uploading ? null : _pickPhoto,
+                        icon: const Icon(Icons.photo_outlined),
+                        label: const Text('Photo'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _saving || _uploading ? null : _pickFile,
+                        icon: const Icon(Icons.description_outlined),
+                        label: const Text('Document'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _saving || _uploading ? null : _link,
+                        icon: const Icon(Icons.link),
+                        label: const Text('Link'),
+                      ),
+                    ],
+                  ),
+                  if (_uploading)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Column(
+                        children: [
+                          LinearProgressIndicator(
+                            value: _progress > 0 ? _progress : null,
+                          ),
+                          Text(
+                            'Uploading ${(_progress * 100).round()}%',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  for (var i = 0; i < _attachments.length; i++)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        _attachments[i]['type'] == 'photo'
+                            ? Icons.photo
+                            : Icons.description_outlined,
+                      ),
+                      title: Text(
+                        _attachments[i]['name'] ?? 'Attachment',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: _attachments[i]['reattach'] == 'true'
+                          ? const Text('Reattach this local Demo photo')
+                          : null,
+                      trailing: IconButton(
+                        tooltip: 'Remove attachment',
+                        onPressed: _saving
+                            ? null
+                            : () {
+                                setState(() => _attachments.removeAt(i));
+                                _scheduleDraft();
+                              },
+                        icon: const Icon(Icons.close),
+                      ),
+                    ),
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    title: const Text('More options'),
+                    children: [
+                      if (!template.communityAnnouncement &&
+                          _type != 'achievement')
+                        _institutePicker(),
+                      if (_type == 'career' &&
+                          _fields['purpose']!.text == 'Career advice')
+                        ...template.fields
+                            .where(
+                              (f) => const [
+                                'organization',
+                                'deadline',
+                                'sourceUrl',
+                              ].contains(f.key),
+                            )
+                            .map(_field),
+                      Row(
+                        children: [
+                          const Expanded(child: Text('Topics')),
+                          TextButton(
+                            onPressed: _saving ? null : _topics,
+                            child: const Text('Choose'),
+                          ),
+                        ],
+                      ),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          for (final tag in _tags)
+                            InputChip(
+                              label: Text(tag),
+                              onDeleted: _saving
+                                  ? null
+                                  : () {
+                                      setState(() => _tags.remove(tag));
+                                      _scheduleDraft();
+                                    },
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Text(
+                        _error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: _saving || _uploading || _uid.isEmpty
+                          ? null
+                          : _publish,
+                      icon: _saving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.send_outlined),
+                      label: Text(
+                        _saving
+                            ? 'Publishing…'
+                            : widget.post == null
+                            ? 'Publish post'
+                            : 'Save changes',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _uid.isEmpty
+                        ? 'Sign in to publish.'
+                        : 'Your draft is saved automatically on this device.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                ],
+              ],
+            ),
+    );
   }
 }

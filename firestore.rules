@@ -299,6 +299,23 @@ service cloud.firestore {
       match /blockedUsers/{blockedUid} {
         allow read, write: if signedIn() && request.auth.uid == userId;
       }
+      match /hiddenPosts/{postId} {
+        allow read, delete: if signedIn() && request.auth.uid == userId;
+        allow create, update: if signedIn() && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly(['postId','title','reason','createdAt'])
+          && request.resource.data.postId == postId
+          && request.resource.data.title is string && request.resource.data.title.size() <= 140
+          && request.resource.data.reason in ['hide','not_interested']
+          && request.resource.data.createdAt == request.time;
+      }
+      match /mutedAuthors/{authorId} {
+        allow read, delete: if signedIn() && request.auth.uid == userId;
+        allow create, update: if signedIn() && request.auth.uid == userId && authorId != userId
+          && request.resource.data.keys().hasOnly(['authorId','name','createdAt'])
+          && request.resource.data.authorId == authorId
+          && request.resource.data.name is string && request.resource.data.name.size() <= 200
+          && request.resource.data.createdAt == request.time;
+      }
       match /following/{targetUid} {
         allow read: if signedIn() && (request.auth.uid == userId || request.auth.uid == targetUid);
         allow create: if signedIn() && request.auth.uid == userId
@@ -371,74 +388,154 @@ service cloud.firestore {
       }
     }
     match /posts/{postId} {
-      allow read: if signedIn();
-      allow create: if signedIn()
-        && request.resource.data.authorId == request.auth.uid
-        && request.resource.data.text is string
-        && request.resource.data.text.size() > 0
-        && request.resource.data.text.size() <= 10000
-        && request.resource.data.category is string
-        && request.resource.data.keys().hasOnly([
-          'text', 'authorId', 'authorName', 'category', 'tags', 'instituteIds',
-          'isQuestion', 'createdAt', 'likesCount', 'likedBy', 'commentsCount',
-          'pollOptions', 'pollVotes', 'pollVoters', 'attachments', 'instituteId'
-        ]);
-      allow update: if signedIn() && (
-        // Only the author can edit post content and mark a best answer.
-        (resource.data.authorId == request.auth.uid
-          && request.resource.data.authorId == resource.data.authorId
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'text', 'category', 'tags', 'instituteIds', 'isQuestion',
-            'pollOptions', 'attachments', 'instituteId', 'bestAnswerId'
-          ]))
-        // Like/unlike is limited to adding/removing the current user's own like.
-        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy','likesCount'])
-          && resource.data.likedBy is list
-          && request.resource.data.likedBy is list
-          && request.resource.data.likesCount == request.resource.data.likedBy.size()
-          && (
-            (request.resource.data.likedBy.size() == resource.data.likedBy.size() + 1
-              && request.resource.data.likedBy.hasAll(resource.data.likedBy)
-              && request.resource.data.likedBy.hasAny([request.auth.uid])
-              && !resource.data.likedBy.hasAny([request.auth.uid]))
-            || (request.resource.data.likedBy.size() == resource.data.likedBy.size() - 1
-              && resource.data.likedBy.hasAll(request.resource.data.likedBy)
-              && resource.data.likedBy.hasAny([request.auth.uid])
-              && !request.resource.data.likedBy.hasAny([request.auth.uid]))
-          ))
-        // Keep comment count changes to a single increment/decrement per operation.
-        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentsCount'])
-          && request.resource.data.commentsCount is int
-          && (request.resource.data.commentsCount == resource.data.commentsCount + 1
-            || request.resource.data.commentsCount == resource.data.commentsCount - 1))
-        // Poll transactions can update vote maps but cannot change post content.
-        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pollVotes','pollVoters'])
-          && resource.data.pollVoters is map
+      function validEducationField(data, key) {
+        return data.get(key, '') is string && data.get(key, '').size() <= 600;
+      }
+      function validEducation(data) {
+        return data is map && data.keys().hasOnly(['subject','program','topic','semester','deadline','eligibility','sourceUrl','coverage','mode','schedule','time','location','milestone','duration','purpose','field','organization'])
+          && validEducationField(data, 'subject') && validEducationField(data, 'program')
+          && validEducationField(data, 'topic') && validEducationField(data, 'semester')
+          && validEducationField(data, 'deadline') && validEducationField(data, 'eligibility')
+          && validEducationField(data, 'sourceUrl') && validEducationField(data, 'coverage')
+          && validEducationField(data, 'mode') && validEducationField(data, 'schedule')
+          && validEducationField(data, 'time') && validEducationField(data, 'location')
+          && validEducationField(data, 'milestone') && validEducationField(data, 'duration')
+          && validEducationField(data, 'purpose') && validEducationField(data, 'field')
+          && validEducationField(data, 'organization');
+      }
+      function attachmentAt(data, index) {
+        return index >= data.size() || (data[index] is map
+          && data[index].type in ['photo','file','link']
+          && data[index].name is string && data[index].name.size() <= 200
+          && data[index].url is string && data[index].url.size() <= 4000
+          && data[index].url.matches('https?://.*'));
+      }
+      function validContent(data) {
+        return data.text is string && data.text.size() > 0 && data.text.size() <= 10000
+          && data.authorName is string && data.authorName.size() <= 200
+          && data.category is string && data.category.size() <= 100
+          && data.get('postType', 'general') in ['general','question','resource','admission','scholarship','study_group','assignment','achievement','poll','career']
+          && validEducation(data.get('educationalData', {}))
+          && data.get('tags', []) is list && data.get('tags', []).size() <= 12
+          && data.get('instituteIds', []) is list && data.get('instituteIds', []).size() <= 10
+          && data.isQuestion is bool
+          && data.get('attachments', []) is list && data.get('attachments', []).size() <= 8
+          && attachmentAt(data.get('attachments', []), 0) && attachmentAt(data.get('attachments', []), 1)
+          && attachmentAt(data.get('attachments', []), 2) && attachmentAt(data.get('attachments', []), 3)
+          && attachmentAt(data.get('attachments', []), 4) && attachmentAt(data.get('attachments', []), 5)
+          && attachmentAt(data.get('attachments', []), 6) && attachmentAt(data.get('attachments', []), 7)
+          && data.get('pollOptions', []) is list
+          && (data.get('pollOptions', []).size() == 0 || (data.pollOptions.size() >= 2 && data.pollOptions.size() <= 5))
+          && (data.get('pollClosesAt', null) == null || data.pollClosesAt is timestamp);
+      }
+      function ownReactorIds() {
+        let before = resource.data.get('likedBy', []);
+        let after = request.resource.data.get('likedBy', []);
+        return before is list && after is list && after.toSet().size() == after.size()
+          && after.toSet().difference(before.toSet()).hasOnly([request.auth.uid])
+          && before.toSet().difference(after.toSet()).hasOnly([request.auth.uid])
+          && request.resource.data.likesCount == after.size();
+      }
+      function validReactionUpdate() {
+        let before = resource.data.get('reactions', {});
+        let after = request.resource.data.get('reactions', {});
+        let choice = after.get(request.auth.uid, null);
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions','likedBy','likesCount'])
+          && before is map && after is map
+          && after.diff(before).affectedKeys().hasOnly([request.auth.uid])
+          && (choice == null || choice in ['like','insightful','helpful','celebrate','support'])
+          && ownReactorIds()
+          && ((choice != null) == request.resource.data.likedBy.hasAny([request.auth.uid]));
+      }
+      function validLegacyLike() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy','likesCount'])
+          && resource.data.get('reactions', {}).get(request.auth.uid, null) == null
+          && ownReactorIds()
+          && (resource.data.likedBy.hasAny([request.auth.uid]) != request.resource.data.likedBy.hasAny([request.auth.uid]));
+      }
+      function pollHasVotes() {
+        let votes = resource.data.get('pollVotes', {});
+        return resource.data.get('pollVoters', {}).size() > 0
+          || votes.get('0', 0) + votes.get('1', 0) + votes.get('2', 0) + votes.get('3', 0) + votes.get('4', 0) > 0;
+      }
+      function voteCount(key) {
+        let oldChoice = resource.data.get('pollVoters', {}).get(request.auth.uid, -1);
+        let choice = request.resource.data.pollVoters[request.auth.uid];
+        let expected = resource.data.get('pollVotes', {}).get(key, 0)
+          - (oldChoice == int(key) ? 1 : 0) + (choice == int(key) ? 1 : 0);
+        return request.resource.data.pollVotes.get(key, 0) == expected && expected >= 0;
+      }
+      function validVote() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pollVotes','pollVoters'])
+          && resource.data.get('pollOptions', []).size() >= 2
+          && (resource.data.get('pollClosesAt', null) == null || request.time < resource.data.pollClosesAt)
           && request.resource.data.pollVoters is map
-          // A voter can change only their own vote record, never another user's vote.
-          && request.resource.data.pollVoters.diff(resource.data.pollVoters).affectedKeys().hasOnly([request.auth.uid])
+          && request.resource.data.pollVoters.diff(resource.data.get('pollVoters', {})).affectedKeys().hasOnly([request.auth.uid])
           && request.resource.data.pollVoters[request.auth.uid] is int
           && request.resource.data.pollVoters[request.auth.uid] >= 0
           && request.resource.data.pollVoters[request.auth.uid] < resource.data.pollOptions.size()
           && request.resource.data.pollVotes is map
-          && resource.data.pollVotes is map)
-      );
-      allow delete: if signedIn()
-        && (resource.data.authorId == request.auth.uid || admin());
-
+          && request.resource.data.pollVotes.keys().hasOnly(['0','1','2','3','4'])
+          && voteCount('0') && voteCount('1') && voteCount('2') && voteCount('3') && voteCount('4');
+      }
+      function validCommentCounter() {
+        let id = request.resource.data.get('lastCommentId', '');
+        let path = /databases/$(database)/documents/posts/$(postId)/comments/$(id);
+        return id is string && id.size() > 0
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentsCount','lastCommentId','bestAnswerId'])
+          && request.resource.data.commentsCount is int && request.resource.data.commentsCount >= 0
+          && ((!exists(path) && existsAfter(path)
+              && getAfter(path).data.authorId == request.auth.uid
+              && request.resource.data.commentsCount == resource.data.commentsCount + 1
+              && request.resource.data.get('bestAnswerId', null) == resource.data.get('bestAnswerId', null))
+            || (exists(path) && !existsAfter(path)
+              && (get(path).data.authorId == request.auth.uid || admin())
+              && request.resource.data.commentsCount == (resource.data.commentsCount > 0 ? resource.data.commentsCount - 1 : 0)
+              && (request.resource.data.get('bestAnswerId', null) == resource.data.get('bestAnswerId', null)
+                || (resource.data.get('bestAnswerId', null) == id && request.resource.data.get('bestAnswerId', null) == null))));
+      }
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.authorId == request.auth.uid
+        && validContent(request.resource.data) && request.resource.data.createdAt == request.time
+        && request.resource.data.likesCount == 0 && request.resource.data.likedBy == []
+        && request.resource.data.get('reactions', {}) == {}
+        && request.resource.data.commentsCount == 0
+        && request.resource.data.get('pollVotes', {}) == {} && request.resource.data.get('pollVoters', {}) == {}
+        && request.resource.data.get('bestAnswerId', null) == null
+        && (request.resource.data.get('pollClosesAt', null) == null
+          || (request.resource.data.pollClosesAt > request.time && request.resource.data.pollClosesAt < request.time + duration.value(8, 'd')))
+        && request.resource.data.keys().hasOnly(['text','authorId','authorName','category','tags','instituteIds','isQuestion','createdAt','likesCount','likedBy','commentsCount','pollOptions','pollVotes','pollVoters','attachments','instituteId','postType','educationalData','reactions','pollClosesAt','bestAnswerId']);
+      allow update: if signedIn() && (
+        (resource.data.authorId == request.auth.uid
+          && request.resource.data.authorId == resource.data.authorId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text','category','tags','instituteIds','isQuestion','pollOptions','attachments','instituteId','bestAnswerId','postType','educationalData','pollClosesAt','updatedAt'])
+          && validContent(request.resource.data)
+          && (request.resource.data.get('updatedAt', null) == resource.data.get('updatedAt', null) || request.resource.data.updatedAt == request.time)
+          && (!pollHasVotes() || (request.resource.data.pollOptions == resource.data.pollOptions
+            && request.resource.data.get('pollClosesAt', null) == resource.data.get('pollClosesAt', null)
+            && request.resource.data.get('postType', 'general') == resource.data.get('postType', 'general')))
+          && (request.resource.data.get('bestAnswerId', null) == resource.data.get('bestAnswerId', null)
+            || request.resource.data.get('bestAnswerId', null) == null
+            || (request.resource.data.isQuestion == true
+              && exists(/databases/$(database)/documents/posts/$(postId)/comments/$(request.resource.data.bestAnswerId)))))
+        || validReactionUpdate() || validLegacyLike() || validCommentCounter() || validVote());
+      allow delete: if signedIn() && (resource.data.authorId == request.auth.uid || admin());
       match /comments/{commentId} {
         allow read: if signedIn();
-        allow create: if signedIn()
-          && request.resource.data.authorId == request.auth.uid
-          && request.resource.data.text is string
-          && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 5000
-          && request.resource.data.keys().hasOnly(['text','authorId','authorName','createdAt']);
+        allow create: if signedIn() && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 5000
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.keys().hasOnly(['text','authorId','authorName','createdAt'])
+          && getAfter(/databases/$(database)/documents/posts/$(postId)).data.lastCommentId == commentId
+          && getAfter(/databases/$(database)/documents/posts/$(postId)).data.commentsCount == get(/databases/$(database)/documents/posts/$(postId)).data.commentsCount + 1;
         allow update: if false;
-        allow delete: if signedIn()
-          && (resource.data.authorId == request.auth.uid || admin());
+        allow delete: if signedIn() && (resource.data.authorId == request.auth.uid || admin())
+          && getAfter(/databases/$(database)/documents/posts/$(postId)).data.lastCommentId == commentId
+          && getAfter(/databases/$(database)/documents/posts/$(postId)).data.commentsCount == (get(/databases/$(database)/documents/posts/$(postId)).data.commentsCount > 0 ? get(/databases/$(database)/documents/posts/$(postId)).data.commentsCount - 1 : 0)
+          && (get(/databases/$(database)/documents/posts/$(postId)).data.get('bestAnswerId', null) != commentId || getAfter(/databases/$(database)/documents/posts/$(postId)).data.get('bestAnswerId', null) == null);
       }
     }
+
     match /institutes/{instituteId} {
       allow read: if resource.data.status in ['approved', 'verified']
         || admin()

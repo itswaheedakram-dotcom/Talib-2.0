@@ -1,346 +1,779 @@
-import '../../../../core/widgets/user_identity.dart';
-import '../../../../core/models/user_profile.dart';
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../app/theme.dart';
-import '../../../models/post.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/services/database_service.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
-import '../../../../core/services/demo_data_service.dart';
-import '../../timeline_topics.dart';
+import '../../../models/post.dart';
 import '../../../institutes/data/institute_repository.dart';
-import '../../../models/institute.dart';
+import '../../timeline_topics.dart';
+import '../../data/community_feed_controller.dart';
+import '../../data/community_preferences.dart';
+import '../widgets/community_shimmer.dart';
+import '../widgets/community_post_card.dart';
+import '../widgets/community_people_results.dart';
 
-class CommunityScreen extends StatefulWidget{
-  final String? instituteId;final String? instituteName;final String? authorId;
-  const CommunityScreen({super.key,this.instituteId,this.instituteName,this.authorId});
-  @override State<CommunityScreen> createState()=>_CommunityScreenState();
+class CommunityScreen extends StatefulWidget {
+  final String? instituteId, instituteName, authorId;
+  const CommunityScreen({
+    super.key,
+    this.instituteId,
+    this.instituteName,
+    this.authorId,
+  });
+  @override
+  State<CommunityScreen> createState() => _CommunityScreenState();
 }
-class _CommunityScreenState extends State<CommunityScreen>{
-  final _db=DatabaseService();final _search=TextEditingController();
-  bool popular=false;String query='';String category='All';
-  int timelineTab=0;
-  String? _selectedInstituteId;
-  Set<String> _topics=TimelineTopics.defaults.toSet();
-  final cats=['All','General','Admission Help','Career','Scholarships','Study Help','Institute Reviews','Jobs/Internships','Announcements'];
-  @override void initState(){super.initState();InstituteRepository.instance.load();}
-  @override void dispose(){_search.dispose();super.dispose();}
-  String _errorText(Object error){final raw=error.toString().trim();if(raw.isEmpty)return 'Unknown error.';return raw.replaceFirst(RegExp(r'^Exception:\s*'),'');}
-  void _showError(Object error){if(!mounted)return;ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_errorText(error)),duration:Duration(seconds:5)));}
-  void _login()=>_showError(StateError('Please sign in to create, like or save posts.'));
-  
-  Widget _timelineButton({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }){
-    return Padding(
-      padding:EdgeInsets.symmetric(horizontal:4,vertical:5),
-      child:Material(
-        color:selected?AppColors.primaryGreen:AppPalette.of(context).surface,
-        borderRadius:BorderRadius.circular(22),
-        child:InkWell(
-          onTap:onTap,
-          borderRadius:BorderRadius.circular(22),
-          child:Container(
-            height:38,
-            padding:EdgeInsets.symmetric(horizontal:15),
-            alignment:Alignment.center,
-            decoration:BoxDecoration(
-              borderRadius:BorderRadius.circular(22),
-              border:Border.all(
-                color:selected?AppColors.primaryGreen:AppPalette.of(context).border,
-              ),
-            ),
-            child:Text(
-              label,
-              maxLines:1,
-              overflow:TextOverflow.ellipsis,
-              style:TextStyle(
-                fontWeight:FontWeight.w700,
-                fontSize:13,
-                color:selected?AppColors.white:AppPalette.of(context).muted,
-              ),
+
+class _CommunityScreenState extends State<CommunityScreen> {
+  final _db = DatabaseService(),
+      _search = TextEditingController(),
+      _scroll = ScrollController();
+  CommunityFeedController? _feed;
+  CommunityPreferences? _preferences;
+  StreamSubscription<User?>? _auth;
+  String _scope = '', _uid = '', _topic = 'All', _institute = '', _query = '';
+  bool _following = false, _people = false, _guide = true;
+  bool _prefsOpen = false;
+  bool get _demo => ActiveProfileController.instance.isDemo;
+  String get _currentUid => _demo
+      ? (ActiveProfileController.instance.effectiveUid ?? '')
+      : (FirebaseService.initialized
+            ? FirebaseAuth.instance.currentUser?.uid ?? ''
+            : '');
+  String get _currentScope => '${_demo ? 'demo' : 'real'}:$_currentUid';
+  bool get _canInteract => _uid.isNotEmpty;
+  @override
+  void initState() {
+    super.initState();
+    ActiveProfileController.instance.addListener(_identityChanged);
+    if (FirebaseService.initialized)
+      _auth = FirebaseAuth.instance.authStateChanges().listen(
+        (_) => _identityChanged(),
+      );
+    InstituteRepository.instance.addListener(_changed);
+    InstituteRepository.instance.load();
+    _bind();
+    _scroll.addListener(_scrollChanged);
+  }
+
+  void _identityChanged() {
+    if (_scope != _currentScope) {
+      if (_prefsOpen) Navigator.of(context, rootNavigator: true).pop();
+      _bind();
+    }
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  void _bind() {
+    _feed?.removeListener(_changed);
+    _feed?.dispose();
+    _preferences?.removeListener(_changed);
+    _preferences?.dispose();
+    _scope = _currentScope;
+    _uid = _currentUid;
+    _query = '';
+    _search.clear();
+    _topic = 'All';
+    _institute = '';
+    _people = false;
+    _following = false;
+    _guide = true;
+    _feed = CommunityFeedController(demo: _demo, uid: _uid)
+      ..addListener(_changed);
+    _preferences = CommunityPreferences(demo: _demo, uid: _uid)
+      ..addListener(_changed);
+    _preferences!.start();
+    _feed!.start();
+    _loadGuide();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _loadGuide() async {
+    final scope = _scope;
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted && scope == _scope)
+      setState(
+        () =>
+            _guide = !(prefs.getBool('talib.community.guide.$scope') ?? false),
+      );
+  }
+
+  Future<void> _hideGuide() async {
+    final scope = _scope;
+    setState(() => _guide = false);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('talib.community.guide.$scope', true);
+  }
+
+  @override
+  void dispose() {
+    _feed?.removeListener(_changed);
+    _feed?.dispose();
+    _preferences?.removeListener(_changed);
+    _preferences?.dispose();
+    _auth?.cancel();
+    ActiveProfileController.instance.removeListener(_identityChanged);
+    InstituteRepository.instance.removeListener(_changed);
+    _search.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _scrollChanged() {
+    if (!_people &&
+        _scroll.hasClients &&
+        _scroll.position.extentAfter < 400 &&
+        _feed?.hasMore == true &&
+        _feed?.loadingMore == false &&
+        _feed?.error == null)
+      _feed!.loadMore();
+  }
+
+  void _message(String text) {
+    if (mounted)
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  Future<void> _act(Future<void> Function() action, {String? success}) async {
+    final scope = _scope;
+    try {
+      await action();
+      if (mounted && scope == _scope && success != null) _message(success);
+    } catch (_) {
+      if (mounted && scope == _scope)
+        _message('Could not complete this action. Please retry.');
+    }
+  }
+
+  Future<void> _create([String type = '']) async {
+    if (!_canInteract) {
+      _message('Sign in to create a post.');
+      return;
+    }
+    final scope = _scope;
+    final result = await context.push(
+      '/community/create?type=${Uri.encodeComponent(type)}&instituteId=${Uri.encodeComponent(widget.instituteId ?? '')}&instituteName=${Uri.encodeComponent(widget.instituteName ?? '')}',
+    );
+    if (result == true && mounted && scope == _scope) {
+      await _feed!.refresh();
+      _top();
+    }
+  }
+
+  void _top() {
+    if (_scroll.hasClients)
+      _scroll.animateTo(
+        0,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+      );
+  }
+
+  Future<void> _open(Post p) async {
+    final scope = _scope;
+    await context.push('/community/post/${p.id}');
+    if (mounted && scope == _scope) _feed?.refreshPost(p.id);
+  }
+
+  Future<void> _react(Post p, String? value) async {
+    final uid = _uid, scope = _scope;
+    await _db.setReaction(p.id, uid, value);
+    if (mounted && scope == _scope) await _feed?.refreshPost(p.id);
+  }
+
+  Future<void> _save(Post p) async {
+    final saved = _preferences!.saved.contains(p.id);
+    await _act(
+      () => _db.toggleBookmark(p.id, _uid, !saved),
+      success: saved ? 'Removed from saved posts' : 'Post saved',
+    );
+  }
+
+  Future<void> _hide(Post p, {bool notInterested = false}) async {
+    final prefs = _preferences!;
+    await _act(
+      () => prefs.hide(p, reason: notInterested ? 'not_interested' : 'hide'),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          notInterested
+              ? 'We will hide this post from your feed.'
+              : 'Post hidden',
+        ),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () => _act(() => prefs.restore('hiddenPosts', p.id)),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _delete(Post p) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Delete post?'),
+        content: const Text('This permanently removes the post.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (yes == true)
+      await _act(() async {
+        await _db.deletePost(p.id);
+        _feed?.remove(p.id);
+      });
+  }
+
+  Future<void> _report(Post p) async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialog) => SimpleDialog(
+        title: const Text('Report post'),
+        children:
+            [
+                  'Spam',
+                  'Harassment',
+                  'Fake information',
+                  'Inappropriate',
+                  'Scam',
+                  'Other',
+                ]
+                .map(
+                  (v) => SimpleDialogOption(
+                    onPressed: () => Navigator.pop(dialog, v),
+                    child: Text(v),
+                  ),
+                )
+                .toList(),
+      ),
+    );
+    if (reason != null)
+      await _act(
+        () => _db.report(
+          reporterId: _uid,
+          targetId: p.id,
+          targetType: 'post',
+          reason: reason,
+        ),
+        success: 'Report submitted for review',
+      );
+  }
+
+  Future<void> _feedPreferences() async {
+    final prefs = _preferences!;
+    _prefsOpen = true;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheet) => ListenableBuilder(
+        listenable: prefs,
+        builder: (context, _) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * .65,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                const Text(
+                  'Feed preferences',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
+                for (final entry in {
+                  'Hidden posts': ('hiddenPosts', prefs.hidden),
+                  'Muted people': ('mutedAuthors', prefs.muted),
+                  'Blocked people': ('blockedUsers', prefs.blocked),
+                }.entries) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 18),
+                    child: Text(
+                      entry.key,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  if (entry.value.$2.isEmpty) const Text('None'),
+                  for (final item in entry.value.$2.entries)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        item.value,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: TextButton(
+                        onPressed: () =>
+                            _act(() => prefs.restore(entry.value.$1, item.key)),
+                        child: const Text('Restore'),
+                      ),
+                    ),
+                ],
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(sheet);
+                    setState(() => _guide = true);
+                  },
+                  child: const Text('Show guidance shortcut'),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
+    _prefsOpen = false;
   }
 
-  Widget _topicTab(String name){
-    final selected=timelineTab>=2&&_selectedInstituteId==null&&category==name;
-    return _timelineButton(
-      label:name,
-      selected:selected,
-      onTap:()=>setState((){
-        timelineTab=2;
-        _selectedInstituteId=null;
-        category=name;
-      }),
-    );
-  }
-
-  Widget _instituteTab(Institute institute){
-    final selected=_selectedInstituteId==institute.id;
-    return _timelineButton(
-      label:institute.name,
-      selected:selected,
-      onTap:()=>setState((){
-        timelineTab=3;
-        _selectedInstituteId=institute.id;
-        category='All';
-      }),
-    );
-  }
-
-  @override Widget build(BuildContext context){
-    final ready=FirebaseService.initialized;
-    final user=ready?FirebaseAuth.instance.currentUser:null;
-    final identity=ActiveProfileController.instance;
-    final demo=identity.isDemoActive;
-    final canInteract=user!=null||demo;
-    final uid=identity.resolveUid(user?.uid??'');
-
+  @override
+  Widget build(BuildContext context) {
+    final feed = _feed!, prefs = _preferences!;
+    final selectedInstitutes = InstituteRepository.instance.items
+        .where((i) => prefs.institutes.contains(i.id))
+        .toList();
+    final filtered = feed.posts
+        .where(
+          (p) =>
+              prefs.allows(p) &&
+              (!_following || prefs.following.contains(p.authorId)) &&
+              (widget.authorId == null || p.authorId == widget.authorId) &&
+              (widget.instituteId == null ||
+                  p.instituteIds.contains(widget.instituteId) ||
+                  p.instituteId == widget.instituteId) &&
+              (_institute.isEmpty ||
+                  p.instituteIds.contains(_institute) ||
+                  p.instituteId == _institute) &&
+              (_topic == 'All' ||
+                  (p.tags.isEmpty ? [p.category] : p.tags).any(
+                    (t) => TimelineTopics.matches(_topic, t),
+                  )) &&
+              (_query.isEmpty ||
+                  '${p.text} ${p.authorName} ${p.tags.join(' ')} ${p.educationalData.values.join(' ')}'
+                      .toLowerCase()
+                      .contains(_query.toLowerCase())),
+        )
+        .toList();
     return Scaffold(
-      appBar:AppBar(title:Text(widget.authorId!=null?'My Posts':widget.instituteName==null?'Community':'${widget.instituteName} Community'),actions:[
-        PopupMenuButton<bool>(onSelected:(v)=>setState(()=>popular=v),itemBuilder:(_)=>const[
-          PopupMenuItem(value:false,child:Text('Latest')),PopupMenuItem(value:true,child:Text('Popular')),
-        ]),
-      ]),
-      floatingActionButton:FloatingActionButton.extended(
-        onPressed:!canInteract?_login:()=>context.push('/community/create?instituteId=${Uri.encodeComponent(widget.instituteId??'')}&instituteName=${Uri.encodeComponent(widget.instituteName??'')}'),
-        icon:Icon(Icons.add),label:Text('Post'),
-      ),
-      body:Column(children:[
-        Container(margin:EdgeInsets.fromLTRB(12,10,12,6),padding:EdgeInsets.all(13),
-          decoration:BoxDecoration(color:AppPalette.of(context).softSurface,borderRadius:BorderRadius.circular(12)),
-          child:Row(children:[
-            Icon(Icons.groups_rounded,color:AppPalette.of(context).ink,size:28),SizedBox(width:10),
-            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Text('Need Guidance?',style:TextStyle(color:AppPalette.of(context).ink,fontWeight:FontWeight.w700)),
-              Text('Ask students and professionals for guidance.',style:TextStyle(fontSize:12,color:AppPalette.of(context).muted)),
-            ])),
-          ])),
-        AnimatedBuilder(
-          animation:InstituteRepository.instance,
-          builder:(context,_){
-            return SizedBox(
-              height:48,
-              child:StreamBuilder<Set<String>>(
-                stream:(uid.isEmpty&&!demo)?const Stream<Set<String>>.empty():_db.timelineTopicsStream(uid),
-                builder:(context,pref){
-                  final topics=pref.data??_topics;
-                  _topics=topics;
-                  return StreamBuilder<Set<String>>(
-                    stream:(uid.isEmpty&&!demo)?const Stream<Set<String>>.empty():_db.timelineInstitutesStream(uid),
-                    builder:(context,instPref){
-                      final selectedInstituteIds=instPref.data??const <String>{};
-                      final selectedInstitutes=InstituteRepository.instance.items.where((i)=>selectedInstituteIds.contains(i.id));
-                      final tabs=<Widget>[
-                        _timelineTab('For You',0),
-                        _timelineTab('Following',1),
-                        ...topics.map(_topicTab),
-                        ...selectedInstitutes.map(_instituteTab),
-                        _timelineButton(
-                          label:'+ Add',
-                          selected:false,
-                          onTap:()=>context.push('/community/add-to-timeline').then(
-                            (_)=>(mounted?setState((){}):null),
-                          ),
-                        ),
-                      ];
-                      return ListView(
-                        scrollDirection:Axis.horizontal,
-                        padding:EdgeInsets.symmetric(horizontal:4),
-                        children:tabs,
-                      );
-                    },
-                  );
-                },
-              ),
-            );
-          },
+      appBar: AppBar(
+        title: Text(
+          widget.authorId != null
+              ? 'My posts'
+              : widget.instituteName == null
+              ? 'Community'
+              : '${widget.instituteName} community',
         ),
-        Padding(padding:EdgeInsets.fromLTRB(12,0,12,6),child:TextField(
-          controller:_search,onChanged:(v)=>setState(()=>query=v.trim()),
-          decoration:InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search posts and students',
-            filled:true,fillColor:AppPalette.of(context).surface,border:OutlineInputBorder(borderRadius:BorderRadius.circular(10),borderSide:BorderSide.none)),
-        )),
-        Expanded(child:timelineTab==0
-          ?_postFeed(user,demo,ready,_topics,null,null)
-          :timelineTab==1
-            ?StreamBuilder<Set<String>>(stream:(uid.isEmpty&&!demo)?const Stream<Set<String>>.empty():_db.followingIdsStream(uid),
-                builder:(context,follow)=>_postFeed(user,demo,ready,_topics,follow.data??const <String>{},null))
-            :_postFeed(user,demo,ready,{category},null,_selectedInstituteId)),
-      ]),
+        actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Feed options',
+            onSelected: (v) {
+              if (v == 'preferences') {
+                _feedPreferences();
+              } else if (v == 'topics') {
+                context.push('/community/add-to-timeline');
+              } else {
+                feed.changeSort(v);
+                _top();
+              }
+            },
+            itemBuilder: (_) => [
+              for (final sort in ['Latest', 'Popular'])
+                PopupMenuItem(
+                  value: sort,
+                  child: Text('${feed.sort == sort ? '✓ ' : ''}$sort'),
+                ),
+              if (_canInteract)
+                const PopupMenuItem(
+                  value: 'preferences',
+                  child: Text('Feed preferences'),
+                ),
+              if (_canInteract)
+                const PopupMenuItem(
+                  value: 'topics',
+                  child: Text('Manage topics'),
+                ),
+            ],
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _create(),
+        icon: const Icon(Icons.edit_outlined),
+        label: const Text('Create post'),
+      ),
+      body: Column(
+        children: [
+          if (_guide)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 8, 0),
+              child: Row(
+                children: [
+                  const Icon(Icons.lightbulb_outline, size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Need guidance?',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => _create('question'),
+                    child: const Text('Ask a question'),
+                  ),
+                  IconButton(
+                    tooltip: 'Dismiss guidance',
+                    onPressed: _hideGuide,
+                    icon: const Icon(Icons.close, size: 18),
+                  ),
+                ],
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                ChoiceChip(
+                  label: const Text('For You'),
+                  selected: !_following,
+                  onSelected: (_) {
+                    setState(() => _following = false);
+                    _top();
+                  },
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('Following'),
+                  selected: _following,
+                  onSelected: (_) {
+                    setState(() => _following = true);
+                    _top();
+                  },
+                ),
+
+                Text(
+                  feed.sort,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!_people)
+            SizedBox(
+              height: 42,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: FilterChip(
+                      label: const Text('All topics'),
+                      selected: _topic == 'All' && _institute.isEmpty,
+                      onSelected: (_) => setState(() {
+                        _topic = 'All';
+                        _institute = '';
+                      }),
+                    ),
+                  ),
+                  for (final topic in prefs.topics)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: FilterChip(
+                        label: Text(topic),
+                        selected: _topic == topic,
+                        onSelected: (_) => setState(() {
+                          _topic = topic;
+                          _institute = '';
+                        }),
+                      ),
+                    ),
+                  for (final i in selectedInstitutes)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: FilterChip(
+                        label: Text(i.name),
+                        selected: _institute == i.id,
+                        onSelected: (_) => setState(() {
+                          _institute = i.id;
+                          _topic = 'All';
+                        }),
+                      ),
+                    ),
+                  ActionChip(
+                    label: const Text('+ Topics'),
+                    onPressed: _canInteract
+                        ? () => context.push('/community/add-to-timeline')
+                        : null,
+                  ),
+                ],
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
+            child: TextField(
+              controller: _search,
+              onChanged: (v) => setState(() => _query = v.trim()),
+              decoration: InputDecoration(
+                hintText: _people ? 'Search people' : 'Search community',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: _query.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Clear search',
+                        onPressed: () {
+                          _search.clear();
+                          setState(() => _query = '');
+                        },
+                        icon: const Icon(Icons.close, size: 18),
+                      ),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          if (_query.isNotEmpty || _people)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  ChoiceChip(
+                    label: const Text('Posts'),
+                    selected: !_people,
+                    onSelected: (_) => setState(() => _people = false),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('People'),
+                    selected: _people,
+                    onSelected: (_) => setState(() => _people = true),
+                  ),
+                ],
+              ),
+            ),
+          if (prefs.error != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      prefs.error!,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                  TextButton(onPressed: _bind, child: const Text('Retry')),
+                ],
+              ),
+            ),
+          if (feed.pendingCount > 0 && !_people)
+            TextButton.icon(
+              onPressed: () {
+                feed.showNewPosts();
+                _top();
+              },
+              icon: const Icon(Icons.arrow_upward, size: 18),
+              label: Text(
+                '${feed.pendingCount} ${feed.sort == 'Latest' ? 'new posts' : 'feed updates'} available',
+              ),
+            ),
+          Expanded(
+            child: _people
+                ? CommunityPeopleResults(
+                    key: ValueKey(_scope),
+                    query: _query,
+                    demo: _demo,
+                    uid: _uid,
+                  )
+                : (feed.loading || (_following && !prefs.followingReady))
+                ? const CommunityShimmer()
+                : feed.error != null && feed.posts.isEmpty
+                ? _empty(feed.error!, retry: true)
+                : RefreshIndicator(
+                    onRefresh: feed.refresh,
+                    child: ListView.separated(
+                      key: PageStorageKey('community.$_scope'),
+                      controller: _scroll,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
+                      itemCount: filtered.length + 1,
+                      separatorBuilder: (_, __) => const SizedBox(height: 4),
+                      itemBuilder: (context, index) {
+                        if (index == filtered.length) {
+                          if (filtered.isEmpty)
+                            return SizedBox(
+                              height: 250,
+                              child: _empty(
+                                _following && prefs.following.isEmpty
+                                    ? 'Follow people to see their posts.'
+                                    : _query.isNotEmpty
+                                    ? 'No posts match this search.'
+                                    : 'No posts here yet.',
+                                more: feed.hasMore,
+                              ),
+                            );
+                          return Column(
+                            children: [
+                              if (feed.error != null)
+                                Text(feed.error!, textAlign: TextAlign.center),
+                              if (feed.loadingMore)
+                                const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              else if (feed.hasMore || feed.error != null)
+                                TextButton(
+                                  onPressed: feed.loadMore,
+                                  child: const Text('Load more posts'),
+                                )
+                              else
+                                const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Text(
+                                    'You are all caught up',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                            ],
+                          );
+                        }
+                        final post = filtered[index],
+                            owner = post.authorId == _uid;
+                        return CommunityPostCard(
+                          key: ValueKey(post.id),
+                          post: post,
+                          uid: _uid,
+                          saved: prefs.saved.contains(post.id),
+                          onOpen: () => _open(post),
+                          onAuthor: () =>
+                              context.push('/profile/${post.authorId}'),
+                          onReact: _canInteract
+                              ? (value) => _react(post, value)
+                              : null,
+                          onSave: _canInteract ? () => _save(post) : null,
+                          onPoll: _canInteract
+                              ? (index) => _act(() async {
+                                  await _db.votePoll(
+                                    postId: post.id,
+                                    uid: _uid,
+                                    option: index,
+                                  );
+                                  await feed.refreshPost(post.id);
+                                })
+                              : null,
+                          menu: {
+                            if (owner)
+                              'Edit': () => context
+                                  .push('/community/create', extra: post)
+                                  .then((_) => feed.refreshPost(post.id)),
+                            if (owner) 'Delete': () => _delete(post),
+                            if (_canInteract) 'Hide post': () => _hide(post),
+                            if (_canInteract && !owner)
+                              'Not interested': () =>
+                                  _hide(post, notInterested: true),
+                            if (_canInteract && !owner)
+                              'Mute ${post.authorName}': () => _act(
+                                () => prefs.mute(post),
+                                success: 'Person muted',
+                              ),
+                            if (_canInteract &&
+                                !owner &&
+                                prefs.following.contains(post.authorId))
+                              'Unfollow': () => _act(
+                                () => _db.toggleFollow(
+                                  _uid,
+                                  post.authorId,
+                                  false,
+                                ),
+                              ),
+                            if (_canInteract && !owner)
+                              'Report': () => _report(post),
+                            if (_canInteract && !owner)
+                              'Block': () => _act(
+                                () => prefs.block(post),
+                                success: 'Person blocked',
+                              ),
+                          },
+                        );
+                      },
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _timelineTab(String label,int index)=>_timelineButton(
-    label:label,
-    selected:timelineTab==index,
-    onTap:()=>setState((){
-      timelineTab=index;
-      _selectedInstituteId=null;
-      category='All';
-    }),
-  );
-
-  Widget _postFeed(User? user,bool demo,bool ready,Set<String> topics,Set<String>? following,String? instituteFilterId){
-    // Always load the complete post stream here. Timeline buttons are a view
-    // over the same centralized tag data, so aliases/legacy posts continue to work.
-    final stream=demo?_demoPostsStream():ready?_db.postsStream(popular:popular,category:'All',query:query):const Stream<List<Post>>.empty();
-    return StreamBuilder<List<Post>>(stream:stream,builder:(context,s){
-      if(s.hasError)return _errorState(s.error!);
-      if(!demo&&!ready)return _errorState(StateError(FirebaseService.initializationErrorMessage.isEmpty?'Firebase is not initialized.':FirebaseService.initializationErrorMessage));
-      if(s.connectionState==ConnectionState.waiting)return Center(child:CircularProgressIndicator());
-      var posts=s.data??const <Post>[];
-      final authorId=widget.authorId;
-      if(authorId!=null)posts=posts.where((p)=>p.authorId==authorId).toList();
-      if(instituteFilterId!=null){
-        posts=posts.where((p)=>p.instituteIds.contains(instituteFilterId)||p.instituteId==instituteFilterId).toList();
-      }else if(timelineTab==0){
-        // For You is the global feed. Topic and institute tabs are separate
-        // views and must not filter this default feed.
-      }else if(timelineTab==1){
-        posts=posts.where((p)=>following?.contains(p.authorId)==true).toList();
-      }else if(timelineTab==2 && category!='All'){
-        // Topic tabs use exact topic matching. One post can appear in every
-        // topic it is explicitly tagged with, but never in unrelated topics.
-        posts=posts.where((p){
-          final values=p.tags.isEmpty ? [p.category] : p.tags;
-          return values.any((tag)=>TimelineTopics.matches(category,tag));
-        }).toList();
-      }
-      if(widget.instituteId!=null)posts=posts.where((p)=>p.instituteIds.contains(widget.instituteId)||p.instituteId==widget.instituteId).toList();
-      return _postList(posts,user);
-    });
-  }
-
-  Widget _errorState(Object error)=>Center(child:Padding(padding:EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
-    Text(_errorText(error),textAlign:TextAlign.center),SizedBox(height:12),
-    OutlinedButton(onPressed:()=>setState((){}),child:Text('Retry')),
-  ])));
-  
-  Stream<List<Post>> _demoPostsStream()async*{
-    List<Post> current()=>DemoDataService.instance.posts(category:'All',query:query)
-      .where((p)=>widget.instituteId==null||p.instituteId==widget.instituteId).toList();
-    yield current();yield*DemoDataService.instance.changes.map((_)=>current());
-  }
-  
-  Widget _postList(List<Post> posts,User? user){
-    if(posts.isEmpty)return Center(child:Padding(padding:EdgeInsets.all(24),child:Text('No community posts found.')));
-    final identity=ActiveProfileController.instance;final uid=identity.resolveUid(user?.uid??'');final canInteract=user!=null||identity.isDemoActive;
-    return ListView.separated(padding:EdgeInsets.fromLTRB(12,6,12,90),itemCount:posts.length,
-      separatorBuilder:(_,__)=>SizedBox(height:8),itemBuilder:(_,i){
-        final p=posts[i];final owner=uid==p.authorId;
-        return _PostCard(post:p,user:user,onOpen:()=>context.push('/community/post/${p.id}'),
-          onAuthor:()=>context.push('/profile/${p.authorId}'),onLike:!canInteract?null:()=>_toggleLike(p,uid),
-          onBookmark:!canInteract?null:()=>_toggleBookmark(p,uid),onDelete:owner?()=>_delete(p):null,
-          onEdit:owner?()=>context.push('/community/create',extra:p):null,onReport:!canInteract?null:()=>_report(p,user,uid),
-          onPoll:!canInteract||p.pollOptions.isEmpty?null:(option)=>_votePoll(p,uid,option));
-      });
-  }
-  Future<void> _toggleLike(Post p,String uid)async{try{await _db.toggleLike(p,uid);}catch(error){_showError(error);}}
-  Future<void> _toggleBookmark(Post p,String uid)async{try{await _db.toggleBookmark(p.id,uid,true);if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Saved to bookmarks')));}catch(error){_showError(error);}}
-  Future<void> _votePoll(Post p,String uid,int option)async{try{await _db.votePoll(postId:p.id,uid:uid,option:option);}catch(error){_showError(error);}}
-  Future<void> _delete(Post p)async{
-    final yes=await showDialog<bool>(context:context,builder:(_)=>AlertDialog(title:Text('Delete post?'),
-      content:Text('This post will be permanently deleted.'),actions:[
-        TextButton(onPressed:()=>Navigator.pop(context,false),child:Text('Cancel')),
-        FilledButton(onPressed:()=>Navigator.pop(context,true),child:Text('Delete'))]));
-    if(yes!=true)return;try{await _db.deletePost(p.id);}catch(error){_showError(error);}
-  }
-  Future<void> _report(Post p,User? user,String uid)async{
-    final reason=await showDialog<String>(context:context,builder:(_)=>SimpleDialog(title:Text('Report post'),
-      children:['Spam','Harassment','Fake information','Inappropriate','Scam','Other'].map((x)=>SimpleDialogOption(onPressed:()=>Navigator.pop(context,x),child:Text(x))).toList()));
-    if(reason==null)return;try{await _db.report(reporterId:user?.uid??uid,targetId:p.id,targetType:'post',reason:reason);}catch(error){_showError(error);}
-  }
-}
-
-class _PostCard extends StatelessWidget{
-  final Post post;final User? user;final VoidCallback onOpen,onAuthor;
-  final VoidCallback? onLike,onBookmark,onDelete,onEdit,onReport;final Future<void> Function(int)? onPoll;
-  const _PostCard({required this.post,required this.user,required this.onOpen,required this.onAuthor,this.onLike,this.onBookmark,this.onDelete,this.onEdit,this.onReport,this.onPoll});
-  @override Widget build(BuildContext context){
-    final liked=post.likedByUser(ActiveProfileController.instance.resolveUid(user?.uid??''));
-    return Card(child:Padding(padding:EdgeInsets.fromLTRB(13,12,9,8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Row(children:[
-        Expanded(child:InkWell(onTap:onAuthor,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          UserIdentity(uid: post.authorId, name: post.authorName),
-          SizedBox(height:3),
-          if(post.tags.isNotEmpty || post.instituteIds.isNotEmpty || post.instituteId!=null)
-            Wrap(spacing:5,runSpacing:4,children:[
-              ...post.tags.map((tag)=>_tagChip(context, tag)),
-              ...((post.instituteIds.isNotEmpty?post.instituteIds:(post.instituteId==null?const <String>[]:[post.instituteId!])).map((id){
-                final institute=InstituteRepository.instance.byId(id);
-                return _tagChip(context, institute?.name ?? id);
-              })),
-            ])
-          else
-            _tagChip(context, post.category),
-        ]))),
-        PopupMenuButton<String>(onSelected:(v){if(v=='edit'&&onEdit!=null)onEdit!();if(v=='delete'&&onDelete!=null)onDelete!();if(v=='report'&&onReport!=null)onReport!();if(v=='save'&&onBookmark!=null)onBookmark!();},
-          itemBuilder:(_)=>[if(onEdit!=null)PopupMenuItem(value:'edit',child:Text('Edit')),if(onDelete!=null)PopupMenuItem(value:'delete',child:Text('Delete')),
-            if(onBookmark!=null)PopupMenuItem(value:'save',child:Text('Save')),if(onReport!=null)PopupMenuItem(value:'report',child:Text('Report'))]),
-      ]),
-      if(post.isQuestion)Padding(padding:EdgeInsets.only(top:5),child:Text('QUESTION',style:TextStyle(fontSize:10,color:AppColors.primaryGreen,fontWeight:FontWeight.w800))),
-      SizedBox(height:8),InkWell(onTap:onOpen,child:Text(post.text,style:TextStyle(fontSize:14,height:1.4))),
-      if(post.attachments.isNotEmpty) ...[
-        SizedBox(height:8),
-        ...post.attachments.map((a){
-          final type=a['type']??'file'; final url=a['url']??''; final name=a[ProfileFields.name]??'Attachment';
-          if(type=='photo'&&url.isNotEmpty) return Padding(
-            padding:EdgeInsets.only(bottom:7),
-            child:ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.network(
-              url,height:190,width:double.infinity,fit:BoxFit.cover,
-              errorBuilder:(_,__,___)=>_attachmentTile(context, name,Icons.broken_image_outlined),
-            )),
-          );
-          return _attachmentTile(context, name,type=='link'?Icons.link:Icons.insert_drive_file_outlined);
-        }),
-      ],
-      SizedBox(height:7),
-      if(post.pollOptions.isNotEmpty)...[
-        Text('Poll',style:TextStyle(fontWeight:FontWeight.w700,color:AppPalette.of(context).ink)),SizedBox(height:6),
-        ...List.generate(post.pollOptions.length,(i){
-          final total=post.pollVotes.values.fold<int>(0,(a,b)=>a+b);final votes=post.pollVotes[i.toString()]??0;final pct=total==0?0:votes/total;
-          return Padding(padding:EdgeInsets.only(bottom:6),child:InkWell(onTap:onPoll==null?null:()=>onPoll!(i),borderRadius:BorderRadius.circular(8),
-            child:Container(padding:EdgeInsets.symmetric(horizontal:10,vertical:9),decoration:BoxDecoration(border:Border.all(color:AppPalette.of(context).border),borderRadius:BorderRadius.circular(8)),
-              child:Row(children:[Expanded(child:Text(post.pollOptions[i])),Text('${(pct*100).round()}%  ($votes)',style:TextStyle(fontSize:11,color:AppPalette.of(context).muted))]))));
-        }),SizedBox(height:4),
-      ],
-      Row(children:[
-        IconButton(onPressed:onLike,icon:Icon(liked?Icons.favorite:Icons.favorite_border,color:liked?Colors.red:AppColors.primaryGreen)),TextButton(onPressed: post.likedBy.isEmpty ? null : () => showModalBottomSheet<void>(
-          context: context, builder: (_) => ListView(children: [
-            ListTile(title: Text('Liked by')),
-            ...post.likedBy.map((id) => ListTile(title: UserIdentity(uid: id, name: 'Community member'),
-              onTap: () { Navigator.pop(context); context.push('/profile/$id'); })),
-          ])), child: Text(post.likesCount.toString())),
-        IconButton(onPressed:onOpen,icon:Icon(Icons.comment_outlined,color:AppColors.primaryGreen)),Text(post.commentsCount.toString()),
-        Spacer(),TextButton(onPressed:onOpen,child:Text('View')),
-      ]),
-    ])));
-  }
-  Widget _tagChip(BuildContext context, String label)=>Container(
-    padding:EdgeInsets.symmetric(horizontal:9,vertical:3),
-    decoration:BoxDecoration(color:AppPalette.of(context).softSurface,borderRadius:BorderRadius.circular(20)),
-    child:Text(label,style:TextStyle(fontSize:10,fontWeight:FontWeight.w700,color:AppColors.primaryGreen),maxLines:1,overflow:TextOverflow.ellipsis),
-  );
-
-  Widget _attachmentTile(BuildContext context, String name,IconData icon){
-    return Container(
-      margin:EdgeInsets.only(bottom:7),
-      padding:EdgeInsets.symmetric(horizontal:10,vertical:9),
-      decoration:BoxDecoration(color:AppPalette.of(context).softSurface,borderRadius:BorderRadius.circular(9)),
-      child:Row(children:[
-        Icon(icon,size:19,color:AppColors.primaryGreen),
-        SizedBox(width:8),
-        Expanded(child:Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:12))),
-      ]),
-    );
-  }
+  Widget _empty(String message, {bool retry = false, bool more = false}) =>
+      Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                retry ? Icons.cloud_off_outlined : Icons.forum_outlined,
+                size: 36,
+              ),
+              const SizedBox(height: 10),
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: 10),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                children: [
+                  if (retry)
+                    OutlinedButton(
+                      onPressed: () => _feed!.refresh(),
+                      child: const Text('Retry'),
+                    ),
+                  if (more)
+                    OutlinedButton(
+                      onPressed: _feed!.loadingMore ? null : _feed!.loadMore,
+                      child: Text(
+                        _feed!.loadingMore ? 'Loading…' : 'Search more posts',
+                      ),
+                    ),
+                  if (!retry)
+                    OutlinedButton(
+                      onPressed: () => setState(() => _people = true),
+                      child: const Text('Find people'),
+                    ),
+                  if (_canInteract && !retry)
+                    FilledButton(
+                      onPressed: () => _create(),
+                      child: const Text('Create post'),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
 }
