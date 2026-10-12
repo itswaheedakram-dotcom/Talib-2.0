@@ -21,14 +21,14 @@ void main(){
     ActiveProfileController.instance.activate(temporaryProfiles.first);
     await tester.pumpWidget(const MaterialApp(home:ListHostelScreen()));await tester.pumpAndSettle();
     final boys=tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip,'Boys'));expect(boys.selected,false);
-    final name=find.byWidgetPredicate((w)=>w is TextFormField&&w.decoration?.labelText=='Hostel name');
+    final name=find.byWidgetPredicate((w)=>w is TextField&&w.decoration?.labelText=='Hostel name');
     await tester.enterText(name,'Saved hostel');
     await tester.tap(find.byTooltip('Save draft'));await tester.pumpAndSettle();
     await tester.pumpWidget(const SizedBox());await tester.pumpAndSettle();
     await tester.pumpWidget(const MaterialApp(home:ListHostelScreen()));await tester.pumpAndSettle();
     expect(find.text('Resume saved draft?'),findsOneWidget);
     await tester.tap(find.text('Resume'));await tester.pumpAndSettle();
-    final restored=tester.widget<TextFormField>(find.byWidgetPredicate((w)=>w is TextFormField&&w.decoration?.labelText=='Hostel name'));
+    final restored=tester.widget<TextField>(find.byWidgetPredicate((w)=>w is TextField&&w.decoration?.labelText=='Hostel name'));
     expect(restored.controller!.text,'Saved hostel');
     await tester.pumpWidget(const SizedBox());ActiveProfileController.instance.clear();
   });
