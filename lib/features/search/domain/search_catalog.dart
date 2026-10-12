@@ -92,13 +92,14 @@ class SearchEngine {
     final applied=Map<String,String>.from(filters);
     void infer(String key,String? value){if(value!=null&&!applied.containsKey(key))applied[key]=value;}
     infer('city',parsed.location);infer('area',parsed.area);
-    if(effective=='hostels'){infer('gender',parsed.gender);if(parsed.maxBudget!=null)infer('budget',parsed.maxBudget.toString());}
+    if(effective=='institutes'&&parsed.instituteName==null){if(RegExp(r'\bschool\b').hasMatch(parsed.normalized))infer('type','schools');if(RegExp(r'\bcollege\b').hasMatch(parsed.normalized))infer('type','colleges');if(RegExp(r'\buniversity\b').hasMatch(parsed.normalized))infer('type','universities');}
+    if(effective=='hostels'){if(RegExp(r'\bac\b').hasMatch(parsed.normalized))infer('ac','true');if(RegExp(r'\bavailable\b').hasMatch(parsed.normalized))infer('availableOnly','true');infer('gender',parsed.gender);if(parsed.maxBudget!=null)infer('budget',parsed.maxBudget.toString());}
     if(parsed.program!=null&&const ['institutes','courses','admissions','scholarships'].contains(effective))infer('program',parsed.program);
     if(parsed.wantsOpenAdmissions)infer('status','Open');
     if(parsed.wantsBestRated&&sort=='Relevance')sort='Top rated';
     final terms=List<String>.from(parsed.terms);
     if(parsed.instituteName!=null)terms.addAll(normalize(parsed.instituteName!).split(' ').where((v)=>v!='the'));
-    final ignore={'the','of','in','for'};terms.removeWhere(ignore.contains);
+    final ignore={'the','of','in','for',if(effective=='hostels'&&applied.containsKey('ac'))'ac'};terms.removeWhere(ignore.contains);
     if(parsed.terms.isEmpty&&parsed.understood.length==1&&parsed.understood.first.startsWith('Searching')&&query.trim().isNotEmpty)terms.addAll(normalize(query).split(' '));
     if(parsed.normalized.isEmpty&&query.trim().isNotEmpty)terms.addAll(query.trim().split(RegExp(r'\s+')));
     final activeCatalog=_adapters[effective]?.catalog;
@@ -126,6 +127,7 @@ class SearchEngine {
     }
     for(final filter in filters.entries){
       if(record.catalogId=='hostels'&&offers is List&&roomKeys.contains(filter.key))continue;
+      if(record.catalogId=='admissions'&&filter.key=='status'&&filter.value=='Open'&&(filters['program']??'').isNotEmpty&&record.field('programStatus') is Map){final statuses=record.field('programStatus') as Map;if(!statuses.entries.any((e)=>_fieldPass(e.key,filters['program']!,'program')&&e.value=='Open'))return false;continue;}
       if(!_fieldPass(record.field(filter.key),filter.value,filter.key))return false;
     }
     return true;

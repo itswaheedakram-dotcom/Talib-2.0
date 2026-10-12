@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -53,6 +55,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
   setState((){_response=result;_loading=false;if(query.isNotEmpty){_recent.remove(query);_recent.insert(0,query);_recent=_recent.take(8).toList();}});await _saveRecent();
  }
  void _changed(String value){_epoch++;_debounce?.cancel();setState((){_loading=false;_response=null;});_debounce=Timer(const Duration(milliseconds:250),(){if(mounted)setState((){});});}
+ Future<void> _retry()async{final query=_text.text,category=_category;final filters={...?_response?.filters,..._filters};await _initialize();if(!mounted)return;_category=category;_filters=filters;_text.text=query;await _search(refresh:true);}
  void _clear(){_text.clear();_filters={};_changed('');}
  List<String> get _suggestions{
   final query=SearchEngine.normalize(_text.text);if(query.isEmpty)return [];
@@ -84,9 +87,9 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
    if(engine!=null)SizedBox(height:48,child:ListView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:16),children:[for(final c in [const SearchCatalog(id:'all',label:'All'),...engine.catalogs])Padding(padding:const EdgeInsets.only(right:8),child:ChoiceChip(label:Text(c.label),selected:selected==c.id,onSelected:(_){_category=c.id;_filters={};_search();}))])),
    if(response!=null)Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:Row(children:[Expanded(child:Text('${response.matches.length}${response.hasMore?'+':''} results')),TextButton.icon(onPressed:_loading?null:_editFilters,icon:const Icon(Icons.tune,size:18),label:const Text('Filters')),PopupMenuButton<String>(tooltip:'Sort results',initialValue:_sort,onSelected:(v){_sort=v;_search();},itemBuilder:(_)=>[for(final s in ['Relevance','Newest',if(selected=='hostels')...['Top rated','Price low']])PopupMenuItem(value:s,child:Text(s))],child:Padding(padding:const EdgeInsets.all(8),child:Text(_sort)))])),
    if(response!=null&&response.filters.values.any((v)=>v.isNotEmpty))SizedBox(height:42,child:ListView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:16),children:[for(final e in response.filters.entries.where((e)=>e.value.isNotEmpty))Padding(padding:const EdgeInsets.only(right:6),child:InputChip(label:Text('${e.key}: ${e.value}'),onDeleted:(){_filters={...response.filters,e.key:''};_search();}))])),
-   if(warnings.isNotEmpty)Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:Row(children:[const Icon(Icons.info_outline,size:18),const SizedBox(width:8),Expanded(child:Text(warnings.join('\n'),maxLines:3,overflow:TextOverflow.ellipsis)),TextButton(onPressed:_loading?null:()=>_initialize(),child:const Text('Retry'))])),
+   if(warnings.isNotEmpty)Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:Row(children:[const Icon(Icons.info_outline,size:18),const SizedBox(width:8),Expanded(child:Text(warnings.join('\n'),maxLines:3,overflow:TextOverflow.ellipsis)),TextButton(onPressed:_loading?null:()=>_retry(),child:const Text('Retry'))])),
    if(_loading)const LinearProgressIndicator(),
-   Expanded(child:response==null?_discovery():response.matches.isEmpty&&!_loading?Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.search_off,size:44),const SizedBox(height:12),Text(warnings.isEmpty?'No matching results':'Some sources could not be loaded',style:Theme.of(context).textTheme.titleMedium),const SizedBox(height:8),const Text('Try another name, category or location.',textAlign:TextAlign.center),TextButton(onPressed:(){_filters={for(final k in response.filters.keys)k:''};_search(refresh:true);},child:const Text('Clear filters and retry'))]))):ListView.separated(padding:const EdgeInsets.all(16),itemCount:(response.matches.length<_limit?response.matches.length:_limit)+((response.matches.length>_limit||response.hasMore)?1:0),separatorBuilder:(_,__)=>const Divider(height:16),itemBuilder:(context,index){
+   Expanded(child:response==null?_discovery():response.matches.isEmpty&&!_loading?Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.search_off,size:44),const SizedBox(height:12),Text(warnings.isEmpty?(response.hasMore?'No matches in loaded results':'No matching results'):'Some sources could not be loaded',style:Theme.of(context).textTheme.titleMedium),const SizedBox(height:8),Text(response.hasMore?'More listings are available to search.':'Try another name, category or location.',textAlign:TextAlign.center),if(response.hasMore)FilledButton(onPressed:()=>_search(more:true),child:const Text('Search more listings')),TextButton(onPressed:(){_filters={for(final k in response.filters.keys)k:''};_search(refresh:true);},child:const Text('Clear filters and retry'))]))):ListView.separated(padding:const EdgeInsets.all(16),itemCount:(response.matches.length<_limit?response.matches.length:_limit)+((response.matches.length>_limit||response.hasMore)?1:0),separatorBuilder:(_,__)=>const Divider(height:16),itemBuilder:(context,index){
     if(index>=response.matches.length||index>=_limit)return TextButton(onPressed:_loading?null:(){if(_limit<response.matches.length){setState(()=>_limit+=20);}else{_limit+=20;_search(more:true);}},child:Text(response.hasMore&&_limit>=response.matches.length?'Load more':'Show more'));
     final r=response.matches[index].record;final label=engine?.catalogs.where((c)=>c.id==r.catalogId).firstOrNull?.label??r.catalogId;
     return ListTile(contentPadding:EdgeInsets.zero,leading:CircleAvatar(child:Icon(catalogIcon(r.catalogId))),title:r.catalogId=='people'?VerifiedAccountName(uid:r.id,name:r.title,compact:true):Text(r.title,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w600)),subtitle:Text([label+(r.isDemo?' • Demo':''),[r.area,r.city].where((v)=>v.isNotEmpty).join(', '),r.description].where((v)=>v.isNotEmpty).join('\n'),maxLines:3,overflow:TextOverflow.ellipsis),trailing:const Icon(Icons.chevron_right),onTap:()=>_open(r));
@@ -103,5 +106,22 @@ IconData catalogIcon(String id)=>switch(id){'institutes'=>Icons.school_outlined,
 class CatalogRecordScreen extends StatelessWidget {
  final SearchRecord record;
  const CatalogRecordScreen({super.key,required this.record});
- @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Text(record.catalogId)),body:ListView(padding:const EdgeInsets.all(20),children:[Text(record.title,style:Theme.of(context).textTheme.headlineSmall),const SizedBox(height:12),if(record.isDemo)const Text('Demo listing'),Text([record.area,record.city].where((v)=>v.isNotEmpty).join(', ')),const SizedBox(height:16),Text(record.description),const SizedBox(height:16),for(final e in record.attributes.entries)Padding(padding:const EdgeInsets.only(bottom:12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(e.key,style:const TextStyle(fontWeight:FontWeight.w600)),SelectableText(SearchRecord.flatten(e.value))]))]));
+ @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Text(record.catalogId)),body:ListView(padding:const EdgeInsets.all(20),children:[Text(record.title,style:Theme.of(context).textTheme.headlineSmall),const SizedBox(height:12),if(record.isDemo)const Text('Demo listing'),Text([record.area,record.city].where((v)=>v.isNotEmpty).join(', ')),const SizedBox(height:16),Text(record.description),const SizedBox(height:16),for(final e in record.attributes.entries)Padding(padding:const EdgeInsets.only(bottom:12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(e.key,style:const TextStyle(fontWeight:FontWeight.w600)),SelectableText(SearchRecord.flatten(e.value)),if(e.value is String&&Uri.tryParse(e.value as String)?.scheme=='https')TextButton.icon(onPressed:()=>launchUrl(Uri.parse(e.value as String),mode:LaunchMode.externalApplication),icon:const Icon(Icons.open_in_new,size:18),label:const Text('Open link'))]))]));
+}
+
+class CatalogDetailScreen extends StatelessWidget {
+ final String catalogId,itemId;
+ const CatalogDetailScreen({super.key,required this.catalogId,required this.itemId});
+ Widget _status(String text)=>Scaffold(appBar:AppBar(title:const Text('Listing')),body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Text(text,textAlign:TextAlign.center))));
+ @override Widget build(BuildContext context)=>StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('catalogItems').doc(itemId).snapshots(),builder:(context,snapshot){
+  if(snapshot.hasError)return _status('This listing is unavailable or no longer published.');
+  if(!snapshot.hasData)return _status('Loading listing…');
+  final data=snapshot.data!.data();if(data==null||data['published']!=true||data['catalogId']!=catalogId)return _status('This listing is unavailable.');
+  return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('searchCatalogs').doc(catalogId).snapshots(),builder:(context,catalog){
+   if(catalog.hasError)return _status('This catalogue is unavailable.');
+   if(!catalog.hasData)return _status('Loading catalogue…');
+   if(catalog.data!.data()?['enabled']!=true)return _status('This catalogue is unavailable.');
+   return CatalogRecordScreen(record:publicCatalogRecord(itemId,data));
+  });
+ });
 }

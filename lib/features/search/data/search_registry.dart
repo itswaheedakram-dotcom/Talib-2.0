@@ -29,6 +29,7 @@ class SearchRegistry {
  final String uid;
  final SearchEngine engine=SearchEngine();
  final List<String> warnings=[];
+ final _shared=_SharedLoads();
  SearchRegistry({required this.demo,required this.uid});
  Future<void> initialize()async{
   final descriptors={for(final c in builtInCatalogs)c.id:c};
@@ -37,7 +38,7 @@ class SearchRegistry {
    final snapshot=await FirebaseFirestore.instance.collection('searchCatalogs').where('enabled',isEqualTo:true).get();
    for(final doc in snapshot.docs){final c=SearchCatalog.fromMap(doc.id,doc.data());if(c.valid){descriptors[c.id]=c;published.add(c.id);}}
   }catch(_){warnings.add('Additional catalogues are unavailable. Retry to reload them.');}}
-  for(final c in descriptors.values){engine.register(_CatalogAdapter(c,demo,uid,published.contains(c.id)));}
+  for(final c in descriptors.values){engine.register(_CatalogAdapter(c,demo,uid,published.contains(c.id),_shared));}
   engine.resetScope('${demo?'demo':'real'}:$uid');
  }
 }
@@ -51,7 +52,8 @@ class _CatalogAdapter implements SearchAdapter {
  @override final SearchCatalog catalog;
  final bool demo,genericEnabled;
  final String uid;
- _CatalogAdapter(this.catalog,this.demo,this.uid,this.genericEnabled);
+ final _SharedLoads shared;
+ _CatalogAdapter(this.catalog,this.demo,this.uid,this.genericEnabled,this.shared);
  @override Future<SearchPage> load({Object? cursor})async{
   final previous=cursor is _Cursor?cursor:null;
   final records=<SearchRecord>[];
@@ -60,15 +62,15 @@ class _CatalogAdapter implements SearchAdapter {
   final id=catalog.id;
   if(previous==null||previous.nativeMore){
    if(const ['institutes','courses','admissions','scholarships'].contains(id)){
-    final ir=InstituteRepository.instance;await ir.load();if(ir.error!=null)throw StateError(ir.error!);
+    final ir=InstituteRepository.instance;await shared.institutes();if(ir.error!=null)throw StateError(ir.error!);
     if(id=='institutes'){
      for(final i in ir.items){records.add(SearchRecord(id:i.id,catalogId:id,title:i.name,description:'${i.description} ${i.address}',city:i.city,area:i.area.isEmpty?i.town:i.area,route:'/institute/${i.id}',tags:_instituteAliases(i.name),attributes:{'type':i.type,'sector':i.sector,'program':[...i.programs,...i.programGroups.values.expand((x)=>x)],'status':i.admissionStatus,'feeRange':i.feeRange,'facilities':i.facilities},isDemo:demo));}
     }else{
-     final opportunities=InstituteOpportunityRepository.instance;await opportunities.loadAll();if(opportunities.error!=null)throw StateError(opportunities.error!);
+     final opportunities=InstituteOpportunityRepository.instance;await shared.opportunities();if(opportunities.error!=null)throw StateError(opportunities.error!);
      final kind=id=='courses'?'course':id=='admissions'?'admission':'scholarship';
      for(final o in opportunities.allItems.where((o)=>o.kind==kind)){
       final parent=ir.byId(o.instituteId);if(parent==null)continue;
-      records.add(SearchRecord(id:o.id,catalogId:id,title:o.title,description:'${parent.name} ${o.description} ${o.eligibility}',city:parent.city,area:parent.area,route:'/institute/${parent.id}/opportunities',tags:_instituteAliases(parent.name),attributes:{'status':o.displayStatus,'program':o.programKeys,'mode':o.deliveryMode,'provider':o.provider,'deadline':o.deadline},isDemo:demo));
+      records.add(SearchRecord(id:o.id,catalogId:id,title:o.title,description:'${parent.name} ${o.description} ${o.eligibility}',city:parent.city,area:parent.area,route:'/institute/${parent.id}/opportunities?kind=$kind',tags:_instituteAliases(parent.name),attributes:{'status':o.displayStatus,'programStatus':{for(final key in o.programKeys)key:o.forProgram(key).statusAt()},'program':o.programKeys,'mode':o.deliveryMode,'provider':o.provider,'deadline':o.deadline},isDemo:demo));
      }
      if(id=='courses'){for(final i in ir.items){for(final p in {...i.programs,...i.programGroups.values.expand((v)=>v)}){
       records.add(SearchRecord(id:'${i.id}:$p',catalogId:id,title:p,description:i.name,city:i.city,area:i.area,route:'/institute/${i.id}/programs',tags:_instituteAliases(i.name),attributes:{'program':p,'provider':i.name},isDemo:demo));
@@ -111,6 +113,12 @@ class _CatalogAdapter implements SearchAdapter {
  SearchRecord _post(Post p)=>SearchRecord(id:p.id,catalogId:'posts',title:p.text,description:'By ${p.authorName}',route:'/community/post/${p.id}',tags:p.tags,attributes:{'category':p.category},updatedAt:p.createdAt,isDemo:demo);
  SearchRecord _resource(String id,Map<String,dynamic> d)=>SearchRecord(id:id,catalogId:'resources',title:(d['title']??'Study resource').toString(),description:(d['description']??'').toString(),attributes:{'category':d['category']??'','url':d['url']??''},isDemo:demo);
 }
-SearchRecord publicCatalogRecord(String id,Map<String,dynamic> d)=>SearchRecord(id:'catalog:$id',catalogId:(d['catalogId']??'').toString(),title:(d['title']??'').toString(),description:(d['description']??'').toString(),city:(d['city']??'').toString(),area:(d['area']??'').toString(),tags:(d['tags'] is List?(d['tags'] as List).whereType<String>().toList():const []),attributes:d['attributes'] is Map?Map<String,dynamic>.from(d['attributes']):const {},published:d['published']==true,updatedAt:d['updatedAt'] is Timestamp?(d['updatedAt'] as Timestamp).toDate():null);
+SearchRecord publicCatalogRecord(String id,Map<String,dynamic> d)=>SearchRecord(id:'catalog:$id',catalogId:(d['catalogId']??'').toString(),title:(d['title']??'').toString(),route:'/catalog/${Uri.encodeComponent((d['catalogId']??'').toString())}/${Uri.encodeComponent(id)}',description:(d['description']??'').toString(),city:(d['city']??'').toString(),area:(d['area']??'').toString(),tags:(d['tags'] is List?(d['tags'] as List).whereType<String>().toList():const []),attributes:d['attributes'] is Map?Map<String,dynamic>.from(d['attributes']):const {},published:d['published']==true,updatedAt:d['updatedAt'] is Timestamp?(d['updatedAt'] as Timestamp).toDate():null);
 
 List<String> _instituteAliases(String name){final n=name.toLowerCase();return [if(n.contains('arid'))'arid',if(n.contains('bahauddin'))'bzu',if(n.contains('national university of sciences'))'nust',if(n.contains('engineering and technology'))'uet',if(n.contains('university of the punjab'))'punjab university',if(n.contains('islamia university'))'iub'];}
+
+class _SharedLoads {
+ Future<void>? _institutes,_opportunities;
+ Future<void> institutes()=>_institutes??=InstituteRepository.instance.load().whenComplete(()=>_institutes=null);
+ Future<void> opportunities()=>_opportunities??=InstituteOpportunityRepository.instance.loadAll().whenComplete(()=>_opportunities=null);
+}

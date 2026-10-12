@@ -77,6 +77,7 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/institute-dashboard',builder:(_,__)=>InstituteModeScope(builder:()=>const InstituteDashboardScreen())),
   GoRoute(path:'/institute/:id/student-verifications',builder:(_,s)=>InstituteRecordScope(id:s.pathParameters['id']!,builder:()=>StudentVerificationsScreen(instituteId:s.pathParameters['id']!))),
   GoRoute(path:'/institute-admin/:claimId',builder:(_,s)=>InstituteModeScope(builder:()=>InstituteAdminScreen(claimId:s.pathParameters['claimId']!))),
+  GoRoute(path:'/catalog/:catalogId/:itemId',builder:(_,s)=>CatalogDetailScreen(catalogId:s.pathParameters['catalogId']!,itemId:s.pathParameters['itemId']!)),
   GoRoute(path:'/admin/catalogues',builder:(_,__)=>const CatalogAdminScreen()),
   GoRoute(path:'/admin/account-verification',builder:(_,__)=>const AccountVerificationScreen()),
   GoRoute(path:'/admin',builder:(_,__)=>const AdminPanelScreen()),

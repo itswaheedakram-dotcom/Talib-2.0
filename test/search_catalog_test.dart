@@ -32,5 +32,13 @@ void main(){
   final good=FakeAdapter(const SearchCatalog(id:'jobs',label:'Jobs'),[const SearchRecord(id:'1',catalogId:'jobs',title:'Developer')]);final bad=FakeAdapter(const SearchCatalog(id:'events',label:'Events'),[])..fail=true;
   final engine=SearchEngine()..register(good)..register(bad);final result=await engine.search('Developer');expect(result.matches.length,1);expect(result.warnings.length,1);engine.resetScope('other-user');expect(engine.cachedRecords,isEmpty);
  });
+ test('AC and availability natural query stays in hostel filters',()async{
+  final engine=SearchEngine()..register(FakeAdapter(const SearchCatalog(id:'hostels',label:'Hostels',aliases:['hostel']),[const SearchRecord(id:'1',catalogId:'hostels',title:'Garden',attributes:{'offers':[{'ac':true,'availableOnly':2}]}),const SearchRecord(id:'2',catalogId:'hostels',title:'Old rooms',attributes:{'offers':[{'ac':false,'availableOnly':0}]})]));
+  expect((await engine.search('available AC hostels')).matches.single.record.id,'1');
+ });
+ test('named institute aliases do not return unrelated institutes',()async{
+  final engine=SearchEngine()..register(FakeAdapter(const SearchCatalog(id:'institutes',label:'Institutes'),[const SearchRecord(id:'1',catalogId:'institutes',title:'Pir Mehr Ali Shah Arid Agriculture University',tags:['arid']),const SearchRecord(id:'2',catalogId:'institutes',title:'Other university')]));
+  expect((await engine.search('Arid')).matches.single.record.id,'1');
+ });
  test('invalid registry IDs are rejected',(){expect(()=>SearchEngine().register(FakeAdapter(const SearchCatalog(id:'../users',label:'Secret'),[])),throwsArgumentError);});
 }
