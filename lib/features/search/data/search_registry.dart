@@ -60,8 +60,9 @@ class _CatalogAdapter implements SearchAdapter {
   final records=<SearchRecord>[if(demo&&cursor==null)...demoCatalogRecords.where((r)=>r.catalogId==catalog.id)];
   DocumentSnapshot<Map<String,dynamic>>? nativeCursor,genericCursor;
   var nativeMore=false,genericMore=false;
+  final warnings=<String>[];
   final id=catalog.id;
-  if(previous==null||previous.nativeMore){
+  if(previous==null||previous.nativeMore){try{
    if(const ['institutes','courses','admissions','scholarships'].contains(id)){
     final ir=InstituteRepository.instance;await shared.institutes();if(ir.error!=null)throw StateError(ir.error!);
     if(id=='institutes'){
@@ -97,14 +98,16 @@ class _CatalogAdapter implements SearchAdapter {
     }
    }
   }
-  if(!demo&&genericEnabled&&(previous==null||previous.genericMore)){
+  catch(_){warnings.add('${catalog.label} native records could not be loaded. Retry this source.');}
+  }
+  if(!demo&&genericEnabled&&(previous==null||previous.genericMore)){try{
    // Fixed collection and schema; descriptor cannot redirect to private data.
    Query<Map<String,dynamic>> query=FirebaseFirestore.instance.collection('catalogItems').where('catalogId',isEqualTo:id).where('published',isEqualTo:true).orderBy(FieldPath.documentId).limit(200);
    if(previous?.generic!=null)query=query.startAfterDocument(previous!.generic!);
    final snapshot=await query.get();genericMore=snapshot.docs.length==200;if(snapshot.docs.isNotEmpty)genericCursor=snapshot.docs.last;
    records.addAll(snapshot.docs.map((d)=>publicCatalogRecord(d.id,d.data())));
-  }
-  return SearchPage(records,hasMore:nativeMore||genericMore,cursor:_Cursor(native:nativeCursor??previous?.native,generic:genericCursor??previous?.generic,nativeMore:nativeMore,genericMore:genericMore));
+  }catch(_){warnings.add('${catalog.label} published catalogue records could not be loaded. Retry this source.');}}
+  return SearchPage(records,warnings:warnings,hasMore:nativeMore||genericMore,cursor:_Cursor(native:nativeCursor??previous?.native,generic:genericCursor??previous?.generic,nativeMore:nativeMore,genericMore:genericMore));
  }
  SearchRecord _hostel(Hostel h){
   final offers=h.rooms.isEmpty?<Map<String,dynamic>>[{'budget':SmartSearchParser.minimumPrice(h.price),'roomType':h.roomType,'ac':h.ac}]:h.rooms.map((r)=>{'budget':SmartSearchParser.minimumPrice(r.rent),'roomType':r.type,'rentBasis':r.rentBasis,'ac':r.ac,'availableOnly':r.availableBeds}).toList();

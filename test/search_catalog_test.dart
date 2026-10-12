@@ -8,6 +8,10 @@ class FakeAdapter implements SearchAdapter {
  FakeAdapter(this.catalog,this.records);
  @override Future<SearchPage> load({Object? cursor})async{reads++;if(fail)throw StateError('unavailable');return SearchPage(records);}
 }
+class PagingAdapter implements SearchAdapter {
+ @override SearchCatalog get catalog=>const SearchCatalog(id:'transport',label:'Transport');
+ @override Future<SearchPage> load({Object? cursor})async=>cursor==null?const SearchPage([SearchRecord(id:'1',catalogId:'transport',title:'City bus')],hasMore:true,cursor:'page-2'):const SearchPage([SearchRecord(id:'2',catalogId:'transport',title:'Campus shuttle')],warnings:['One additional source is unavailable.']);
+}
 void main(){
  test('future catalogue participates without enum or UI changes',()async{
   final engine=SearchEngine();final adapter=FakeAdapter(const SearchCatalog(id:'transport',label:'Transport',aliases:['bus','buses'],facets:[SearchFacet('mode','Mode')]),[const SearchRecord(id:'bus-1',catalogId:'transport',title:'Campus shuttle',city:'Lahore',attributes:{'mode':'Shared','schedule':{'days':['Monday']}})]);engine.register(adapter);
@@ -39,6 +43,10 @@ void main(){
  test('named institute aliases do not return unrelated institutes',()async{
   final engine=SearchEngine()..register(FakeAdapter(const SearchCatalog(id:'institutes',label:'Institutes'),[const SearchRecord(id:'1',catalogId:'institutes',title:'Pir Mehr Ali Shah Arid Agriculture University',tags:['arid']),const SearchRecord(id:'2',catalogId:'institutes',title:'Other university')]));
   expect((await engine.search('Arid')).matches.single.record.id,'1');
+ });
+ test('pagination appends later matches and preserves partial source warnings',()async{
+  final engine=SearchEngine()..register(PagingAdapter());final initial=await engine.search('Campus',category:'transport');expect(initial.matches,isEmpty);expect(initial.hasMore,isTrue);
+  final next=await engine.search('Campus',category:'transport',more:true);expect(next.matches.single.record.id,'2');expect(next.warnings.length,1);expect(engine.cachedRecords.length,2);
  });
  test('invalid registry IDs are rejected',(){expect(()=>SearchEngine().register(FakeAdapter(const SearchCatalog(id:'../users',label:'Secret'),[])),throwsArgumentError);});
 }

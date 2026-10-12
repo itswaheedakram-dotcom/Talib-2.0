@@ -32,7 +32,8 @@ class SearchPage {
   final List<SearchRecord> records;
   final bool hasMore;
   final Object? cursor;
-  const SearchPage(this.records,{this.hasMore=false,this.cursor});
+  final List<String> warnings;
+  const SearchPage(this.records,{this.hasMore=false,this.cursor,this.warnings=const []});
 }
 abstract class SearchAdapter {
   SearchCatalog get catalog;
@@ -84,7 +85,8 @@ class SearchEngine {
       try{
         final page=await source.load(cursor:more?_cursors[id]:null);if(scope!=_scope)return;
         final map=<String,SearchRecord>{if(more)for(final r in _cache[id]??<SearchRecord>[])r.id:r,for(final r in page.records.where((r)=>r.published&&r.catalogId==id))r.id:r};
-        _cache[id]=map.values.toList();_loaded[id]=now;_cursors[id]=page.cursor;if(page.hasMore){_more.add(id);}else{_more.remove(id);}
+        warnings.addAll(page.warnings);
+        _cache[id]=map.values.toList();if(page.warnings.isEmpty){_loaded[id]=now;}else{_loaded.remove(id);}_cursors[id]=page.cursor;if(page.hasMore){_more.add(id);}else{_more.remove(id);}
       }catch(_){if(scope==_scope){_cache.remove(id);_loaded.remove(id);warnings.add('${source.catalog.label} could not be loaded. Retry to try this source again.');}}
     }));
     if(scope!=_scope)return const SearchResponse([]);
