@@ -72,7 +72,7 @@ class _CatalogAdapter implements SearchAdapter {
      final kind=id=='courses'?'course':id=='admissions'?'admission':'scholarship';
      for(final o in opportunities.allItems.where((o)=>o.kind==kind)){
       final parent=ir.byId(o.instituteId);if(parent==null)continue;
-      records.add(SearchRecord(id:o.id,catalogId:id,title:o.title,description:'${parent.name} ${o.description} ${o.eligibility}',city:parent.city,area:parent.area,route:'/institute/${parent.id}/opportunities?kind=$kind',tags:_instituteAliases(parent.name),attributes:{'status':o.displayStatus,'programStatus':{for(final key in o.programKeys)key:o.forProgram(key).statusAt()},'program':o.programKeys,'mode':o.deliveryMode,'provider':o.provider,'deadline':o.deadline},isDemo:demo));
+      records.add(SearchRecord(id:o.id,catalogId:id,title:o.title,description:'${parent.name} ${o.description} ${o.eligibility}',city:parent.city,area:parent.area,route:'/institute/${parent.id}/opportunities?kind=$kind',tags:_instituteAliases(parent.name),attributes:{'status':o.displayStatus,'programStatus':{for(final key in o.programKeys)key:o.forProgram(key).statusAt()},'program':o.programKeys.isNotEmpty?o.programKeys:[o.title,o.eligibility],'mode':o.deliveryMode,'provider':o.provider,'deadline':o.deadline},isDemo:demo));
      }
      if(id=='courses'){for(final i in ir.items){for(final p in {...i.programs,...i.programGroups.values.expand((v)=>v)}){
       records.add(SearchRecord(id:'${i.id}:$p',catalogId:id,title:p,description:i.name,city:i.city,area:i.area,route:'/institute/${i.id}/programs',tags:_instituteAliases(i.name),attributes:{'program':p,'provider':i.name},isDemo:demo));

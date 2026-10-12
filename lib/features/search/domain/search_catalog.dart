@@ -102,6 +102,7 @@ class SearchEngine {
     if(parsed.wantsOpenAdmissions)infer('status','Open');
     if(parsed.wantsBestRated&&sort=='Relevance')sort='Top rated';
     final terms=List<String>.from(parsed.terms);
+    if(terms.remove('cs'))terms.addAll(['computer','science']);
     if(parsed.instituteName!=null)terms.addAll(normalize(parsed.instituteName!).split(' ').where((v)=>v!='the'));
     final ignore={'the','of','in','for',if(effective=='hostels'&&applied.containsKey('ac'))'ac'};terms.removeWhere(ignore.contains);
     if(parsed.terms.isEmpty&&parsed.understood.length==1&&parsed.understood.first.startsWith('Searching')&&query.trim().isNotEmpty)terms.addAll(normalize(query).split(' '));

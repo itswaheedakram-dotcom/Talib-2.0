@@ -52,5 +52,9 @@ void main(){
   final engine=SearchEngine()..register(FakeAdapter(const SearchCatalog(id:'hostels',label:'Hostels'),[const SearchRecord(id:'a',catalogId:'hostels',title:'A',attributes:{'budget':5000,'offers':[{'budget':5000,'ac':false},{'budget':20000,'ac':true}]}),const SearchRecord(id:'b',catalogId:'hostels',title:'B',attributes:{'budget':15000,'offers':[{'budget':15000,'ac':true}]})]));
   final result=await engine.search('',category:'hostels',filters:{'ac':'true'},sort:'Price low');expect(result.matches.first.record.id,'b');expect(result.matches.last.offer?['budget'],20000);
  });
+ test('CS shorthand finds Computer Science programs',()async{
+  final engine=SearchEngine()..register(FakeAdapter(const SearchCatalog(id:'courses',label:'Courses',aliases:['course','courses']),[const SearchRecord(id:'1',catalogId:'courses',title:'BS Computer Science',attributes:{'program':'BS Computer Science'})]));
+  expect((await engine.search('CS courses')).matches.single.record.id,'1');
+ });
  test('invalid registry IDs are rejected',(){expect(()=>SearchEngine().register(FakeAdapter(const SearchCatalog(id:'../users',label:'Secret'),[])),throwsArgumentError);});
 }
