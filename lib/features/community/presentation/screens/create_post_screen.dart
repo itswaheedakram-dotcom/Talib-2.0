@@ -244,6 +244,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (!mounted || scope != _currentScope) return;
     final raw = prefs.getString(key);
     if (raw != null && _canEdit) {
+      setState(() => _loadingDraft = false);
       _draftDialog = true;
       final restore = await showDialog<bool>(
         context: context,

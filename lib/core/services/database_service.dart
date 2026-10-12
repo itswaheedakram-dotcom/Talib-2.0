@@ -122,6 +122,9 @@ class DatabaseService {
     DateTime? pollClosesAt,
   }) async {
     if (ActiveProfileController.instance.isDemo) {
+      if (DemoDataService.instance.post(postId)?.authorId !=
+          ActiveProfileController.instance.effectiveUid)
+        throw StateError('You can only edit your own posts.');
       DemoDataService.instance.updatePost(
         postId: postId,
         text: text,
@@ -208,6 +211,10 @@ class DatabaseService {
 
   Future<void> deletePost(String postId) async {
     if (ActiveProfileController.instance.isDemo) {
+      final owner = DemoDataService.instance.post(postId)?.authorId;
+      final actor = ActiveProfileController.instance.effectiveUid;
+      if (owner != actor && actor != 'demo-user-6')
+        throw StateError('You can only delete your own posts.');
       DemoDataService.instance.deletePost(postId);
       return;
     }
