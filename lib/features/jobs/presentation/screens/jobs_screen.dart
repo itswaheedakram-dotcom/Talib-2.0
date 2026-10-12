@@ -1,3 +1,6 @@
+import '../../../../core/services/active_profile_controller.dart';
+import '../../../../core/services/firebase_service.dart';
+import '../../../search/presentation/screens/smart_global_search_screen.dart';
 import 'package:flutter/material.dart';
 
 class Job{
@@ -16,7 +19,8 @@ class _JobsScreenState extends State<JobsScreen>{
     Job(title:'Backend Developer',company:'CodeWorks',location:'Remote',field:'Software',mode:'Remote',salary:'Rs. 100,000 - 150,000',experience:'1-2 years',deadline:'25 Nov 2026',description:'Develop APIs and backend services with a focus on reliable and scalable systems.',requirements:['REST APIs','Node.js or similar','Database fundamentals']),
   ];
   List<Job> get filtered{final q=search.text.toLowerCase().trim();return jobs.where((j)=>(q.isEmpty||'${j.title} ${j.company} ${j.location} ${j.field}'.toLowerCase().contains(q))&&(field=='All'||j.field==field)&&(mode=='All'||j.mode==mode)).toList();}
-  @override Widget build(BuildContext context){final list=filtered;return Scaffold(
+  @override Widget build(BuildContext context){
+    if(FirebaseService.initialized&&!ActiveProfileController.instance.isDemo)return const SmartGlobalSearchScreen(initialCategory:'jobs');final list=filtered;return Scaffold(
     appBar:AppBar(title:const Text('Jobs'),actions:[IconButton(onPressed:showFilters,icon:const Icon(Icons.tune))]),
     body:Column(children:[
       Padding(padding:const EdgeInsets.fromLTRB(16,8,16,12),child:TextField(controller:search,onChanged:(_)=>setState((){}),decoration:InputDecoration(hintText:'Search jobs, companies...',prefixIcon:const Icon(Icons.search),border:OutlineInputBorder(borderRadius:BorderRadius.circular(16))))),

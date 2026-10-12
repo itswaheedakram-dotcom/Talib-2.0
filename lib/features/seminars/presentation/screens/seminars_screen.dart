@@ -1,3 +1,6 @@
+import '../../../../core/services/active_profile_controller.dart';
+import '../../../../core/services/firebase_service.dart';
+import '../../../search/presentation/screens/smart_global_search_screen.dart';
 import 'package:flutter/material.dart';
 
 class Seminar {
@@ -59,6 +62,7 @@ class _SeminarsScreenState extends State<SeminarsScreen> {
   Widget _detailRow(IconData icon, String text) => Padding(padding: const EdgeInsets.only(bottom: 10), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, size: 20), const SizedBox(width: 10), Expanded(child: Text(text))]));
 
   @override Widget build(BuildContext context) {
+    if(FirebaseService.initialized&&!ActiveProfileController.instance.isDemo)return const SmartGlobalSearchScreen(initialCategory:'seminars');
     final items = _filtered;
     final categories = ['All', 'Technology', 'Career', 'Admissions', 'Skills', 'Business'];
     return Scaffold(appBar: AppBar(title: const Text('Seminars')), body: Column(children: [

@@ -21,3 +21,5 @@ Existing independent collections need a SearchAdapter that converts approved pub
 Search fetches pages of 200 per supported Firestore source, then ranks locally, with a 60-second scoped cache (public people are rechecked each submit). Results count describes loaded records; '+' means more pages exist. Load more continues discovery; it is not an exhaustive server-side full-text index. Institute/program and opportunity sources use their existing repository loaders. Consider a server-side indexed search service when volume exceeds local ranking capacity.
 
 Shared queries require the composite index catalogId ASC, published ASC, document ID ASC. The repository includes its index configuration. Sorting is across loaded results, not unseen pages.
+
+Courses, scholarships, jobs, internships and seminars use this same engine in real mode. Their existing sample module screens and searchable sample fixtures are isolated to Demo mode. Real jobs, internships and seminars become available by publishing their shared catalogue records; samples are never promoted into production.

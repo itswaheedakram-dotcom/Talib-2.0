@@ -8,6 +8,7 @@ import '../../hostels/data/hostel_repository.dart';
 import '../../models/hostel.dart';
 import '../../models/post.dart';
 import '../domain/search_catalog.dart';
+import 'demo_search_catalog.dart';
 import '../domain/smart_search_parser.dart';
 
 const builtInCatalogs=<SearchCatalog>[
@@ -56,7 +57,7 @@ class _CatalogAdapter implements SearchAdapter {
  _CatalogAdapter(this.catalog,this.demo,this.uid,this.genericEnabled,this.shared);
  @override Future<SearchPage> load({Object? cursor})async{
   final previous=cursor is _Cursor?cursor:null;
-  final records=<SearchRecord>[];
+  final records=<SearchRecord>[if(demo&&cursor==null)...demoCatalogRecords.where((r)=>r.catalogId==catalog.id)];
   DocumentSnapshot<Map<String,dynamic>>? nativeCursor,genericCursor;
   var nativeMore=false,genericMore=false;
   final id=catalog.id;

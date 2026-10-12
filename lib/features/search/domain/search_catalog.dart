@@ -104,7 +104,7 @@ class SearchEngine {
     if(parsed.normalized.isEmpty&&query.trim().isNotEmpty)terms.addAll(query.trim().split(RegExp(r'\s+')));
     final activeCatalog=_adapters[effective]?.catalog;
     if(activeCatalog!=null){final aliases=[activeCatalog.label,...activeCatalog.aliases].expand((a)=>normalize(a).split(' ')).toSet();terms.removeWhere(aliases.contains);}
-    if(effective=='all'&&parsed.category!=GlobalSearchCategory.all){final inferred=_adapters[inferCategory(query)]?.catalog;if(inferred!=null)terms.add(normalize(inferred.aliases.isNotEmpty?inferred.aliases.first:inferred.label));}
+    if(parsed.category!=GlobalSearchCategory.all&&effective!=inferCategory(query)){final inferred=_adapters[inferCategory(query)]?.catalog;if(inferred!=null)terms.add(normalize(inferred.aliases.isNotEmpty?inferred.aliases.first:inferred.label));}
     final matches=<SearchMatch>[];
     for(final source in selected){for(final record in _cache[source.catalog.id]??<SearchRecord>[]){
       if(!_passes(record,applied))continue;

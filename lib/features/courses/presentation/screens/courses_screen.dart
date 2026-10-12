@@ -1,3 +1,6 @@
+import '../../../../core/services/active_profile_controller.dart';
+import '../../../../core/services/firebase_service.dart';
+import '../../../search/presentation/screens/smart_global_search_screen.dart';
 import 'package:flutter/material.dart';
 
 class CoursesScreen extends StatefulWidget {
@@ -22,6 +25,7 @@ class _CoursesScreenState extends State<CoursesScreen>{
       &&(level=='All'||c.level==level)&&(field=='All'||c.field==field)&&(mode=='All'||c.mode==mode);
   }).toList();
   @override Widget build(BuildContext context){
+    if(FirebaseService.initialized&&!ActiveProfileController.instance.isDemo)return const SmartGlobalSearchScreen(initialCategory:'courses');
     final list=filtered;
     return Scaffold(
       appBar:AppBar(title:const Text('Courses'),actions:[IconButton(onPressed:showFilters,icon:const Icon(Icons.tune))]),

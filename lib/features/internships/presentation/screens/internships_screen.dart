@@ -1,3 +1,6 @@
+import '../../../../core/services/active_profile_controller.dart';
+import '../../../../core/services/firebase_service.dart';
+import '../../../search/presentation/screens/smart_global_search_screen.dart';
 import 'package:flutter/material.dart';
 
 class Internship {
@@ -46,6 +49,7 @@ class _InternshipsScreenState extends State<InternshipsScreen> {
   Widget _chip(IconData icon,String text) => Chip(avatar: Icon(icon,size:17),label: Text(text));
 
   @override Widget build(BuildContext context) {
+    if(FirebaseService.initialized&&!ActiveProfileController.instance.isDemo)return const SmartGlobalSearchScreen(initialCategory:'internships');
     final data=_filtered;
     return Scaffold(appBar: AppBar(title: const Text('Internships'), actions: [IconButton(onPressed: () => _showFilters(), icon: const Icon(Icons.tune))]), body: Column(children: [
       Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 12), child: TextField(controller: _search, onChanged: (_)=>setState((){}), decoration: InputDecoration(hintText: 'Search internships, companies...', prefixIcon: const Icon(Icons.search), suffixIcon: _search.text.isEmpty ? null : IconButton(onPressed: ()=>setState(()=>_search.clear()), icon: const Icon(Icons.clear)), border: OutlineInputBorder(borderRadius: BorderRadius.circular(16))))),

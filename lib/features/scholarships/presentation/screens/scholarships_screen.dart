@@ -1,3 +1,6 @@
+import '../../../../core/services/active_profile_controller.dart';
+import '../../../../core/services/firebase_service.dart';
+import '../../../search/presentation/screens/smart_global_search_screen.dart';
 import 'package:flutter/material.dart';
 
 class ScholarshipsScreen extends StatefulWidget {
@@ -21,6 +24,7 @@ class _ScholarshipsScreenState extends State<ScholarshipsScreen> {
   }).toList();
 
   @override Widget build(BuildContext context) {
+    if(FirebaseService.initialized&&!ActiveProfileController.instance.isDemo)return const SmartGlobalSearchScreen(initialCategory:'scholarships');
     final list=filtered;
     return Scaffold(
       appBar: AppBar(title: const Text('Scholarships'), actions:[
