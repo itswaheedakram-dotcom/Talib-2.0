@@ -1,6 +1,6 @@
 # Extensible global search
 
-SearchRegistry registers built-in adapters and reads enabled `searchCatalogs` descriptors. A new public catalogue needs no search screen, parser enum or routing edits when it uses the shared contract. Super admin can register and publish it under Admin → Catalogue registry. Reopen search (or Retry registry) to discover changes. Drafts and disabled catalogues are not searchable. Demo never reads or publishes live catalogue data.
+SearchRegistry registers built-in adapters and reads enabled `searchCatalogs` descriptors. A new public catalogue needs no search screen, parser enum or routing edits when it uses the shared contract. Super admin can register and publish it under Admin → Catalogue registry. Search observes the public registry live; adding, editing or disabling a descriptor updates categories without restarting the app. Retry reconnects after a registry network failure. Listing pages use their scoped cache. Drafts and disabled catalogues are not searchable. Demo never reads or publishes live catalogue data.
 
 Descriptor document `searchCatalogs/transport`:
 

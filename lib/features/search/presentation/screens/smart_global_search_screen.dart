@@ -28,6 +28,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
  int _epoch=0,_limit=20;
  Timer? _debounce;
  StreamSubscription<User?>? _auth;
+ StreamSubscription<QuerySnapshot<Map<String,dynamic>>>? _catalogUpdates;
  bool get _demo=>ActiveProfileController.instance.isDemo||!FirebaseService.initialized;
  String get _uid=>_demo?(ActiveProfileController.instance.effectiveUid??'demo-user-1'):(FirebaseAuth.instance.currentUser?.uid??'signed-out');
  String get _currentScope=>'${_demo?'demo':'real'}:$_uid';
@@ -35,15 +36,20 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
  @override void initState(){super.initState();_category=widget.initialCategory;ActiveProfileController.instance.addListener(_identityChanged);if(FirebaseService.initialized)_auth=FirebaseAuth.instance.authStateChanges().listen((_)=>_identityChanged());_initialize();}
  void _identityChanged(){if(_scope!=_currentScope)_initialize();}
  Future<void> _initialize()async{
+  _catalogUpdates?.cancel();_catalogUpdates=null;
   final request=++_epoch;_scope=_currentScope;final scope=_scope;
   final registry=SearchRegistry(demo:_demo,uid:_uid);
   if(mounted)setState((){_registry=null;_response=null;_recent=[];_ready=false;_loading=false;_filters={};_text.clear();});
   await registry.initialize();final prefs=await SharedPreferences.getInstance();
   if(!mounted||request!=_epoch||scope!=_currentScope)return;
   setState((){_registry=registry;_ready=true;_recent=prefs.getStringList(_recentKey)??[];});
+  if(!registry.demo)_catalogUpdates=FirebaseFirestore.instance.collection('searchCatalogs').where('enabled',isEqualTo:true).snapshots().listen((snapshot){
+   if(!mounted||scope!=_currentScope||!identical(_registry,registry))return;
+   if(registry.applyDocuments(snapshot.docs)){final active=_response!=null||_loading;if(_category!=null&&_category!='all'&&!registry.engine.catalogs.any((c)=>c.id==_category)){_category='all';_filters={};}setState((){});if(active)_search(refresh:true);}
+  },onError:(Object error){if(mounted&&scope==_currentScope&&identical(_registry,registry)){const message='Live catalogue updates are unavailable. Retry to reconnect.';if(!registry.warnings.contains(message))setState(()=>registry.warnings.add(message));}});
   if(widget.initialCategory!=null)await _search();
  }
- @override void dispose(){_epoch++;_debounce?.cancel();_auth?.cancel();ActiveProfileController.instance.removeListener(_identityChanged);_text.dispose();super.dispose();}
+ @override void dispose(){_epoch++;_debounce?.cancel();_auth?.cancel();_catalogUpdates?.cancel();ActiveProfileController.instance.removeListener(_identityChanged);_text.dispose();super.dispose();}
  Future<void> _saveRecent()async{final key=_recentKey;final values=List<String>.from(_recent);final prefs=await SharedPreferences.getInstance();await prefs.setStringList(key,values);}
  Future<void> _search({String? input,bool more=false,bool refresh=false})async{
   final registry=_registry;if(registry==null)return;

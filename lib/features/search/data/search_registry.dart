@@ -32,16 +32,32 @@ class SearchRegistry {
  final List<String> warnings=[];
  final _shared=_SharedLoads();
  SearchRegistry({required this.demo,required this.uid});
- Future<void> initialize()async{
-  final descriptors={for(final c in builtInCatalogs)c.id:c};
-  final published=<String>{};
-  if(!demo){try{
-   final snapshot=await FirebaseFirestore.instance.collection('searchCatalogs').where('enabled',isEqualTo:true).get();
-   for(final doc in snapshot.docs){final c=SearchCatalog.fromMap(doc.id,doc.data());if(c.valid){descriptors[c.id]=c;published.add(c.id);}}
-  }catch(_){warnings.add('Additional catalogues are unavailable. Retry to reload them.');}}
+ String _fingerprint='';
+ bool _registered=false;
+ bool applyCatalogs(Iterable<SearchCatalog> remote){
+  final public=remote.where((c)=>c.valid).toList()..sort((a,b)=>a.id.compareTo(b.id));
+  final fingerprint=public.map((c)=>'${c.id}:${c.toMap()}').join('|');
+  if(_registered&&fingerprint==_fingerprint)return false;
+  _registered=true;_fingerprint=fingerprint;
+  final descriptors={for(final c in builtInCatalogs)c.id:c,for(final c in public)c.id:c};
+  final published=public.map((c)=>c.id).toSet();
+  for(final c in engine.catalogs){engine.unregister(c.id);}
   for(final c in descriptors.values){engine.register(_CatalogAdapter(c,demo,uid,published.contains(c.id),_shared));}
-  engine.resetScope('${demo?'demo':'real'}:$uid');
+  engine.resetScope('${demo?'demo':'real'}:$uid:$fingerprint');
+  return true;
  }
+ bool applyDocuments(Iterable<QueryDocumentSnapshot<Map<String,dynamic>>> docs){
+  final valid=<SearchCatalog>[];
+  for(final doc in docs){try{final c=SearchCatalog.fromMap(doc.id,doc.data());if(c.valid&&doc.data()['enabled']==true)valid.add(c);}catch(_){/* One invalid descriptor must not block other catalogues. */}}
+  return applyCatalogs(valid);
+ }
+ Future<void> initialize()async{
+  if(!demo){try{
+   final snapshot=await FirebaseFirestore.instance.collection('searchCatalogs').where('enabled',isEqualTo:true).get();applyDocuments(snapshot.docs);return;
+  }catch(_){warnings.add('Additional catalogues are unavailable. Retry to reload them.');}}
+  applyCatalogs(const []);
+ }
+
 }
 
 class _Cursor {
