@@ -28,4 +28,4 @@ url=ROOT+'/'+urllib.parse.quote(path,safe='')+'?alt=media'
 check(200,request('GET',url,'community-bob'),'signed-in community member can read public post media')
 check(403,request('GET',url),'anonymous media read denied without a shared download token')
 check(403,request('DELETE',ROOT+'/'+urllib.parse.quote(path,safe=''),'community-bob'),'another member cannot delete media')
-check(200,request('DELETE',ROOT+'/'+urllib.parse.quote(path,safe=''),'community-alice'),'owner removes own media')
+check(204,request('DELETE',ROOT+'/'+urllib.parse.quote(path,safe=''),'community-alice'),'owner removes own media')
