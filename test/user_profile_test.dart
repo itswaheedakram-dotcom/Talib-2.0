@@ -71,12 +71,12 @@ void main() {
     expect(find.text('immutable-long-user-id-123456789'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
-  testWidgets('central profile screen displays UID and edit entry without duplicate course', (tester) async {
+  testWidgets('central profile screen hides internal UID and keeps edit entry without duplicate course', (tester) async {
     ActiveProfileController.instance.activate(temporaryProfiles[0]);
     StudentAffiliationRepository.instance.resetDemoForTest(seed: true);
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: const ProfileView(uid: 'demo-user-1')));
     await tester.pumpAndSettle();
-    expect(find.text('UID: demo-user-1'), findsOneWidget);
+    expect(find.text('UID: demo-user-1'), findsNothing);
     expect(find.text('Edit profile'), findsOneWidget);
     expect(find.text('BS Computer Science (Demo)'), findsOneWidget);
     expect(tester.takeException(), isNull);
