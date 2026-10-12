@@ -184,7 +184,7 @@ abstract final class SmartSearchParser {
     final stopWords = <String>{
       'in','near','where','good','best','top','find','show','need','me','the','a','an','for','of','is','are','open','currently','admission','hostel','scholarship','institute','school','college','university','people','profile','resources','community','deadline','last','date','under','below','less','than','maximum','max','budget','rs','pkr','female','male','girls','boys','students','student','kaha','kahan','hai','hain','mein','main','dakhla','wazifa','wazaif','rupay','kiraya','monthly','available','wi','fi','room','larki','larko','larkon','larkio','larkiyon','batao','btao','dikhao','dhoondo','mujhy','mujhe','chahiye','he','hn','acha','achi','achy','ache','behtareen','tak','kam','khulay','khula','tareekh','akhri','aakhri','lakh','lac','hazaar','hazar','thousand','rated','achay','idaray','bata','dein'
     };
-    for (final entry in _locations.entries) {
+    for (final entry in _locations.entries.where((entry)=>entry.key==location||entry.key==area)) {
       for (final alias in entry.value) {
         stopWords.addAll(normalize(alias).split(' '));
       }

@@ -42,7 +42,8 @@ abstract class SearchAdapter {
 class SearchMatch {
   final SearchRecord record;
   final double score;
-  const SearchMatch(this.record,this.score);
+  final Map<String,dynamic>? offer;
+  const SearchMatch(this.record,this.score,{this.offer});
 }
 class SearchResponse {
   final List<SearchMatch> matches;
@@ -68,10 +69,11 @@ class SearchEngine {
   static String normalize(String value){final parsed=SmartSearchParser.normalize(value);return parsed.isEmpty?value.toLowerCase().trim():parsed;}
   String inferCategory(String query){
     final parsed=SmartSearchParser.parse(query);final known=switch(parsed.category){GlobalSearchCategory.institutes=>'institutes',GlobalSearchCategory.admissions=>'admissions',GlobalSearchCategory.hostels=>'hostels',GlobalSearchCategory.scholarships=>'scholarships',GlobalSearchCategory.resources=>'resources',GlobalSearchCategory.community=>'posts',GlobalSearchCategory.people=>'people',_=>'all'};
-    if(known!='all'&&_adapters.containsKey(known))return known;
+    
     final text=normalize(query);final candidates=<({String id,int length})>[];
     for(final cat in catalogs){for(final alias in [cat.label,...cat.aliases]){final n=normalize(alias);if(n.isNotEmpty&&RegExp(r'\b'+RegExp.escape(n)+r'\b').hasMatch(text))candidates.add((id:cat.id,length:n.length));}}
-    candidates.sort((a,b)=>b.length.compareTo(a.length));return candidates.isEmpty?'all':candidates.first.id;
+    if(candidates.any((c)=>c.id==known))return known;
+    candidates.sort((a,b)=>b.length.compareTo(a.length));return candidates.isEmpty?(_adapters.containsKey(known)?known:'all'):candidates.first.id;
   }
   Future<SearchResponse> search(String query,{String? category,Map<String,String> filters=const {},String sort='Relevance',bool refresh=false,bool more=false})async{
     final scope=_scope;final effective=category??inferCategory(query);final warnings=<String>[];
@@ -111,15 +113,22 @@ class SearchEngine {
     for(final source in selected){for(final record in _cache[source.catalog.id]??<SearchRecord>[]){
       if(!_passes(record,applied))continue;
       final score=_score(record,terms,query,source.catalog);
-      if(score>0)matches.add(SearchMatch(record,score));
+      if(score>0)matches.add(SearchMatch(record,score,offer:_matchingOffer(record,applied)));
     }}
     matches.sort((a,b){
       if(sort=='Newest'){final c=(b.record.updatedAt??DateTime(1970)).compareTo(a.record.updatedAt??DateTime(1970));if(c!=0)return c;}
       if(sort=='Top rated'){final c=_number(b.record.field('rating')).compareTo(_number(a.record.field('rating')));if(c!=0)return c;}
-      if(sort=='Price low'){final av=a.record.field('budget'),bv=b.record.field('budget');final c=(av==null?double.infinity:_number(av)).compareTo(bv==null?double.infinity:_number(bv));if(c!=0)return c;}
+      if(sort=='Price low'){final av=a.offer?['budget']??a.record.field('budget'),bv=b.offer?['budget']??b.record.field('budget');final c=(av==null?double.infinity:_number(av)).compareTo(bv==null?double.infinity:_number(bv));if(c!=0)return c;}
       final score=b.score.compareTo(a.score);return score!=0?score:a.record.title.compareTo(b.record.title);
     });
     return SearchResponse(matches,warnings:warnings,hasMore:selected.any((s)=>_more.contains(s.catalog.id)),category:effective,filters:applied);
+  }
+  Map<String,dynamic>? _matchingOffer(SearchRecord record,Map<String,String> filters){
+    if(record.catalogId!='hostels'||record.field('offers') is! List)return null;
+    const keys={'budget','roomType','rentBasis','ac','availableOnly'};
+    final offers=(record.field('offers') as List).whereType<Map>().where((o)=>filters.entries.where((e)=>keys.contains(e.key)).every((e)=>_fieldPass(o[e.key],e.value,e.key))).map((o)=>Map<String,dynamic>.from(o)).toList();
+    offers.sort((a,b)=>(a['budget'] is num?(a['budget'] as num).toDouble():double.infinity).compareTo(b['budget'] is num?(b['budget'] as num).toDouble():double.infinity));
+    return offers.isEmpty?null:offers.first;
   }
   bool _passes(SearchRecord record,Map<String,String> filters){
     final roomKeys={'budget','roomType','rentBasis','ac','availableOnly'};
