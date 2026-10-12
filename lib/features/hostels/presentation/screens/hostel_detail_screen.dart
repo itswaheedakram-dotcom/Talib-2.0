@@ -754,8 +754,8 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
       padding: const EdgeInsets.fromLTRB(0, 18, 0, 8),
       child: Text(
         value,
-        style: const TextStyle(
-          color: AppColors.darkGreen,
+        style: TextStyle(
+          color: AppPalette.of(context).ink,
           fontSize: 17,
           fontWeight: FontWeight.w700,
         ),
@@ -768,7 +768,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppPalette.of(context).surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(

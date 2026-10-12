@@ -32,7 +32,7 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
   final facilities=<String>[],rules=<String>[],photos=<String>[],included=<String>[];
   final nearby=<String,String>{};
   String gender='',type='',meals='No meals',curfew='No curfew',visitors='Not allowed',stay='1 month',notice='1 month';
-  bool saving=false,uploading=false,ready=false,showRooms=false,publicPhone=true,attempted=false;
+  bool saving=false,uploading=false,ready=false,showRooms=false,publicPhone=true,attempted=false,restoring=false;
   late final String formUid;
   late final bool formDemo;
   int step=0;Timer? timer;String? error;
@@ -58,8 +58,8 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
       }
       if(rooms.isEmpty)rooms.add(_RoomDraft());
       final prefs=await SharedPreferences.getInstance();final saved=prefs.getString(draftKey);
-      if(saved!=null&&mounted){final yes=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(title:const Text('Resume saved draft?'),content:const Text('Continue the hostel form saved on this device.'),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Start fresh')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Resume'))]));if(yes==true){restore(Map<String,dynamic>.from(jsonDecode(saved)));}else{await prefs.remove(draftKey);}}
-    }catch(_){error='Unable to load this form. Please try again.';}finally{if(mounted)setState(()=>ready=true);}
+      if(saved!=null&&mounted){setState((){ready=true;restoring=true;});final yes=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(title:const Text('Resume saved draft?'),content:const Text('Continue the hostel form saved on this device.'),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Start fresh')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Resume'))]));if(yes==true){restore(Map<String,dynamic>.from(jsonDecode(saved)));}else{await prefs.remove(draftKey);}}
+    }catch(_){error='Unable to load this form. Please try again.';}finally{restoring=false;if(mounted)setState(()=>ready=true);}
   }
   Map<String,dynamic> draft()=>{'fields':{for(final e in fields.entries)e.key:e.value.text},'gender':gender,'type':type,'meals':meals,'rooms':rooms.map((r)=>r.draft).toList(),'facilities':facilities,'rules':rules,'photos':photos,'included':included,'nearby':nearby,'publicPhone':publicPhone,'curfew':curfew,'visitors':visitors,'stay':stay,'notice':notice,'step':step};
   void restore(Map<String,dynamic> d){
@@ -67,7 +67,7 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
     gender=d['gender']??'';type=d['type']??'';meals=d['meals']??'No meals';for(final r in rooms){r.dispose();}rooms..clear()..addAll((d['rooms'] as List? ?? []).map((r)=>_RoomDraft.fromDraft(Map<String,dynamic>.from(r))));
     void replace(List<String> list,String key){list..clear()..addAll(List<String>.from(d[key]??[]));}replace(facilities,'facilities');replace(rules,'rules');replace(photos,'photos');replace(included,'included');nearby..clear()..addAll(Map<String,String>.from(d['nearby']??{}));publicPhone=d['publicPhone']!=false;curfew=d['curfew']??'No curfew';visitors=d['visitors']??'Not allowed';stay=d['stay']??'1 month';notice=d['notice']??'1 month';step=((d['step'] as num?)?.toInt()??0).clamp(0,3);
   }
-  void dirty(){if(!ready||saving||uid!=formUid||demo!=formDemo)return;timer?.cancel();timer=Timer(const Duration(milliseconds:500),()=>saveDraft());}
+  void dirty(){if(!ready||saving||restoring||uid!=formUid||demo!=formDemo)return;timer?.cancel();timer=Timer(const Duration(milliseconds:500),()=>saveDraft());}
   Future<void> saveDraft({bool notify=false})async{try{if(uid!=formUid||demo!=formDemo)return;final data=jsonEncode(draft());final key=draftKey;final prefs=await SharedPreferences.getInstance();await prefs.setString(key,data);if(notify&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Draft saved on this device.')));}catch(_){if(notify&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Draft could not be saved.')));}}
   @override void dispose(){timer?.cancel();if(ready&&!saving&&error==null)saveDraft();locations.removeListener(changed);institutes.removeListener(changed);for(final c in fields.values){c.dispose();}for(final r in rooms){r.dispose();}scroll.dispose();super.dispose();}
   void select(VoidCallback action){setState(action);dirty();}
