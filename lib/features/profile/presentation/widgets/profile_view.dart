@@ -155,7 +155,7 @@ class _ProfileViewState extends State<ProfileView> {
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(p.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
             if (p.username.isNotEmpty) UserIdLabel(uid: p.username, showLabel: false),
-            UserIdLabel(uid: p.uid), Text(p.roleLabel),
+            Text(p.roleLabel),
             if (p.city.isNotEmpty) Text(p.city),
           ])),
         ]),
@@ -197,6 +197,10 @@ class _ProfileViewState extends State<ProfileView> {
       ]),
       _reviews(p, owner),
       if (owner) _card('Account', [
+        TextButton.icon(onPressed: () async {
+          await Clipboard.setData(ClipboardData(text: p.uid));
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account ID copied')));
+        }, icon: const Icon(Icons.copy_outlined), label: const Text('Copy account ID')),
         TextButton.icon(onPressed: () => context.push('/settings'), icon: const Icon(Icons.settings_outlined), label: const Text('Privacy & settings')),
         if (repo.isDemo(p.uid)) ...[
           const Text('Demo changes stay in this test session.'),
