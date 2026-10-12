@@ -43,3 +43,9 @@ new={**hostel,'status':'pending','isVerified':False}
 name=f'projects/{PROJECT}/databases/(default)/documents/hostels/hostel-new-test'
 writes=[{'update':{'name':name,'fields':{k:value(v) for k,v in new.items()}}},{'update':{'name':name+'/private/contact','fields':{'phone':value('03001234567')}}}]
 check(200,call('POST',':commit',{'writes':writes},uid='hostel-owner'),'owner creates pending listing and private contact atomically')
+
+# Pre-wizard records may omit optional moderation/review aggregates.
+legacy={k:v for k,v in hostel.items() if k not in ['isVerified','isDemo','reviewCount','ratingTotal','rating']}
+check(200,patch('/hostels/hostel-legacy-test',legacy,seed=True),'seed legacy hostel without optional aggregates')
+check(200,patch('/hostels/hostel-legacy-test?updateMask.fieldPaths=name',{'name':'Updated legacy'},uid='hostel-owner'),'owner can edit legacy hostel without optional aggregates')
+check(403,patch('/hostels/hostel-legacy-test?updateMask.fieldPaths=isVerified',{'isVerified':True},uid='hostel-owner'),'legacy owner cannot grant verification')

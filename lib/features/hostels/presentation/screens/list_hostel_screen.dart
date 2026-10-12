@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
@@ -95,7 +96,7 @@ class _ListHostelScreenState extends State<ListHostelScreen> {
     if(saving)return;if(uid!=formUid||demo!=formDemo){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Your active profile changed. Reopen this form.')));return;}if(!demo&&FirebaseAuth.instance.currentUser==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sign in before submitting.')));return;}
     timer?.cancel();setState(()=>saving=true);
     try{await HostelRepository().saveListingSafe(h,userId:uid,privatePhone:text('phone'),demo:demo);final prefs=await SharedPreferences.getInstance();await prefs.remove(draftKey);if(!mounted)return;ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(widget.initialHostel==null?'Hostel submitted for approval.':'Hostel updated.')));Navigator.pop(context,true);}
-    catch(_){if(mounted){setState(()=>saving=false);await saveDraft();ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Save failed. Check connection and permissions. Your draft is retained.')));}}
+    catch(e){if(mounted){setState(()=>saving=false);await saveDraft();if(!mounted)return;final message=e is FirebaseException?switch(e.code){'permission-denied'=>'Save was denied. Your owner/admin access may have changed. Reopen the form and retry.','unavailable'=>'Unable to reach the server. Check your connection and retry.','not-found'=>'This hostel no longer exists. Reopen the hostel list.',_=>'Unable to save right now. Please retry.'}:'Unable to save this listing. Reopen the form and retry.';ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$message Your draft is retained.')));}}
   }
   Future<void> upload()async{
     if(uploading||photos.length>=12)return;

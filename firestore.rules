@@ -786,11 +786,11 @@ service cloud.firestore {
         || (hostelOwner()
           && request.resource.data.ownerId == resource.data.ownerId
           && request.resource.data.status == resource.data.status
-          && request.resource.data.isVerified == resource.data.isVerified
-          && request.resource.data.isDemo == resource.data.isDemo
-          && request.resource.data.reviewCount == resource.data.reviewCount
-          && request.resource.data.ratingTotal == resource.data.ratingTotal
-          && request.resource.data.rating == resource.data.rating
+          && request.resource.data.get('isVerified', false) == resource.data.get('isVerified', false)
+          && request.resource.data.get('isDemo', false) == resource.data.get('isDemo', false)
+          && request.resource.data.get('reviewCount', 0) == resource.data.get('reviewCount', 0)
+          && request.resource.data.get('ratingTotal', 0) == resource.data.get('ratingTotal', 0)
+          && request.resource.data.get('rating', 0) == resource.data.get('rating', 0)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name','city','area','type','gender','distance','price','securityFee',
             'roomType','availability','meals','ac','facilities','imageUrl','imageUrls',
