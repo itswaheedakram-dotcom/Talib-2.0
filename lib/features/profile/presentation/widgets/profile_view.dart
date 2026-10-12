@@ -10,6 +10,7 @@ import '../../../../core/services/active_profile_controller.dart';
 import '../../../../core/services/demo_data_service.dart';
 import '../../../../core/services/database_service.dart';
 import '../../../../core/widgets/user_identity.dart';
+import '../../../../core/widgets/verified_account_name.dart';
 import 'profile_editor.dart';
 import 'student_affiliation_card.dart';
 
@@ -153,7 +154,7 @@ class _ProfileViewState extends State<ProfileView> {
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           ProfileAvatar(name: p.name, photoUrl: p.photoUrl), const SizedBox(width: 16),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(p.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+            VerifiedAccountName(uid:p.uid,name:p.name,style:Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight:FontWeight.w700)),
             if (p.username.isNotEmpty) UserIdLabel(uid: p.username, showLabel: false),
             Text(p.roleLabel),
             if (p.city.isNotEmpty) Text(p.city),

@@ -1,4 +1,5 @@
 import '../../../../core/models/user_profile.dart';
+import '../../../../core/widgets/verified_account_name.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -378,7 +379,7 @@ class _SmartGlobalSearchScreenState extends State<SmartGlobalSearchScreen> {
                         if(index==_visibleLimit)return TextButton(onPressed:()=>setState(()=>_visibleLimit+=60),child:Text('Show more results'));
                         final h=_hits[index];return Card(color:AppPalette.of(context).surface,margin:EdgeInsets.zero,child:ListTile(
                           leading:CircleAvatar(backgroundColor:AppPalette.of(context).softSurface,foregroundColor:AppPalette.of(context).ink,child:Icon(h.icon)),
-                          title:Text(h.title,style:TextStyle(fontWeight:FontWeight.w700,color:AppPalette.of(context).ink)),
+                          title:h.route.startsWith('/profile/')?VerifiedAccountName(uid:Uri.decodeComponent(h.route.substring('/profile/'.length)),name:h.title,compact:true,style:TextStyle(fontWeight:FontWeight.w700,color:AppPalette.of(context).ink)):Text(h.title,style:TextStyle(fontWeight:FontWeight.w700,color:AppPalette.of(context).ink)),
                           subtitle:Padding(padding:EdgeInsets.only(top:5),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(h.type,style:TextStyle(color:AppPalette.of(context).accent,fontWeight:FontWeight.w600)),if(h.location.isNotEmpty)Text(h.location),if(h.subtitle.isNotEmpty)Text(h.subtitle,maxLines:2,overflow:TextOverflow.ellipsis)])),
                           trailing:Icon(Icons.chevron_right,color:AppPalette.of(context).accent),onTap:()=>_open(h),
                         ));

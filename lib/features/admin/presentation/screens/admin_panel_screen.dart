@@ -262,6 +262,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             ),
           ),
           const SizedBox(height: 8),
+          _section('Account verification', 'Demo-only green tick controls', Icons.verified_rounded, () => context.push('/admin/account-verification')),
           const Text('Admin modules', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
           _section(
             'Hostel Ownership Claims',
@@ -378,6 +379,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   const Text('Platform administration', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 6),
                   _section('Manager Admins', 'Create, suspend or revoke manager access', Icons.admin_panel_settings_outlined, _showCreateManagerDialog),
+                  _section('Account verification', 'Verify or revoke green account ticks', Icons.verified_rounded, () => context.push('/admin/account-verification')),
                   _managerSection(),
                 ],
                 if (_access.isSuperAdmin || canManageInstitutes)

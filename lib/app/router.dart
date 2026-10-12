@@ -52,6 +52,7 @@ import '../features/settings/presentation/screens/settings_screen.dart';
 import '../features/settings/presentation/screens/blocked_users_screen.dart';
 import '../features/settings/presentation/screens/temporary_profiles_screen.dart';
 import '../features/admin/presentation/screens/admin_panel_screen.dart';
+import '../features/admin/presentation/screens/account_verification_screen.dart';
 import '../features/admin/presentation/screens/admin_hostel_claims_screen.dart';
 import '../features/admin/presentation/screens/admin_hostel_submissions_screen.dart';
 import '../features/admin/presentation/screens/admin_placeholder_screen.dart';
@@ -75,6 +76,7 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/institute-dashboard',builder:(_,__)=>InstituteModeScope(builder:()=>const InstituteDashboardScreen())),
   GoRoute(path:'/institute/:id/student-verifications',builder:(_,s)=>InstituteRecordScope(id:s.pathParameters['id']!,builder:()=>StudentVerificationsScreen(instituteId:s.pathParameters['id']!))),
   GoRoute(path:'/institute-admin/:claimId',builder:(_,s)=>InstituteModeScope(builder:()=>InstituteAdminScreen(claimId:s.pathParameters['claimId']!))),
+  GoRoute(path:'/admin/account-verification',builder:(_,__)=>const AccountVerificationScreen()),
   GoRoute(path:'/admin',builder:(_,__)=>const AdminPanelScreen()),
   GoRoute(path:'/admin/institute-claims',builder:(_,__)=>InstituteModeScope(builder:()=>const AdminInstituteClaimsScreen())),
   GoRoute(path:'/admin/institute-submissions',builder:(_,__)=>InstituteModeScope(builder:()=>const AdminInstituteSubmissionsScreen())),

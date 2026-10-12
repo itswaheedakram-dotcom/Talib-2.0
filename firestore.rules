@@ -150,6 +150,44 @@ service cloud.firestore {
         && data.diff(old).affectedKeys().hasOnly(['verificationStatus', 'updatedAt']);
     }
 
+    function accountVerificationCategory(category) {
+      return category in ['official_team','institute_representative','education_professional','hostel_representative','public_figure','organization'];
+    }
+    match /accountVerifications/{userId} {
+      allow read: if signedIn();
+      allow create, update: if admin()
+        && exists(/databases/$(database)/documents/users/$(userId))
+        && request.resource.data.keys().hasOnly(['status','category','verifiedAt','updatedAt','auditId'])
+        && request.resource.data.status in ['verified','revoked']
+        && (request.resource.data.status != 'revoked' || (exists(/databases/$(database)/documents/accountVerifications/$(userId))
+          && resource.data.status == 'verified' && request.resource.data.category == resource.data.category
+          && request.resource.data.verifiedAt == resource.data.verifiedAt))
+        && accountVerificationCategory(request.resource.data.category)
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.verifiedAt is timestamp
+        && (request.resource.data.status != 'verified' || request.resource.data.verifiedAt == request.time)
+        && request.resource.data.auditId is string
+        && existsAfter(/databases/$(database)/documents/accountVerificationAudits/$(request.resource.data.auditId))
+        && getAfter(/databases/$(database)/documents/accountVerificationAudits/$(request.resource.data.auditId)).data.targetUid == userId
+        && getAfter(/databases/$(database)/documents/accountVerificationAudits/$(request.resource.data.auditId)).data.actorUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/accountVerificationAudits/$(request.resource.data.auditId)).data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/accountVerificationAudits/$(request.resource.data.auditId)).data.category == request.resource.data.category
+        && getAfter(/databases/$(database)/documents/accountVerificationAudits/$(request.resource.data.auditId)).data.action == (request.resource.data.status == 'verified' ? 'verify' : 'revoke');
+      allow delete: if false;
+    }
+    match /accountVerificationAudits/{auditId} {
+      allow read: if admin();
+      allow create: if admin()
+        && request.resource.data.keys().hasOnly(['targetUid','actorUid','action','category','reason','createdAt','previousStatus'])
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.action in ['verify','revoke']
+        && accountVerificationCategory(request.resource.data.category)
+        && request.resource.data.reason is string && request.resource.data.reason.size() >= 10 && request.resource.data.reason.size() <= 1000
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/accountVerifications/$(request.resource.data.targetUid)).data.auditId == auditId;
+      allow update, delete: if false;
+    }
+
     match /users/{userId} {
       // Authenticated users may view profiles, but may only change their own profile.
       // Admin tools may update only the representative fields needed after a verified claim.

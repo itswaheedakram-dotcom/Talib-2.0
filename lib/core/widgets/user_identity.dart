@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'verified_account_name.dart';
 import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -18,8 +19,7 @@ class UserIdentity extends StatelessWidget {
       ProfileAvatar(name: display, photoUrl: photoUrl, radius: 18),
       const SizedBox(width: 8),
       Flexible(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-      Text(display.isEmpty ? 'Student' : display, softWrap: !compact, maxLines: compact ? 1 : null, overflow: compact ? TextOverflow.ellipsis : null,
-        style: TextStyle(fontWeight: FontWeight.w700, color: color)),
+      VerifiedAccountName(uid:uid,name:display.isEmpty?'Student':display,compact:compact,style:TextStyle(fontWeight:FontWeight.w700,color:color)),
       if (showUsername && uid.isNotEmpty) UserIdLabel(uid: username.isEmpty ? uid : username, color: color, showLabel: false),
     ])),
     ]);
