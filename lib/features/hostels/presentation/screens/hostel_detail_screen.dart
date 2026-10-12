@@ -308,6 +308,15 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
               ],
             ],
           ),
+          if (_isOwner)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: OutlinedButton.icon(
+                onPressed: () => context.push('/hostel/${Uri.encodeComponent(hostel.id)}/managers'),
+                icon: const Icon(Icons.manage_accounts_outlined),
+                label: const Text('Manage hostel team'),
+              ),
+            ),
           const SizedBox(height: 14),
           _quickHighlights(),
           const SizedBox(height: 14),
@@ -325,6 +334,9 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                     .where((e) => e.isNotEmpty)
                     .join(', '),
               ),
+            for (final entry in const {'country': 'Country', 'region': 'Province / Region', 'district': 'District'}.entries)
+              if ((hostel.listingDetails[entry.key] ?? '').toString().trim().isNotEmpty)
+                _infoRow(Icons.place_outlined, entry.value, hostel.listingDetails[entry.key].toString()),
             if (hostel.distance.isNotEmpty)
               _infoRow(
                 Icons.near_me_outlined,
@@ -374,10 +386,17 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
           if(hostel.listingDetails.isNotEmpty)...[
             _sectionTitle('Listing details'),
             _infoCard([
-              Text('Included in rent: '+((hostel.listingDetails['includedCharges'] as List?)??[]).join(', ')),
-              if((hostel.listingDetails['extraCharges']??'').toString().isNotEmpty)Text('Extra charges: '+hostel.listingDetails['extraCharges'].toString()),
-              Text('Minimum stay: ${hostel.listingDetails['minimumStay']??'Not specified'} · Notice: ${hostel.listingDetails['noticePeriod']??'Not specified'}'),
-              Text('Curfew: ${hostel.listingDetails['curfew']??'Not specified'} · Visitors: ${hostel.listingDetails['visitors']??'Not specified'}'),
+              _infoRow(Icons.receipt_long_outlined, 'Included in rent',
+                ((hostel.listingDetails['includedCharges'] as List?) ?? []).isEmpty
+                  ? 'Not specified'
+                  : (hostel.listingDetails['includedCharges'] as List).join(', ')),
+              if ((hostel.listingDetails['extraCharges'] ?? '').toString().trim().isNotEmpty)
+                _infoRow(Icons.payments_outlined, 'Extra charges', hostel.listingDetails['extraCharges'].toString()),
+              for (final entry in const {'minimumStay': 'Minimum stay', 'noticePeriod': 'Notice period', 'curfew': 'Curfew', 'visitors': 'Visitors'}.entries)
+                if ((hostel.listingDetails[entry.key] ?? '').toString().trim().isNotEmpty)
+                  _infoRow(Icons.info_outline, entry.value, hostel.listingDetails[entry.key].toString()),
+              if (hostel.listingDetails['nearbyInstitutes'] is Map && (hostel.listingDetails['nearbyInstitutes'] as Map).isNotEmpty)
+                const Text('Nearby institutes', style: TextStyle(fontWeight: FontWeight.w600)),
               if(hostel.listingDetails['nearbyInstitutes'] is Map)Wrap(spacing:8,children:(hostel.listingDetails['nearbyInstitutes'] as Map).entries.map((e)=>TextButton(onPressed:()=>context.push('/institute/'+Uri.encodeComponent(e.key.toString())),child:Text(e.value.toString()))).toList()),
               if(hostel.listingDetails['publicPhone']==false)TextButton.icon(onPressed:hostel.ownerId.isEmpty?null:()=>context.push('/profile/'+Uri.encodeComponent(hostel.ownerId)),icon:const Icon(Icons.person_outline),label:const Text('Contact owner through profile')),
             ]),
