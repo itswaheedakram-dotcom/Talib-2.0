@@ -2,6 +2,7 @@ import '../../../../core/widgets/user_identity.dart';
 import '../../../../core/services/admin_access_service.dart';
 import 'list_hostel_screen.dart';
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -490,6 +491,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                   },
                   itemBuilder: (_, index) {
                     final value = values[index];
+                    if(value.startsWith('data:image/'))return Image.memory(base64Decode(value.split(',').last),fit:BoxFit.cover);
                     final isLocalFile = value.startsWith('/') || value.startsWith('file://');
                     if (isLocalFile) {
                       final localPath = value.startsWith('file://')

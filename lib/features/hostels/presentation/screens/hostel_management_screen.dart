@@ -416,8 +416,10 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
             IconButton(onPressed: () => setState(() { r.dispose(); _rooms.removeAt(index); }), icon: const Icon(Icons.delete_outline)),
           ]),
           _roomField(r.type, 'Room type', r.setType),
-          _roomField(r.rent, 'Rent', r.setRent),
-          _roomField(r.security, 'Security fee', r.setSecurity),
+          DropdownButtonFormField<String>(initialValue:r.rentBasis.isEmpty?null:r.rentBasis,decoration:_dec('Monthly rent basis'),items:const [DropdownMenuItem(value:'Per bed',child:Text('Per bed')),DropdownMenuItem(value:'Per room',child:Text('Per room'))],onChanged:(v)=>setState(()=>r.rentBasis=v??'')),
+          _roomField(r.rent, 'Monthly rent (PKR)', r.setRent),
+          _roomField(r.security, 'Security fee (PKR)', r.setSecurity),
+          DropdownButtonFormField<String>(initialValue:const ['Refundable','Non-refundable','No security fee','Not specified'].contains(r.securityPolicy)?r.securityPolicy:'Not specified',decoration:_dec('Security policy'),items:const ['Refundable','Non-refundable','No security fee','Not specified'].map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:(v)=>setState(()=>r.securityPolicy=v??'Not specified')),
           Row(children: [
             Expanded(child: _roomField(r.totalBeds, 'Total beds', r.setTotalBeds)),
             const SizedBox(width: 10),
@@ -625,11 +627,11 @@ class _RoomDraft {
   factory _RoomDraft.empty() => _RoomDraft(
     type: TextEditingController(),
     rent: TextEditingController(),
-    security: TextEditingController(),
+    security: TextEditingController(text:'0'),
     totalBeds: TextEditingController(text: '0'),
     availableBeds: TextEditingController(text: '0'),
     notes: TextEditingController(),
-  );
+  )..rentBasis='Per bed';
 
   factory _RoomDraft.fromRoom(HostelRoom room) => _RoomDraft(
     type: TextEditingController(text: room.type),
