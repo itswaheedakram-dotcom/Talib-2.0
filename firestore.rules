@@ -559,15 +559,64 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.permissions[permission] == true;
       }
 
+      function validHostelRoomAt(rooms, index) {
+        return rooms.size() <= index || (rooms[index] is map
+          && rooms[index].totalBeds is int && rooms[index].totalBeds > 0
+          && rooms[index].availableBeds is int && rooms[index].availableBeds >= 0
+          && rooms[index].availableBeds <= rooms[index].totalBeds
+          && rooms[index].rent is string && rooms[index].rent.matches('^[0-9]+([.][0-9]+)?$')
+          && !rooms[index].rent.matches('^0+([.]0+)?$')
+          && rooms[index].rentBasis in ['Per bed', 'Per room']
+          && rooms[index].securityFee is string && rooms[index].securityFee.matches('^[0-9]+([.][0-9]+)?$')
+          && rooms[index].roomCount is int && rooms[index].roomCount > 0);
+      }
+      function validStructuredHostel(data) {
+        return (!('listingDetails' in data) || (data.listingDetails is map
+          && data.listingDetails.publicPhone is bool
+          && (data.listingDetails.publicPhone == true || data.phone == '')))
+          && (!('rooms' in data) || !('listingDetails' in data) || (data.rooms is list && data.rooms.size() > 0 && data.rooms.size() <= 30
+          && validHostelRoomAt(data.rooms, 0)
+          && validHostelRoomAt(data.rooms, 1)
+          && validHostelRoomAt(data.rooms, 2)
+          && validHostelRoomAt(data.rooms, 3)
+          && validHostelRoomAt(data.rooms, 4)
+          && validHostelRoomAt(data.rooms, 5)
+          && validHostelRoomAt(data.rooms, 6)
+          && validHostelRoomAt(data.rooms, 7)
+          && validHostelRoomAt(data.rooms, 8)
+          && validHostelRoomAt(data.rooms, 9)
+          && validHostelRoomAt(data.rooms, 10)
+          && validHostelRoomAt(data.rooms, 11)
+          && validHostelRoomAt(data.rooms, 12)
+          && validHostelRoomAt(data.rooms, 13)
+          && validHostelRoomAt(data.rooms, 14)
+          && validHostelRoomAt(data.rooms, 15)
+          && validHostelRoomAt(data.rooms, 16)
+          && validHostelRoomAt(data.rooms, 17)
+          && validHostelRoomAt(data.rooms, 18)
+          && validHostelRoomAt(data.rooms, 19)
+          && validHostelRoomAt(data.rooms, 20)
+          && validHostelRoomAt(data.rooms, 21)
+          && validHostelRoomAt(data.rooms, 22)
+          && validHostelRoomAt(data.rooms, 23)
+          && validHostelRoomAt(data.rooms, 24)
+          && validHostelRoomAt(data.rooms, 25)
+          && validHostelRoomAt(data.rooms, 26)
+          && validHostelRoomAt(data.rooms, 27)
+          && validHostelRoomAt(data.rooms, 28)
+          && validHostelRoomAt(data.rooms, 29)
+        ));
+      }
       allow read: if resource.data.status == 'approved' || hostelOwner() || admin()
         || (signedIn() && exists(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid))
           && get(/databases/$(database)/documents/hostels/$(hostelId)/managers/$(request.auth.uid)).data.status == 'active');
 
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status == 'pending'
+        && validStructuredHostel(request.resource.data);
 
-      allow update: if admin()
+      allow update: if (admin()
         || (hostelOwner()
           && request.resource.data.ownerId == resource.data.ownerId
           && request.resource.data.status == resource.data.status
@@ -579,7 +628,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name','city','area','type','gender','distance','price','securityFee',
             'roomType','availability','meals','ac','facilities','imageUrl','imageUrls',
-            'description','phone','website','address','rooms','rules','updatedAt'
+            'description','phone','website','address','rooms','rules','listingDetails','updatedAt'
           ]))
         || (managerPermission('basicInfo')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','type','gender','description','updatedAt']))
@@ -607,9 +656,23 @@ service cloud.firestore {
           && request.resource.data.reviewCount >= 0
           && request.resource.data.ratingTotal >= 0
           && request.resource.data.rating >= 0
-          && request.resource.data.rating <= 5);
+          && request.resource.data.rating <= 5))
+        && ((!request.resource.data.diff(resource.data).affectedKeys().hasAny(['rooms','listingDetails','phone']))
+          || validStructuredHostel(request.resource.data));
 
       allow delete: if admin() || hostelOwner();
+
+      match /private/{documentId} {
+        function mayEditContact() {
+          return admin() || (signedIn()
+            && getAfter(/databases/$(database)/documents/hostels/$(hostelId)).data.ownerId == request.auth.uid)
+            || managerPermission('contact');
+        }
+        allow read: if admin() || (signedIn() && get(/databases/$(database)/documents/hostels/$(hostelId)).data.ownerId == request.auth.uid) || managerPermission('contact');
+        allow create, update: if documentId == 'contact' && mayEditContact()
+          && request.resource.data.keys().hasOnly(['phone','updatedAt']) && request.resource.data.phone is string;
+        allow delete: if mayEditContact();
+      }
 
       match /managers/{managerId} {
         function parentHostelOwner() {

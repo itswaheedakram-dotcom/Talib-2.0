@@ -1,4 +1,5 @@
 import '../../../core/models/user_profile.dart';
+import '../../../core/services/admin_access_service.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/hostel.dart';
@@ -150,7 +151,7 @@ class HostelRepository {
       imageUrl: old.imageUrl, address: old.address, ownerId: old.ownerId,
       ownerName: old.ownerName, status: status, isVerified: status == 'approved',
       isDemo: true, rating: old.rating, reviewCount: old.reviewCount,
-      ratingTotal: old.ratingTotal, rooms: old.rooms, rules: old.rules,
+      ratingTotal: old.ratingTotal, rooms: old.rooms, rules: old.rules, listingDetails:old.listingDetails,
     );
     _emitDemoHostels();
   }
@@ -202,7 +203,7 @@ class HostelRepository {
           imageUrl: old.imageUrl, address: old.address, ownerId: claim.userId,
           ownerName: claim.userName, status: old.status, isVerified: old.isVerified,
           isDemo: true, rating: old.rating, reviewCount: old.reviewCount,
-          ratingTotal: old.ratingTotal, rooms: old.rooms, rules: old.rules,
+          ratingTotal: old.ratingTotal, rooms: old.rooms, rules: old.rules, listingDetails:old.listingDetails,
         );
       }
     }
@@ -281,7 +282,7 @@ class HostelRepository {
         ownerId: current.ownerId, ownerName: current.ownerName, status: current.status,
         isVerified: current.isVerified, isDemo: current.isDemo,
         rating: reviews.isEmpty ? 0 : total / reviews.length,
-        reviewCount: reviews.length, ratingTotal: total, rooms: current.rooms, rules: current.rules,
+        reviewCount: reviews.length, ratingTotal: total, rooms: current.rooms, rules: current.rules, listingDetails:current.listingDetails,
       );
       _emitDemoReviews(hostelId);
     }
@@ -393,7 +394,7 @@ class HostelRepository {
         reviewCount: 0,
         ratingTotal: 0,
         rooms: hostel.rooms,
-        rules: hostel.rules,
+        rules: hostel.rules, listingDetails:hostel.listingDetails,
       );
       _demoHostels.add(copy);
       _emitDemoHostels();
@@ -539,6 +540,7 @@ class HostelRepository {
     required Map<String, dynamic> changes,
   }) async {
     if (changes.isEmpty) return;
+    if(changes['rooms'] is List){final rooms=(changes['rooms'] as List).map((room)=>room is HostelRoom?room:HostelRoom.fromMap(Map<String,dynamic>.from(room))).toList();if(hostel.listingDetails.isNotEmpty){for(final room in rooms){if(room.validationError!=null)throw ArgumentError(room.validationError);}}changes={...changes,'rooms':rooms.map((room)=>room.toMap()).toList()};}
     if (userId.trim().isEmpty) throw StateError('User identity is required.');
     final isLocalDemoHostel = _demoHostels.any((item) => item.id == hostel.id);
     if (userId.startsWith('demo-user-') && !isLocalDemoHostel) {
@@ -563,7 +565,8 @@ class HostelRepository {
 
     final isOwner = hostel.ownerId == userId;
     final isDemoHostel = _demoHostels.any((item) => item.id == hostel.id);
-    if (!isOwner) {
+    final superAdmin=AdminAccessService.instance.isSuperAdmin||(isLocalDemoHostel&&AdminAccessService.instance.isDemoSuperAdmin);
+    if (!isOwner && !superAdmin) {
       final manager = await getManager(hostel.id, userId);
       if (manager == null || !manager.can(permission)) {
         throw StateError('You do not have permission to edit this section.');
@@ -574,7 +577,13 @@ class HostelRepository {
       final index = _demoHostels.indexWhere((item) => item.id == hostel.id);
       if (index < 0) throw StateError('Hostel not found.');
       _demoHostels[index] = _applyDemoChanges(_demoHostels[index], changes);
+      _emitDemoHostels();
       return;
+    }
+    if(permission==HostelManagerPermissions.contact&&hostel.listingDetails['publicPhone']==false&&changes.containsKey('phone')){
+      final phone=changes['phone'].toString();
+      await _collection.doc(hostel.id).collection('private').doc('contact').set({'phone':phone,'updatedAt':FieldValue.serverTimestamp()});
+      changes={...changes,'phone':''};
     }
     await _collection.doc(hostel.id).update({
       ...changes,
@@ -617,8 +626,9 @@ class HostelRepository {
       reviewCount: hostel.reviewCount,
       ratingTotal: hostel.ratingTotal,
       rooms: changes['rooms'] is List
-          ? List<HostelRoom>.from(changes['rooms'] as List)
+          ? (changes['rooms'] as List).map((room)=>room is HostelRoom?room:HostelRoom.fromMap(Map<String,dynamic>.from(room))).toList()
           : hostel.rooms,
+      listingDetails:hostel.listingDetails,
       rules: changes['rules'] is List
           ? List<String>.from((changes['rules'] as List).map((e) => e.toString()))
           : hostel.rules,
@@ -690,6 +700,40 @@ class HostelRepository {
       batch.set(ref, {...hostel.toMap(), 'status':'approved','isVerified':true,'isDemo':true,'reviewCount':0,'ratingTotal':0.0,'rating':0.0,'createdAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()});
     }
     await batch.commit();
+  }
+
+  static final Map<String,String> _demoContacts={};
+  Future<String> privateContact(Hostel hostel) async {
+    if(hostel.isDemo||!FirebaseService.initialized)return _demoContacts[hostel.id]??'';
+    final doc=await _collection.doc(hostel.id).collection('private').doc('contact').get();
+    return (doc.data()?['phone']??'').toString();
+  }
+  Future<String> saveListingSafe(Hostel hostel,{required String userId,required String privatePhone,required bool demo}) async {
+    if(userId.isEmpty)throw StateError('Sign in is required.');
+    if(hostel.listingDetails['publicPhone']==false&&hostel.phone.isNotEmpty)throw ArgumentError('Private phone cannot appear in public hostel data.');
+    if(hostel.rooms.isEmpty||hostel.rooms.length>30)throw ArgumentError('Add between 1 and 30 room configurations.');
+    for(final room in hostel.rooms){if(room.validationError!=null)throw ArgumentError(room.validationError);}
+    final superAdmin=AdminAccessService.instance.isSuperAdmin||(demo&&AdminAccessService.instance.isDemoSuperAdmin);
+    if(hostel.ownerId!=userId&&!superAdmin)throw StateError('Only the owner or super admin may edit the full listing.');
+    if(demo){
+      final id=hostel.id.isEmpty?'demo_hostel_${DateTime.now().microsecondsSinceEpoch}':hostel.id;
+      final item=hostel.copyWithDetails({'isDemo':true});
+      final copy=Hostel(id:id,name:item.name,city:item.city,area:item.area,type:item.type,gender:item.gender,distance:item.distance,price:item.price,securityFee:item.securityFee,roomType:item.roomType,availability:item.availability,meals:item.meals,ac:item.ac,facilities:item.facilities,imageUrls:item.imageUrls,description:item.description,phone:item.phone,website:item.website,imageUrl:item.imageUrl,address:item.address,ownerId:item.ownerId,ownerName:item.ownerName,status:item.status,isVerified:item.isVerified,isDemo:true,rating:item.rating,reviewCount:item.reviewCount,ratingTotal:item.ratingTotal,rooms:item.rooms,rules:item.rules,listingDetails:item.listingDetails);
+      final index=_demoHostels.indexWhere((h)=>h.id==id);if(index<0){_demoHostels.add(copy);}else{_demoHostels[index]=copy;}
+      _demoContacts[id]=privatePhone;_emitDemoHostels();return id;
+    }
+    final ref=hostel.id.isEmpty?_collection.doc():_collection.doc(hostel.id);
+    final data=hostel.toMap();
+    if(hostel.id.isNotEmpty){
+      final old=(await ref.get()).data();if(old==null)throw StateError('Hostel no longer exists.');
+      if(old['ownerId']!=userId&&!superAdmin)throw StateError('You no longer own this hostel.');
+      // Moderation, ownership and review aggregates cannot be overwritten by a stale form.
+      for(final key in ['ownerId','ownerName','status','isVerified','isDemo','rating','reviewCount','ratingTotal']){data.remove(key);}
+    }else{data.addAll({'status':'pending','isVerified':false,'isDemo':false,'reviewCount':0,'ratingTotal':0.0,'rating':0.0,'createdAt':FieldValue.serverTimestamp()});}
+    final batch=_db.batch();
+    if(hostel.id.isEmpty){batch.set(ref,{...data,'updatedAt':FieldValue.serverTimestamp()});}else{batch.update(ref,{...data,'updatedAt':FieldValue.serverTimestamp()});}
+    batch.set(ref.collection('private').doc('contact'),{'phone':privatePhone,'updatedAt':FieldValue.serverTimestamp()});
+    await batch.commit();return ref.id;
   }
 
   Future<String> submitHostel(Hostel hostel) async { final ref=_collection.doc(); await ref.set({...hostel.toMap(),'ownerId':hostel.ownerId,'ownerName':hostel.ownerName,'status':'pending','isVerified':false,'isDemo':false,'reviewCount':0,'ratingTotal':0.0,'rating':0.0,'createdAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()}); return ref.id; }

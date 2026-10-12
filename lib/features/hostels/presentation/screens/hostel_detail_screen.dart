@@ -1,4 +1,6 @@
 import '../../../../core/widgets/user_identity.dart';
+import '../../../../core/services/admin_access_service.dart';
+import 'list_hostel_screen.dart';
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -34,7 +36,10 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
   HostelManager? _managerAccess;
   final TextEditingController _commentController = TextEditingController();
 
-  Hostel get hostel => widget.hostel;
+  Hostel? _editedHostel;
+  bool _showAllRooms=false;
+  Hostel get hostel => _editedHostel??widget.hostel;
+  bool get _superAdmin=>AdminAccessService.instance.isSuperAdmin||(hostel.isDemo&&AdminAccessService.instance.isDemoSuperAdmin);
 
   List<String> get images {
     final values = <String>[];
@@ -76,7 +81,7 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
     return uid != null && uid == hostel.ownerId;
   }
 
-  bool get _canManage => _isOwner || _managerAccess != null;
+  bool get _canManage => _isOwner || _superAdmin || _managerAccess != null;
 
 
   bool get signedIn {
@@ -91,14 +96,28 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
   @override
   void initState() {
     super.initState();
+    AdminAccessService.instance.addListener(_adminChanged);
+    AdminAccessService.instance.start();
     _loadMyReview();
     _loadManagementAccess();
   }
 
   @override
   void dispose() {
+    AdminAccessService.instance.removeListener(_adminChanged);
     _commentController.dispose();
     super.dispose();
+  }
+
+  void _adminChanged(){if(mounted)setState((){});}
+  Future<void> _editHostel() async {
+    if(_isOwner||_superAdmin){
+      final saved=await Navigator.push<bool>(context,MaterialPageRoute(builder:(_)=>ListHostelScreen(initialHostel:hostel)));
+      if(saved==true){
+        final latest=hostel.isDemo?HostelRepository.demoHostels.where((h)=>h.id==hostel.id).firstOrNull:await HostelRepository().getHostel(hostel.id);
+        if(mounted&&latest!=null)setState(()=>_editedHostel=latest);
+      }
+    }else{await context.push('/hostel/'+Uri.encodeComponent(hostel.id)+'/manage',extra:hostel);}
   }
 
   Future<void> _loadManagementAccess() async {
@@ -214,6 +233,8 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
         ? hostel.address.trim()
         : <String>[hostel.area, hostel.city].where((e) => e.trim().isNotEmpty).join(', ');
     if (query.isEmpty) return;
+    final pin=hostel.listingDetails['mapUrl']?.toString()??'';
+    if(pin.startsWith('https://')){await launchUrl(Uri.parse(pin),mode:LaunchMode.externalApplication);return;}
     final uri = Uri.https('www.google.com', '/maps/search/', <String, String>{
       'api': '1',
       'query': query,
@@ -278,9 +299,9 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
                 if (hostel.ownerId.trim().isEmpty) const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => context.push('/hostel/' + Uri.encodeComponent(hostel.id) + '/manage', extra: hostel),
+                    onPressed: _editHostel,
                     icon: const Icon(Icons.settings_outlined),
-                    label: const Text('Manage'),
+                    label: Text(_superAdmin?'Edit hostel':'Manage'),
                   ),
                 ),
               ],
@@ -349,6 +370,17 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
             if (hostel.meals.isNotEmpty)
               _infoRow(Icons.restaurant_outlined, 'Meals / Mess', hostel.meals),
           ]),
+          if(hostel.listingDetails.isNotEmpty)...[
+            _sectionTitle('Listing details'),
+            _infoCard([
+              Text('Included in rent: '+((hostel.listingDetails['includedCharges'] as List?)??[]).join(', ')),
+              if((hostel.listingDetails['extraCharges']??'').toString().isNotEmpty)Text('Extra charges: '+hostel.listingDetails['extraCharges'].toString()),
+              Text('Minimum stay: ${hostel.listingDetails['minimumStay']??'Not specified'} · Notice: ${hostel.listingDetails['noticePeriod']??'Not specified'}'),
+              Text('Curfew: ${hostel.listingDetails['curfew']??'Not specified'} · Visitors: ${hostel.listingDetails['visitors']??'Not specified'}'),
+              if(hostel.listingDetails['nearbyInstitutes'] is Map)Wrap(spacing:8,children:(hostel.listingDetails['nearbyInstitutes'] as Map).entries.map((e)=>TextButton(onPressed:()=>context.push('/institute/'+Uri.encodeComponent(e.key.toString())),child:Text(e.value.toString()))).toList()),
+              if(hostel.listingDetails['publicPhone']==false)TextButton.icon(onPressed:hostel.ownerId.isEmpty?null:()=>context.push('/profile/'+Uri.encodeComponent(hostel.ownerId)),icon:const Icon(Icons.person_outline),label:const Text('Contact owner through profile')),
+            ]),
+          ],
           if (hostel.rooms.isNotEmpty) ...[
             _sectionTitle('Rooms & Pricing'),
             _roomsCard(),
@@ -545,24 +577,19 @@ class _HostelDetailScreenState extends State<HostelDetailScreen> {
   }
 
   Widget _roomsCard() {
+    final visible=_showAllRooms?hostel.rooms:hostel.rooms.take(2);
+    final colors=AppPalette.of(context);
     return _infoCard([
-      ...hostel.rooms.map((room) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Container(
-          width: double.infinity, padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: AppColors.cream, borderRadius: BorderRadius.circular(12)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [Expanded(child: Text(room.type.isEmpty ? 'Room' : room.type, style: const TextStyle(color: AppColors.darkGreen, fontSize: 15, fontWeight: FontWeight.w700))), if (room.ac) _tagPill('AC')]),
-            const SizedBox(height: 8),
-            Wrap(spacing: 14, runSpacing: 7, children: [
-              if (room.rent.isNotEmpty) _roomMeta('Rent', room.rent),
-              if (room.securityFee.isNotEmpty) _roomMeta('Security', room.securityFee),
-              if (room.totalBeds > 0) _roomMeta('Beds', '${room.availableBeds}/${room.totalBeds} available'),
-            ]),
-            if (room.notes.isNotEmpty) ...[const SizedBox(height: 8), Text(room.notes, style: const TextStyle(color: AppColors.mutedText, fontSize: 12, height: 1.35))],
-          ]),
-        ),
-      )),
+      for(final room in visible)Container(margin:const EdgeInsets.only(bottom:10),decoration:BoxDecoration(color:colors.softSurface,borderRadius:BorderRadius.circular(12)),child:ExpansionTile(
+        initiallyExpanded:hostel.rooms.indexOf(room)<2,title:Text('${room.type} · ${room.ac?'AC':'Non-AC'}',style:TextStyle(color:colors.ink,fontWeight:FontWeight.w700)),
+        subtitle:Text('${room.rentLabel} · ${room.availableBeds} beds available'),
+        children:[Padding(padding:const EdgeInsets.fromLTRB(16,0,16,16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text('${room.roomCount} rooms · ${room.availableBeds}/${room.totalBeds} beds available'),
+          Text('Security: ${room.securityFee.isEmpty?'Not specified':'PKR '+room.securityFee} · ${room.securityPolicy}'),
+          if(room.notes.isNotEmpty)Text(room.notes),
+        ]))])),
+      if(hostel.rooms.length>2)TextButton(onPressed:()=>setState(()=>_showAllRooms=!_showAllRooms),child:Text(_showAllRooms?'Show less':'Show all rooms (${hostel.rooms.length})')),
+      if(hostel.listingDetails['availabilityUpdatedAt']!=null)Text('Availability updated: '+hostel.listingDetails['availabilityUpdatedAt'].toString().split('T').first,style:TextStyle(color:colors.muted,fontSize:12)),
     ]);
   }
 

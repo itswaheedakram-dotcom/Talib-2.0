@@ -1,307 +1,140 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../../../core/services/active_profile_controller.dart';
+import '../../../../core/services/admin_access_service.dart';
+import '../../../institutes/data/location_catalog.dart';
+import '../../../institutes/data/institute_repository.dart';
 import '../../data/hostel_registry.dart';
 import '../../data/hostel_repository.dart';
 import '../../data/hostel_room.dart';
 import '../../../models/hostel.dart';
 
 class ListHostelScreen extends StatefulWidget {
-  const ListHostelScreen({super.key});
-  @override State<ListHostelScreen> createState() => _ListHostelScreenState();
+  final Hostel? initialHostel;
+  const ListHostelScreen({super.key,this.initialHostel});
+  @override State<ListHostelScreen> createState()=>_ListHostelScreenState();
 }
-
 class _ListHostelScreenState extends State<ListHostelScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _name = TextEditingController(), _city = TextEditingController(), _area = TextEditingController(), _address = TextEditingController();
-  final _phone = TextEditingController(), _website = TextEditingController(), _description = TextEditingController();
-  final _imageUrl = TextEditingController(), _imageUrls = TextEditingController(), _ruleInput = TextEditingController();
-  String _gender = HostelRegistry.genders.first, _type = HostelRegistry.types.first, _meals = HostelRegistry.mealOptions.first;
-  bool _saving = false;
-  bool _uploadingImage = false;
-  final List<String> _facilities = [], _rules = [];
-  final List<_RoomDraft> _rooms = [];
-
-  @override void dispose() {
-    for (final c in [_name,_city,_area,_address,_phone,_website,_description,_imageUrl,_imageUrls,_ruleInput]) { c.dispose(); }
-    for (final room in _rooms) { room.dispose(); }
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    // FirebaseAuth.instance throws when Firebase has not been initialized.
-    // Read auth only when Firebase is ready so demo submissions still work.
-    final activeProfile = ActiveProfileController.instance.active;
-    User? user;
-    if (FirebaseService.initialized) {
-      try {
-        user = FirebaseAuth.instance.currentUser;
-      } catch (_) {
-        user = null;
+  final fields=<String,TextEditingController>{for(final key in ['name','country','region','district','city','area','address','phone','website','description','mapUrl','extraCharges','customRule'])key:TextEditingController(text:key=='country'?'Pakistan':'')};
+  final locations=LocationCatalog.instance, institutes=InstituteRepository.instance;
+  final scroll=ScrollController();
+  final rooms=<_RoomDraft>[];
+  final facilities=<String>[],rules=<String>[],photos=<String>[],included=<String>[];
+  final nearby=<String,String>{};
+  String gender='',type='',meals='No meals',curfew='No curfew',visitors='Not allowed',stay='1 month',notice='1 month';
+  bool saving=false,uploading=false,ready=false,showRooms=false,publicPhone=true;
+  int step=0;Timer? timer;String? error;
+  String get uid=>ActiveProfileController.instance.effectiveUid??(FirebaseService.initialized?FirebaseAuth.instance.currentUser?.uid:null)??'local-demo';
+  bool get demo=>ActiveProfileController.instance.isDemo||!FirebaseService.initialized;
+  bool get admin=>AdminAccessService.instance.isSuperAdmin||(demo&&AdminAccessService.instance.isDemoSuperAdmin);
+  String get draftKey=>'hostel-draft-v2-'+(demo?'demo-':'real-')+uid+'-'+(widget.initialHostel?.id??'new');
+  String text(String key)=>fields[key]!.text.trim();
+  void changed(){if(mounted)setState((){});}
+  @override void initState(){super.initState();locations.addListener(changed);institutes.addListener(changed);locations.load();institutes.load();load();}
+  Future<void> load() async {
+    try{
+      if(!demo)await AdminAccessService.instance.refresh();
+      final h=widget.initialHostel;
+      if(h!=null){
+        if(h.ownerId!=uid&&!admin){error='Only the owner or super admin can edit this listing.';return;}
+        final values={...h.toMap(),...h.listingDetails};for(final e in fields.entries){if(values[e.key]!=null)e.value.text=values[e.key].toString();}
+        gender=h.gender;type=h.type;meals=h.meals;publicPhone=h.listingDetails['publicPhone']!=false;
+        curfew=(values['curfew']??curfew).toString();visitors=(values['visitors']??visitors).toString();stay=(values['minimumStay']??stay).toString();notice=(values['noticePeriod']??notice).toString();
+        included.addAll(List<String>.from(values['includedCharges']??[]));facilities.addAll(h.facilities);rules.addAll(h.rules);photos.addAll({...h.imageUrls,if(h.imageUrl.isNotEmpty)h.imageUrl});
+        if(values['nearbyInstitutes'] is Map)nearby.addAll(Map<String,String>.from(values['nearbyInstitutes']));rooms.addAll(h.rooms.map(_RoomDraft.fromModel));
+        if(!publicPhone)fields['phone']!.text=await HostelRepository().privateContact(h);
       }
-    }
-    final demoMode = activeProfile != null || !FirebaseService.initialized;
-    if (user == null && activeProfile == null && !demoMode) {
-      if (mounted) context.push('/signin');
-      return;
-    }
-    if (!_formKey.currentState!.validate()) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please complete the required fields: hostel name, city, area, address and phone.')),
-        );
-      }
-      return;
-    }
-    if (_saving) return;
-    setState(() => _saving = true);
-    try {
-      final rooms = _rooms.map((r) => r.toModel()).where((r) => r.type.trim().isNotEmpty).toList();
-      final mainRoom = rooms.isNotEmpty ? rooms.first : null;
-      final hostel = Hostel(
-        id:'', name:_name.text.trim(), city:_city.text.trim(), area:_area.text.trim(), address:_address.text.trim(),
-        type:_type, gender:_gender, price:mainRoom?.rent ?? '', securityFee:mainRoom?.securityFee ?? '',
-        roomType:mainRoom?.type ?? '', availability:mainRoom == null ? '' : '\${mainRoom.availableBeds} beds available',
-        meals:_meals, ac:rooms.any((r) => r.ac), facilities:List<String>.from(_facilities), rooms:rooms,
-        rules:List<String>.from(_rules), phone:_phone.text.trim(), website:_website.text.trim(),
-        imageUrl:_imageUrl.text.trim(), imageUrls:_imageUrls.text.split(',').map((e)=>e.trim()).where((e)=>e.isNotEmpty).toSet().toList(),
-        description:_description.text.trim(), ownerId:activeProfile?.id ?? user?.uid ?? 'demo-user',
-        ownerName:activeProfile?.name ?? (user?.displayName?.trim().isNotEmpty==true ? user!.displayName!.trim() : 'Hostel Owner'), status:'pending',
-      );
-      await HostelRepository.submitHostelSafe(hostel, demo: demoMode);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(demoMode ? 'Hostel request submitted for admin approval (Demo).' : 'Hostel submitted for admin approval.')));
-      context.pop();
-    } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Hostel request failed: $error')));
-    } finally { if (mounted) setState(() => _saving = false); }
+      if(rooms.isEmpty)rooms.add(_RoomDraft());
+      final prefs=await SharedPreferences.getInstance();final saved=prefs.getString(draftKey);
+      if(saved!=null&&mounted){final yes=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(title:const Text('Resume saved draft?'),content:const Text('Continue the hostel form saved on this device.'),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Start fresh')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Resume'))]));if(yes==true){restore(Map<String,dynamic>.from(jsonDecode(saved)));}else{await prefs.remove(draftKey);}}
+    }catch(_){error='Unable to load this form. Please try again.';}finally{if(mounted)setState(()=>ready=true);}
   }
-
-
-  Future<void> _pickAndUploadImage() async {
-    if (ActiveProfileController.instance.isDemoActive || !FirebaseService.initialized) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Demo mode uses image URLs. Enable Firebase to upload hostel photos.')));
-      return;
-    }
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) { if (mounted) context.push('/signin'); return; }
-    try {
-      final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 82);
-      if (picked == null) return;
-      setState(() => _uploadingImage = true);
-      final bytes = await picked.readAsBytes();
-      final extension = picked.name.contains('.') ? picked.name.split('.').last.toLowerCase() : 'jpg';
-      final ref = FirebaseStorage.instance.ref('hostels/' + user.uid + '/' + DateTime.now().millisecondsSinceEpoch.toString() + '.' + extension);
-      await ref.putData(bytes, SettableMetadata(contentType: 'image/' + extension));
-      final url = await ref.getDownloadURL();
-      if (!mounted) return;
-      setState(() => _imageUrl.text = url);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Main hostel photo uploaded.')));
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Photo upload failed. You can paste an image URL instead.')));
-    } finally {
-      if (mounted) setState(() => _uploadingImage = false);
-    }
+  Map<String,dynamic> draft()=>{'fields':{for(final e in fields.entries)e.key:e.value.text},'gender':gender,'type':type,'meals':meals,'rooms':rooms.map((r)=>r.draft).toList(),'facilities':facilities,'rules':rules,'photos':photos,'included':included,'nearby':nearby,'publicPhone':publicPhone,'curfew':curfew,'visitors':visitors,'stay':stay,'notice':notice,'step':step};
+  void restore(Map<String,dynamic> d){
+    final f=Map<String,dynamic>.from(d['fields']??{});for(final e in fields.entries){e.value.text=(f[e.key]??'').toString();}
+    gender=d['gender']??'';type=d['type']??'';meals=d['meals']??'No meals';for(final r in rooms){r.dispose();}rooms..clear()..addAll((d['rooms'] as List? ?? []).map((r)=>_RoomDraft.fromDraft(Map<String,dynamic>.from(r))));
+    void replace(List<String> list,String key){list..clear()..addAll(List<String>.from(d[key]??[]));}replace(facilities,'facilities');replace(rules,'rules');replace(photos,'photos');replace(included,'included');nearby..clear()..addAll(Map<String,String>.from(d['nearby']??{}));publicPhone=d['publicPhone']!=false;curfew=d['curfew']??'No curfew';visitors=d['visitors']??'Not allowed';stay=d['stay']??'1 month';notice=d['notice']??'1 month';step=((d['step'] as num?)?.toInt()??0).clamp(0,3);
   }
-
-  @override Widget build(BuildContext context) => Scaffold(
-    backgroundColor:AppColors.cream,
-    appBar:AppBar(title:const Text('List Your Hostel')),
-    body:Form(key:_formKey,child:ListView(padding:const EdgeInsets.fromLTRB(16,12,16,32),children:[
-      _intro(), const SizedBox(height:18),
-      _section('Basic Information','Tell students what kind of hostel you are listing.',Icons.hotel_outlined),
-      _field(_name,'Hostel Name',Icons.hotel_rounded,required:true),
-      Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Expanded(child:_dropdown('For',_gender,HostelRegistry.genders,(v)=>setState(()=>_gender=v),Icons.people_alt_outlined)),
-        const SizedBox(width:10),
-        Expanded(child:_dropdown('Type',_type,HostelRegistry.types,(v)=>setState(()=>_type=v),Icons.apartment_outlined)),
-      ]),
-      const SizedBox(height:6),
-      _section('Location','Make the hostel easy to find for students.',Icons.location_on_outlined),
-      Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Expanded(child:_field(_city,'City',Icons.location_city_outlined,required:true)),
-        const SizedBox(width:10),
-        Expanded(child:_field(_area,'Area / Town',Icons.place_outlined,required:true)),
-      ]),
-      _field(_address,'Complete Address',Icons.map_outlined,required:true,maxLines:2),
-      const SizedBox(height:6),
-      _section('Rooms & Pricing','Add every room configuration students can choose from.',Icons.bed_outlined),
-      _rooms.isEmpty ? _emptyRooms() : Column(children:[for(var i=0;i<_rooms.length;i++) _roomCard(i,_rooms[i])]),
-      const SizedBox(height:8),
-      OutlinedButton.icon(onPressed:_addRoom,icon:const Icon(Icons.add_rounded),label:const Text('Add Room Type')),
-      const SizedBox(height:18),
-      _section('Meals','Choose the meal arrangement offered by the hostel.',Icons.restaurant_outlined),
-      _dropdown('Meals / Mess',_meals,HostelRegistry.mealOptions,(v)=>setState(()=>_meals=v),Icons.restaurant_menu_outlined),
-      const SizedBox(height:6),
-      _section('Facilities','Select everything that is available to residents.',Icons.apartment_outlined),
-      _facilityChips(),
-      const SizedBox(height:18),
-      _section('Hostel Rules','Add important rules students should know before joining.',Icons.rule_outlined),
-      _ruleComposer(),
-      if(_rules.isNotEmpty) ...[const SizedBox(height:8),..._rules.asMap().entries.map((e)=>_ruleTile(e.key,e.value))],
-      const SizedBox(height:18),
-      _section('Gallery','Use direct image URLs for the main photo and gallery.',Icons.photo_library_outlined),
-      _field(_imageUrl,'Main Photo URL (optional)',Icons.image_outlined,keyboard:TextInputType.url,onChanged:(_)=>setState((){})),
-      Align(alignment:Alignment.centerLeft,child:OutlinedButton.icon(onPressed:_uploadingImage?null:_pickAndUploadImage,icon:_uploadingImage?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:AppColors.primaryGreen)):const Icon(Icons.upload_outlined),label:Text(_uploadingImage?'Uploading...':'Upload Main Photo'))),
-      _imagePreview(),
-      _field(_imageUrls,'Additional Photo URLs (comma separated)',Icons.collections_outlined,maxLines:2,keyboard:TextInputType.url),
-      const SizedBox(height:6),
-      _section('About the Hostel','Give students a clear overview of what makes this hostel useful.',Icons.description_outlined),
-      _field(_description,'Description',Icons.notes_outlined,maxLines:5),
-      const SizedBox(height:6),
-      _section('Contact','These details will appear at the end of the hostel profile.',Icons.contact_phone_outlined),
-      _field(_phone,'Phone / WhatsApp',Icons.phone_outlined,required:true,keyboard:TextInputType.phone),
-      _field(_website,'Website (optional)',Icons.language_outlined,keyboard:TextInputType.url),
-      const SizedBox(height:8), _approvalNotice(), const SizedBox(height:18),
-      SizedBox(height:52,child:FilledButton.icon(
-        onPressed:_saving?null:_submit,
-        style:FilledButton.styleFrom(backgroundColor:AppColors.primaryGreen,foregroundColor:AppColors.white),
-        icon:_saving?const SizedBox(width:19,height:19,child:CircularProgressIndicator(strokeWidth:2,color:AppColors.white)):const Icon(Icons.send_outlined),
-        label:Text(_saving?'Submitting...':'Submit for Approval'),
-      )),
-    ])));
-
-  Widget _intro()=>Container(
-    padding:const EdgeInsets.all(17),
-    decoration:BoxDecoration(color:AppColors.white,borderRadius:BorderRadius.circular(18)),
-    child:const Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      CircleAvatar(radius:26,backgroundColor:AppColors.softGreen,child:Icon(Icons.hotel_rounded,color:AppColors.primaryGreen,size:29)),
-      SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Text('Reach students looking for accommodation',style:TextStyle(color:AppColors.darkGreen,fontSize:16,fontWeight:FontWeight.w700)),
-        SizedBox(height:5),Text('Add complete and accurate information so students can compare your hostel with confidence.',style:TextStyle(color:AppColors.mutedText,height:1.35)),
-      ])),
-    ]),
-  );
-
-  Widget _section(String title,String subtitle,IconData icon)=>Padding(
-    padding:const EdgeInsets.only(bottom:11),
-    child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Container(width:38,height:38,decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(11)),child:Icon(icon,color:AppColors.primaryGreen,size:21)),
-      const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Text(title,style:const TextStyle(color:AppColors.darkGreen,fontSize:17,fontWeight:FontWeight.w700)),
-        const SizedBox(height:2),Text(subtitle,style:const TextStyle(color:AppColors.mutedText,fontSize:12.5,height:1.3)),
-      ])),
-    ]),
-  );
-
-  Widget _field(TextEditingController c,String label,IconData icon,{bool required=false,int maxLines=1,TextInputType? keyboard,ValueChanged<String>? onChanged})=>Padding(
-    padding:const EdgeInsets.only(bottom:12),
-    child:TextFormField(controller:c,maxLines:maxLines,keyboardType:keyboard,onChanged:onChanged,
-      validator:required?(v)=>v==null||v.trim().isEmpty?'Required':null:null,
-      decoration:InputDecoration(labelText:label,prefixIcon:Icon(icon))),
-  );
-
-  Widget _dropdown(String label,String value,List<String> items,ValueChanged<String> onChanged,IconData icon)=>Padding(
-    padding:const EdgeInsets.only(bottom:12),
-    child:DropdownButtonFormField<String>(
-      value:value,decoration:InputDecoration(labelText:label,prefixIcon:Icon(icon)),
-      items:items.map((e)=>DropdownMenuItem(value:e,child:Text(e,overflow:TextOverflow.ellipsis))).toList(),
-      onChanged:(v){if(v!=null)onChanged(v);},
-    ),
-  );
-
-  Widget _emptyRooms()=>Container(
-    padding:const EdgeInsets.all(16),
-    decoration:BoxDecoration(color:AppColors.white,borderRadius:BorderRadius.circular(15),border:Border.all(color:AppColors.softGreen)),
-    child:const Row(children:[
-      Icon(Icons.bed_outlined,color:AppColors.primaryGreen),SizedBox(width:10),
-      Expanded(child:Text('No room types added yet. Add at least one room to show structured rent and bed availability.',style:TextStyle(color:AppColors.mutedText,height:1.35))),
-    ]),
-  );
-
-  Widget _roomCard(int index,_RoomDraft room)=>Container(
-    margin:const EdgeInsets.only(bottom:12),
-    padding:const EdgeInsets.fromLTRB(14,14,14,6),
-    decoration:BoxDecoration(color:AppColors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:AppColors.softGreen)),
-    child:Column(children:[
-      Row(children:[
-        const Icon(Icons.bed_outlined,color:AppColors.primaryGreen),const SizedBox(width:8),
-        Expanded(child:Text('Room \${index + 1}',style:const TextStyle(color:AppColors.darkGreen,fontWeight:FontWeight.w700))),
-        IconButton(tooltip:'Remove room',onPressed:()=>_removeRoom(index),icon:const Icon(Icons.delete_outline)),
-      ]),
-      _dropdown('Room Type',room.type,HostelRegistry.roomTypes,(v)=>setState(()=>room.type=v),Icons.meeting_room_outlined),
-      Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Expanded(child:_field(room.rent,'Monthly Rent',Icons.payments_outlined)),
-        const SizedBox(width:10),Expanded(child:_field(room.security,'Security Fee',Icons.account_balance_wallet_outlined)),
-      ]),
-      Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Expanded(child:_field(room.totalBeds,'Total Beds',Icons.groups_outlined,keyboard:TextInputType.number)),
-        const SizedBox(width:10),Expanded(child:_field(room.availableBeds,'Available Beds',Icons.event_available_outlined,keyboard:TextInputType.number)),
-      ]),
-      SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('AC available'),value:room.ac,onChanged:(v)=>setState(()=>room.ac=v),activeColor:AppColors.primaryGreen),
-      _field(room.notes,'Room notes (optional)',Icons.notes_outlined,maxLines:2),
-    ]),
-  );
-
-  Widget _facilityChips()=>Container(
-    padding:const EdgeInsets.fromLTRB(12,12,12,4),
-    decoration:BoxDecoration(color:AppColors.white,borderRadius:BorderRadius.circular(15)),
-    child:Wrap(spacing:8,runSpacing:8,children:HostelRegistry.commonFacilities.map((f){
-      final selected=_facilities.contains(f);
-      return FilterChip(label:Text(f),selected:selected,onSelected:(v){setState((){if(v){_facilities.add(f);}else{_facilities.remove(f);}});},selectedColor:AppColors.softGreen,checkmarkColor:AppColors.primaryGreen);
-    }).toList()),
-  );
-
-  Widget _ruleComposer()=>Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-    Expanded(child:TextField(controller:_ruleInput,textInputAction:TextInputAction.done,onSubmitted:(_)=>_addRule(),decoration:const InputDecoration(labelText:'Add a rule',prefixIcon:Icon(Icons.rule_outlined)))),
-    const SizedBox(width:8),SizedBox(height:52,child:FilledButton(onPressed:_addRule,style:FilledButton.styleFrom(backgroundColor:AppColors.primaryGreen,foregroundColor:AppColors.white,padding:const EdgeInsets.symmetric(horizontal:16)),child:const Icon(Icons.add_rounded))),
-  ]);
-
-  Widget _ruleTile(int index,String rule)=>Container(
-    margin:const EdgeInsets.only(bottom:7),
-    decoration:BoxDecoration(color:AppColors.white,borderRadius:BorderRadius.circular(12)),
-    child:ListTile(dense:true,leading:const Icon(Icons.check_circle_outline,color:AppColors.primaryGreen),title:Text(rule),trailing:IconButton(tooltip:'Remove rule',onPressed:()=>setState(()=>_rules.removeAt(index)),icon:const Icon(Icons.close_rounded))),
-  );
-
-  Widget _imagePreview(){
-    final url=_imageUrl.text.trim();
-    if(url.isEmpty)return const SizedBox.shrink();
-    return Padding(
-      padding:const EdgeInsets.only(bottom:12),
-      child:ClipRRect(borderRadius:BorderRadius.circular(14),child:AspectRatio(aspectRatio:16/7,child:Image.network(
-        url,fit:BoxFit.cover,
-        errorBuilder:(_,__,___)=>Container(color:AppColors.softGreen,alignment:Alignment.center,child:const Text('Image preview unavailable',style:TextStyle(color:AppColors.mutedText))),
-        loadingBuilder:(context,child,progress)=>progress==null?child:const Center(child:CircularProgressIndicator(color:AppColors.primaryGreen)),
-      ))),
-    );
+  void dirty(){if(!ready||saving)return;timer?.cancel();timer=Timer(const Duration(milliseconds:500),()=>saveDraft());}
+  Future<void> saveDraft({bool notify=false})async{try{final data=jsonEncode(draft());final key=draftKey;final prefs=await SharedPreferences.getInstance();await prefs.setString(key,data);if(notify&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Draft saved on this device.')));}catch(_){if(notify&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Draft could not be saved.')));}}
+  @override void dispose(){timer?.cancel();if(ready&&!saving&&error==null)saveDraft();locations.removeListener(changed);institutes.removeListener(changed);for(final c in fields.values){c.dispose();}for(final r in rooms){r.dispose();}scroll.dispose();super.dispose();}
+  void select(VoidCallback action){setState(action);dirty();}
+  void go(int value){setState(()=>step=value);if(scroll.hasClients)scroll.jumpTo(0);dirty();}
+  bool validUrl(String value){final uri=Uri.tryParse(value);return uri!=null&&uri.scheme=='https'&&uri.host.contains('.');}
+  List<String> errors(){final result=<String>[];
+    if(text('name').isEmpty)result.add('Hostel name is required.');if(gender.isEmpty||type.isEmpty)result.add('Choose hostel gender and type.');
+    if(['country','region','city','area','address'].any((k)=>text(k).isEmpty))result.add('Complete country, province/region, city, area and exact address.');
+    final phone=text('phone').replaceAll(RegExp(r'\D'),'');if(phone.length<7||phone.length>15)result.add('Enter a valid contact phone number.');
+    if(rooms.isEmpty)result.add('Add at least one room.');for(var i=0;i<rooms.length;i++){final e=rooms[i].model.validationError;if(e!=null)result.add('Room ${i+1}: $e');}
+    for(final key in ['website','mapUrl']){if(text(key).isNotEmpty&&!validUrl(text(key)))result.add('$key must be a valid https:// link.');}return result;
   }
-
-  Widget _approvalNotice()=>Container(
-    padding:const EdgeInsets.all(14),
-    decoration:BoxDecoration(color:AppColors.softGreen,borderRadius:BorderRadius.circular(15)),
-    child:const Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Icon(Icons.verified_user_outlined,color:AppColors.primaryGreen),SizedBox(width:9),
-      Expanded(child:Text('Your listing will stay private until an admin reviews and approves it. After approval, students can discover the hostel through search and filters.',style:TextStyle(color:AppColors.darkGreen,height:1.35))),
-    ]),
-  );
-
-  void _addRoom()=>setState(()=>_rooms.add(_RoomDraft()));
-  void _removeRoom(int index){final room=_rooms.removeAt(index);room.dispose();setState((){});}
-  void _addRule(){
-    final value=_ruleInput.text.trim();
-    if(value.isEmpty)return;
-    if(_rules.contains(value)){_ruleInput.clear();return;}
-    setState((){_rules.add(value);_ruleInput.clear();});
+  Hostel model(){
+    final options=rooms.map((r)=>r.model).toList();final total=options.fold<int>(0,(sum,r)=>sum+r.availableBeds);
+    final main=options.isEmpty?null:options.reduce((a,b)=>(double.tryParse(a.rent)??double.infinity)<=(double.tryParse(b.rent)??double.infinity)?a:b);
+    final details=<String,dynamic>{...widget.initialHostel?.listingDetails??{},for(final key in ['country','region','district','mapUrl','extraCharges'])key:text(key),'nearbyInstitutes':Map<String,String>.from(nearby),'includedCharges':List<String>.from(included),'publicPhone':publicPhone,'curfew':curfew,'visitors':visitors,'minimumStay':stay,'noticePeriod':notice,'availabilityUpdatedAt':DateTime.now().toUtc().toIso8601String()};
+    final values=<String,dynamic>{for(final key in ['name','city','area','address','website'])key:text(key),'type':type,'gender':gender,'price':main?.rentLabel??'','securityFee':main?.securityFee??'','roomType':main?.type??'','availability':total>0?'$total beds available':'Full — waiting list','meals':meals,'ac':options.any((r)=>r.ac),'facilities':List<String>.from(facilities),'rooms':options.map((r)=>r.toMap()).toList(),'rules':List<String>.from(rules),'phone':publicPhone?text('phone'):'','imageUrl':photos.isEmpty?'':photos.first,'imageUrls':List<String>.from(photos),'description':text('description').isNotEmpty?text('description'):'$gender hostel in ${text('area')}, ${text('city')}. ${facilities.join(', ')}.','listingDetails':details};
+    final base=widget.initialHostel??Hostel(id:'',name:'',city:'',area:'',ownerId:uid,ownerName:ActiveProfileController.instance.effectiveName??(FirebaseService.initialized?FirebaseAuth.instance.currentUser?.displayName:null)??'Hostel Owner',status:'pending',isDemo:demo);return base.copyWithDetails(values);
   }
+  Future<void> review()async{
+    final issues=errors();if(issues.isNotEmpty){setState(()=>showRooms=true);await showDialog<void>(context:context,builder:(context)=>AlertDialog(title:const Text('Complete these details'),content:SingleChildScrollView(child:Text(issues.join('\n\n'))),actions:[TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Edit form'))]));return;}
+    final h=model();final yes=await showModalBottomSheet<bool>(context:context,isScrollControlled:true,useSafeArea:true,builder:(context)=>FractionallySizedBox(heightFactor:.9,child:Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[const Text('Review your hostel',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),const SizedBox(height:16),Expanded(child:ListView(children:[Text(h.name,style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold)),Text('${h.gender} · ${h.type}\n${h.address}\n${h.area}, ${h.city}, ${text('region')}, ${text('country')}'),const Divider(),for(final r in h.rooms)ListTile(contentPadding:EdgeInsets.zero,title:Text('${r.type} · ${r.ac?'AC':'Non-AC'}'),subtitle:Text('${r.rentLabel}\n${r.availableBeds}/${r.totalBeds} beds available\n${r.roomCount} rooms · Security PKR ${r.securityFee} · ${r.securityPolicy}')),const Divider(),Text('Included: ${included.isEmpty?'None selected':included.join(', ')}\nExtra charges: ${text('extraCharges').isEmpty?'None specified':text('extraCharges')}\nMeals: $meals\nFacilities: ${facilities.join(', ')}\nMinimum stay: $stay\nNotice: $notice\nCurfew: $curfew\nVisitors: $visitors'),Text(rules.join('\n')),Text('Nearby: ${nearby.values.join(', ')}'),Text(h.description),Text('Phone: ${publicPhone?text('phone'):'Hidden; contact through owner profile'}'),for(final url in photos)Padding(padding:const EdgeInsets.only(top:8),child:photo(url,height:120))])),FilledButton(onPressed:()=>Navigator.pop(context,true),child:Text(widget.initialHostel==null?'Submit for approval':'Save changes')),TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Back to edit'))]))));if(yes==true&&mounted)submit(h);
+  }
+  Future<void> submit(Hostel h)async{
+    if(saving)return;if(!demo&&FirebaseAuth.instance.currentUser==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sign in before submitting.')));return;}
+    timer?.cancel();setState(()=>saving=true);
+    try{await HostelRepository().saveListingSafe(h,userId:uid,privatePhone:text('phone'),demo:demo);final prefs=await SharedPreferences.getInstance();await prefs.remove(draftKey);if(!mounted)return;ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(widget.initialHostel==null?'Hostel submitted for approval.':'Hostel updated.')));Navigator.pop(context,true);}
+    catch(_){if(mounted){setState(()=>saving=false);await saveDraft();ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Save failed. Check connection and permissions. Your draft is retained.')));}}
+  }
+  Future<void> upload()async{
+    if(uploading||photos.length>=12)return;
+    try{final selected=await ImagePicker().pickMultiImage(imageQuality:80,maxWidth:1600);if(selected.isEmpty)return;setState(()=>uploading=true);
+      for(final image in selected.take(12-photos.length)){final bytes=await image.readAsBytes();if(bytes.length>5*1024*1024)throw StateError('Photo too large');String url;
+        if(demo){url='data:image/jpeg;base64,'+base64Encode(bytes);}else{final ref=FirebaseStorage.instance.ref('hostels/'+uid+'/'+DateTime.now().microsecondsSinceEpoch.toString()+'.jpg');await ref.putData(bytes,SettableMetadata(contentType:'image/jpeg'));url=await ref.getDownloadURL();}if(!mounted)return;setState(()=>photos.add(url));dirty();}
+    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Photo upload failed. Choose a smaller image or retry.')));}finally{if(mounted)setState(()=>uploading=false);}
+  }
+  Future<void> pickNearby()async{
+    final selected=Map<String,String>.from(nearby),search=TextEditingController();
+    final yes=await showModalBottomSheet<bool>(context:context,isScrollControlled:true,useSafeArea:true,builder:(context)=>StatefulBuilder(builder:(context,update)=>FractionallySizedBox(heightFactor:.8,child:Column(children:[Padding(padding:const EdgeInsets.all(16),child:TextField(controller:search,onChanged:(_)=>update((){}),decoration:const InputDecoration(labelText:'Search institutes',prefixIcon:Icon(Icons.search)))),Expanded(child:ListView(children:[for(final i in institutes.items.where((i)=>(text('city').isEmpty||i.city.toLowerCase()==text('city').toLowerCase())&&i.name.toLowerCase().contains(search.text.toLowerCase())))CheckboxListTile(title:Text(i.name),subtitle:Text(i.city),value:selected.containsKey(i.id),onChanged:(yes)=>update((){if(yes==true){selected[i.id]=i.name;}else{selected.remove(i.id);}})),if(institutes.loading)const Center(child:CircularProgressIndicator()),if(institutes.error!=null)const Text('Unable to load institutes. Try again later.')])),Padding(padding:const EdgeInsets.all(16),child:FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Use selected institutes')))]))));search.dispose();if(yes==true&&mounted)select(()=>nearby..clear()..addAll(selected));
+  }
+  @override Widget build(BuildContext context){
+    if(!ready||error!=null)return Scaffold(appBar:AppBar(title:const Text('Hostel form')),body:Center(child:error==null?const CircularProgressIndicator():Text(error!)));
+    const titles=['Basic details','Location','Rooms & pricing','Facilities & photos'];
+    return Scaffold(backgroundColor:AppPalette.of(context).background,appBar:AppBar(title:Text(widget.initialHostel==null?'List Your Hostel':'Edit Hostel'),actions:[IconButton(tooltip:'Save draft',onPressed:saving?null:()=>saveDraft(notify:true),icon:const Icon(Icons.save_outlined))]),body:Form(onChanged:dirty,child:Column(children:[Padding(padding:const EdgeInsets.fromLTRB(16,16,16,8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Step ${step+1} of 4 · ${titles[step]}',style:const TextStyle(fontWeight:FontWeight.w700,fontSize:17)),const SizedBox(height:8),LinearProgressIndicator(value:(step+1)/4),const SizedBox(height:6),const Text('Draft saves on this device. Choose options instead of typing.',style:TextStyle(fontSize:12))])),Expanded(child:ListView(controller:scroll,padding:const EdgeInsets.fromLTRB(16,12,16,24),children:switch(step){0=>basic(),1=>location(),2=>roomStep(),_=>lastStep()})),SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(16),child:Row(children:[if(step>0)...[OutlinedButton(onPressed:saving?null:()=>go(step-1),child:const Text('Back')),const SizedBox(width:12)],Expanded(child:FilledButton(onPressed:saving||uploading?null:()=>step<3?go(step+1):review(),child:Text(saving?'Saving…':step<3?'Continue':'Review & submit')))])))])));
+  }
+  Widget heading(String label)=>Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(label,style:const TextStyle(fontSize:17,fontWeight:FontWeight.w700)));
+  Widget input(TextEditingController c,String label,{bool optional=false,bool numeric=false,int lines=1})=>Padding(padding:const EdgeInsets.only(bottom:14),child:TextFormField(controller:c,minLines:1,maxLines:lines,keyboardType:numeric?TextInputType.number:TextInputType.text,inputFormatters:numeric?[FilteringTextInputFormatter.digitsOnly]:null,decoration:InputDecoration(labelText:label+(optional?' (optional)':'')),onChanged:(_){dirty();setState((){});}));
+  Widget field(String key,String label,{bool optional=false,int lines=1})=>input(fields[key]!,label,optional:optional,lines:lines);
+  Widget choice(String label,List<String> values,String value,ValueChanged<String> action)=>Column(crossAxisAlignment:CrossAxisAlignment.start,children:[heading(label),Wrap(spacing:8,runSpacing:4,children:values.map((v)=>ChoiceChip(label:Text(v=='Male'?'Boys':v=='Female'?'Girls':v),selected:value==v,onSelected:(_)=>select(()=>action(v)))).toList()),const SizedBox(height:8)]);
+  Widget dropdown(String label,List<String> values,String value,ValueChanged<String> action)=>Padding(padding:const EdgeInsets.only(bottom:14),child:DropdownButtonFormField<String>(initialValue:values.contains(value)?value:null,isExpanded:true,decoration:InputDecoration(labelText:label),items:values.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:(v){if(v!=null)select(()=>action(v));}));
+  List<Widget> basic()=>[field('name','Hostel name'),choice('Hostel for',HostelRegistry.genders,gender,(v)=>gender=v),choice('Hostel type',HostelRegistry.types,type,(v)=>type=v),field('phone','Contact phone'),SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Show phone on public listing'),subtitle:const Text('When off, students can visit your profile to contact you.'),value:publicPhone,onChanged:(v)=>select(()=>publicPhone=v)),field('website','Website',optional:true),field('description','Description',optional:true,lines:3),const Text('Leave description blank for a summary generated from your selections.')];
+  Widget locationPick(String key,String label,List<String> values,{VoidCallback? reset})=>Padding(padding:const EdgeInsets.only(bottom:14),child:Autocomplete<String>(key:ValueKey(key+':'+(key=='country'?'':key=='region'?text('country'):key=='district'?text('region'):key=='city'?text('district')+text('region'):text('city'))),initialValue:TextEditingValue(text:text(key)),optionsBuilder:(v)=>values.where((x)=>x.toLowerCase().contains(v.text.toLowerCase())),onSelected:(v)=>select((){fields[key]!.text=v;reset?.call();}),fieldViewBuilder:(context,input,focus,submit)=>TextFormField(controller:input,focusNode:focus,decoration:InputDecoration(labelText:label,helperText:'Search suggestions, or enter a missing location',suffixIcon:const Icon(Icons.search)),onChanged:(v){fields[key]!.text=v;reset?.call();dirty();},onFieldSubmitted:(_){submit();setState((){});} )));
+  void clearLocations(List<String> keys){for(final k in keys){fields[k]!.clear();}nearby.clear();}
+  List<Widget> location()=>[
+    locationPick('country','Country',{...LocationCatalog.defaultCountries,...locations.options(type:'country')}.toList(),reset:()=>clearLocations(['region','district','city','area'])),locationPick('region','Province / Region',locations.options(type:'region',country:text('country')),reset:()=>clearLocations(['district','city','area'])),locationPick('district','District (optional)',locations.options(type:'district',parentName:text('region'),country:text('country')),reset:()=>clearLocations(['city','area'])),locationPick('city','City',locations.options(type:'city',parentName:text('district').isEmpty?text('region'):text('district'),country:text('country')),reset:()=>clearLocations(['area'])),locationPick('area','Area / Town',locations.options(type:'area',parentName:text('city'),country:text('country'))),field('address','Exact address',lines:2),field('mapUrl','Map pin link (https://)',optional:true),OutlinedButton.icon(onPressed:()async{await launchUrl(Uri.https('www.google.com','/maps/search/',{'api':'1','query':[text('address'),text('area'),text('city')].join(', ')}),mode:LaunchMode.externalApplication);},icon:const Icon(Icons.map_outlined),label:const Text('Find location in Maps')),const Text('Choose your exact location in Maps and paste its Share link above.'),heading('Nearby institutes'),Wrap(spacing:8,children:nearby.entries.map((e)=>InputChip(label:Text(e.value),onDeleted:()=>select(()=>nearby.remove(e.key)))).toList()),OutlinedButton.icon(onPressed:pickNearby,icon:const Icon(Icons.school_outlined),label:const Text('Select institutes'))];
+  List<Widget> roomStep()=>[const Text('Rent is in PKR per month. Total beds cover all rooms of this configuration.'),for(var i=0;i<rooms.length;i++)if(showRooms||i<2)roomCard(i,rooms[i]),if(rooms.length>2)TextButton(onPressed:()=>select(()=>showRooms=!showRooms),child:Text(showRooms?'Show less':'Show all rooms (${rooms.length})')),OutlinedButton.icon(onPressed:rooms.length>=30?null:()=>select((){rooms.add(_RoomDraft());showRooms=true;}),icon:const Icon(Icons.add),label:const Text('Add room configuration')),heading('Included in rent'),multi(const ['Mess','Electricity','Wi-Fi','Laundry','Water'],included),field('extraCharges','Extra charges / billing details',optional:true,lines:2)];
+  Widget roomCard(int index,_RoomDraft r)=>Card(margin:const EdgeInsets.symmetric(vertical:8),child:ExpansionTile(key:ObjectKey(r),initiallyExpanded:r.expanded,title:Text('Room ${index+1} · ${r.type.isEmpty?'Choose type':r.type}'),subtitle:Text(r.rent.text.isEmpty?'Add rent and availability':r.summary),trailing:IconButton(tooltip:'Remove room',onPressed:()async{final yes=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(title:const Text('Remove this room configuration?'),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Keep')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Remove'))]));if(yes==true&&mounted){select(()=>rooms.remove(r));r.dispose();}},icon:const Icon(Icons.delete_outline)),onExpansionChanged:(v)=>r.expanded=v,children:[Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[choice('Room type',HostelRegistry.roomTypes,r.type,(v)=>r.type=v),choice('Rent charged',const ['Per bed','Per room'],r.basis,(v)=>r.basis=v),input(r.rent,'Monthly rent (PKR)',numeric:true),SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('No security fee'),value:r.noSecurity,onChanged:(v)=>select((){r.noSecurity=v;if(v)r.security.text='0';})),if(!r.noSecurity)...[input(r.security,'Security fee (PKR)',numeric:true),choice('Security deposit',const ['Refundable','Non-refundable'],r.securityPolicy,(v)=>r.securityPolicy=v)],counter('Number of rooms',r.quantity,min:1),counter('Total beds in this configuration',r.total,min:1),counter('Available beds',r.available,min:0),choice('Cooling',const ['AC','Non-AC'],r.ac?'AC':'Non-AC',(v)=>r.ac=v=='AC'),input(r.notes,'Room notes',optional:true,lines:2),if(r.model.validationError!=null)Text(r.model.validationError!,style:TextStyle(color:Theme.of(context).colorScheme.error))]))]));
+  Widget counter(String label,TextEditingController c,{required int min})=>Padding(padding:const EdgeInsets.only(bottom:14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(label),const SizedBox(height:6),Row(children:[IconButton(onPressed:()=>select(()=>c.text=((int.tryParse(c.text)??min)-1).clamp(min,100000).toString()),icon:const Icon(Icons.remove_circle_outline)),Expanded(child:TextFormField(controller:c,textAlign:TextAlign.center,keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],onChanged:(_){dirty();setState((){});},decoration:const InputDecoration(contentPadding:EdgeInsets.all(10)))),IconButton(onPressed:()=>select(()=>c.text=((int.tryParse(c.text)??min)+1).clamp(min,100000).toString()),icon:const Icon(Icons.add_circle_outline))])]));
+  Widget multi(List<String> values,List<String> selected)=>Wrap(spacing:8,runSpacing:4,children:values.map((v)=>FilterChip(label:Text(v),selected:selected.contains(v),onSelected:(yes)=>select((){if(yes){selected.add(v);}else{selected.remove(v);}}))).toList());
+  Widget photo(String url,{double height=80})=>url.startsWith('data:')?Image.memory(base64Decode(url.split(',').last),height:height,fit:BoxFit.cover):Image.network(url,height:height,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image));
+  List<Widget> lastStep()=>[heading('Meals & facilities'),dropdown('Meals / Mess',HostelRegistry.mealOptions,meals,(v)=>meals=v),multi(HostelRegistry.commonFacilities,facilities),heading('House rules'),dropdown('Curfew',const ['No curfew','8 PM','9 PM','10 PM','11 PM','Midnight'],curfew,(v)=>curfew=v),dropdown('Visitors',const ['Not allowed','Daytime only','With permission'],visitors,(v)=>visitors=v),dropdown('Minimum stay',const ['No minimum','1 month','3 months','6 months','1 year'],stay,(v)=>stay=v),dropdown('Notice period',const ['No notice','1 week','2 weeks','1 month'],notice,(v)=>notice=v),multi(const ['No smoking','No pets','Quiet study hours','ID required','No overnight guests'],rules),for(final rule in rules.where((r)=>!const ['No smoking','No pets','Quiet study hours','ID required','No overnight guests'].contains(r)))InputChip(label:Text(rule),onDeleted:()=>select(()=>rules.remove(rule))),field('customRule','Additional rule',optional:true),TextButton(onPressed:(){final rule=text('customRule');if(rule.isNotEmpty)select((){if(!rules.contains(rule))rules.add(rule);fields['customRule']!.clear();});},child:const Text('Add rule')),heading('Photos (${photos.length}/12)'),OutlinedButton.icon(onPressed:uploading?null:upload,icon:const Icon(Icons.photo_library_outlined),label:Text(uploading?'Uploading…':'Choose photos from gallery')),const Text('First photo is the cover. Tap a star to change it.'),Wrap(spacing:8,runSpacing:8,children:[for(var i=0;i<photos.length;i++)SizedBox(width:130,height:125,child:Column(children:[Expanded(child:photo(photos[i])),Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(tooltip:'Use as cover',onPressed:()=>select((){final url=photos.removeAt(i);photos.insert(0,url);}),icon:Icon(i==0?Icons.star:Icons.star_border)),IconButton(tooltip:'Remove photo',onPressed:()=>select(()=>photos.removeAt(i)),icon:const Icon(Icons.close))])]))]),const SizedBox(height:16),Text(widget.initialHostel==null?'Your listing is reviewed before it appears publicly.':'Editing preserves the owner, verification and reviews.')];
 }
-
 class _RoomDraft {
-  String type=HostelRegistry.roomTypes.first;
-  bool ac=false;
-  final rent=TextEditingController(), security=TextEditingController(), totalBeds=TextEditingController(), availableBeds=TextEditingController(), notes=TextEditingController();
-
-  HostelRoom toModel()=>HostelRoom(
-    id:'',type:type,rent:rent.text.trim(),securityFee:security.text.trim(),
-    totalBeds:int.tryParse(totalBeds.text.trim())??0,availableBeds:int.tryParse(availableBeds.text.trim())??0,
-    ac:ac,notes:notes.text.trim(),
-  );
-
-  void dispose(){rent.dispose();security.dispose();totalBeds.dispose();availableBeds.dispose();notes.dispose();}
+  String type='',basis='',securityPolicy='Refundable';bool ac=false,noSecurity=false,expanded=true;
+  final rent=TextEditingController(),security=TextEditingController(text:'0'),quantity=TextEditingController(text:'1'),total=TextEditingController(text:'1'),available=TextEditingController(text:'0'),notes=TextEditingController();
+  _RoomDraft();
+  factory _RoomDraft.fromModel(HostelRoom r){final d=_RoomDraft();d.type=r.type;d.basis=r.rentBasis;d.securityPolicy=r.securityPolicy;d.ac=r.ac;d.noSecurity=r.securityFee=='0';d.expanded=false;String number(String value)=>RegExp(r'\d+(?:\.\d+)?').firstMatch(value.replaceAll(',',''))?.group(0)??'';d.rent.text=number(r.rent);d.security.text=number(r.securityFee).isEmpty?'0':number(r.securityFee);d.quantity.text=r.roomCount.toString();d.total.text=r.totalBeds.toString();d.available.text=r.availableBeds.toString();d.notes.text=r.notes;return d;}
+  Map<String,dynamic> get draft=>{...model.toMap(),'rawRent':rent.text,'rawSecurity':security.text,'rawQuantity':quantity.text,'rawTotal':total.text,'rawAvailable':available.text,'expanded':expanded,'noSecurity':noSecurity};
+  factory _RoomDraft.fromDraft(Map<String,dynamic> d){final r=_RoomDraft.fromModel(HostelRoom.fromMap(d));r.rent.text=d['rawRent']??'';r.security.text=d['rawSecurity']??'0';r.quantity.text=d['rawQuantity']??'1';r.total.text=d['rawTotal']??'1';r.available.text=d['rawAvailable']??'0';r.expanded=d['expanded']!=false;r.noSecurity=d['noSecurity']==true;return r;}
+  HostelRoom get model=>HostelRoom(type:type,rent:rent.text.trim(),securityFee:noSecurity?'0':security.text.trim(),rentBasis:basis,securityPolicy:noSecurity?'No security fee':securityPolicy,roomCount:int.tryParse(quantity.text)??0,totalBeds:int.tryParse(total.text)??0,availableBeds:int.tryParse(available.text)??-1,ac:ac,notes:notes.text.trim());
+  String get summary=>'${ac?'AC':'Non-AC'} · PKR ${rent.text}/${basis=='Per room'?'room':'bed'} · ${available.text} beds available';
+  void dispose(){for(final c in [rent,security,quantity,total,available,notes]){c.dispose();}}
 }

@@ -1,4 +1,6 @@
 import '../../../../core/models/user_profile.dart';
+import '../../../../core/services/admin_access_service.dart';
+import 'list_hostel_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
@@ -45,8 +47,9 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
 
   bool get _isOwner => _hostel != null && _uid != null && _uid == _hostel!.ownerId;
 
+  bool get _superAdmin=>AdminAccessService.instance.isSuperAdmin||(_hostel?.isDemo==true&&AdminAccessService.instance.isDemoSuperAdmin);
   bool _can(String permission) =>
-      _isOwner || (_manager?.status == 'active' && _manager!.can(permission));
+      _isOwner || _superAdmin || (_manager?.status == 'active' && _manager!.can(permission));
 
   TextEditingController _field(String key, String value) =>
       _c.putIfAbsent(key, () => TextEditingController(text: value));
@@ -69,6 +72,7 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
   }
 
   Future<void> _load() async {
+    if(FirebaseService.initialized&&!ActiveProfileController.instance.isDemo)await AdminAccessService.instance.refresh();
     Hostel? hostel = widget.initialHostel;
 
     // When the detail screen already has the hostel object, use it directly. This keeps the management
@@ -105,6 +109,7 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
       // Seed controllers before the first non-loading build so TextFields
       // never receive null controllers.
       _seedFields(hostel);
+      if(hostel.listingDetails['publicPhone']==false){try{_c['phone']!.text=await HostelRepository().privateContact(hostel);}catch(_){}}
     }
 
     if (!mounted) return;
@@ -187,6 +192,7 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
       ownerId: h.ownerId, ownerName: h.ownerName, status: h.status, isVerified: h.isVerified, isDemo: h.isDemo,
       rating: h.rating, reviewCount: h.reviewCount, ratingTotal: h.ratingTotal,
       rooms: x['rooms'] is List ? List<HostelRoom>.from(x['rooms']) : h.rooms,
+      listingDetails:h.listingDetails,
       rules: x['rules'] is List ? List<String>.from(x['rules']) : h.rules,
     );
   }
@@ -390,7 +396,7 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
     );
   }
 
-  void _duplicateRoom(int index) { final r=_rooms[index]; setState(()=>_rooms.insert(index+1,_RoomDraft(type:TextEditingController(text:r.type.text),rent:TextEditingController(text:r.rent.text),security:TextEditingController(text:r.security.text),totalBeds:TextEditingController(text:r.totalBeds.text),availableBeds:TextEditingController(text:r.availableBeds.text),notes:TextEditingController(text:r.notes.text),ac:r.ac))); }
+  void _duplicateRoom(int index) { final r=_rooms[index]; setState(()=>_rooms.insert(index+1,_RoomDraft(type:TextEditingController(text:r.type.text),rent:TextEditingController(text:r.rent.text),security:TextEditingController(text:r.security.text),totalBeds:TextEditingController(text:r.totalBeds.text),availableBeds:TextEditingController(text:r.availableBeds.text),notes:TextEditingController(text:r.notes.text),ac:r.ac)..rentBasis=r.rentBasis..securityPolicy=r.securityPolicy..roomCount=r.roomCount)); }
 
   Widget _roomCard(int index) {
     final r = _rooms[index];
@@ -476,7 +482,7 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
         body: Center(child: Text('Hostel not found.', style: TextStyle(color: AppColors.mutedText))),
       );
     }
-    if (!_isOwner && _manager == null) {
+    if (!_isOwner && !_superAdmin && _manager == null) {
       return const Scaffold(
         backgroundColor: AppColors.cream,
         body: Center(
@@ -513,8 +519,9 @@ class _HostelManagementScreenState extends State<HostelManagementScreen> {
           const SizedBox(height:12),
           Text(h.name, style: const TextStyle(color: AppColors.darkGreen, fontSize: 24, fontWeight: FontWeight.w800)),
           const SizedBox(height: 5),
+          if(_isOwner||_superAdmin)FilledButton.icon(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ListHostelScreen(initialHostel:h))),icon:const Icon(Icons.edit_outlined),label:const Text('Edit full hostel form')),
           Text(_isOwner ? 'Owner — full hostel access' : 'Manager — assigned sections only', style: const TextStyle(color: AppColors.mutedText)),
-          if (!_isOwner) ...[
+          if (!_isOwner && !_superAdmin) ...[
             const SizedBox(height: 10),
             Wrap(
               spacing: 6,
@@ -602,6 +609,7 @@ class _RoomDraft {
   final TextEditingController totalBeds;
   final TextEditingController availableBeds;
   final TextEditingController notes;
+  String rentBasis='',securityPolicy='Not specified';int roomCount=1;
   bool ac;
 
   _RoomDraft({
@@ -631,7 +639,7 @@ class _RoomDraft {
     availableBeds: TextEditingController(text: room.availableBeds.toString()),
     notes: TextEditingController(text: room.notes),
     ac: room.ac,
-  );
+  )..rentBasis=room.rentBasis..securityPolicy=room.securityPolicy..roomCount=room.roomCount;
 
   void setType(String v) {}
   void setRent(String v) {}
@@ -648,7 +656,7 @@ class _RoomDraft {
     totalBeds: int.tryParse(totalBeds.text.trim()) ?? 0,
     availableBeds: int.tryParse(availableBeds.text.trim()) ?? 0,
     ac: ac,
-    notes: notes.text.trim(),
+    notes: notes.text.trim(),rentBasis:rentBasis,securityPolicy:securityPolicy,roomCount:roomCount,
   );
 
   void dispose() {
