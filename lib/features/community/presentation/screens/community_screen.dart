@@ -442,11 +442,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 ],
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Wrap(
-              spacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
+          SizedBox(
+            height: 48,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
                 ChoiceChip(
                   label: const Text('For You'),
@@ -465,24 +465,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     _top();
                   },
                 ),
-
-                Text(
-                  feed.sort,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (!_people)
-            SizedBox(
-              height: 42,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                children: [
+                const SizedBox(width: 8),
+                if (!_people) ...[
                   Padding(
                     padding: const EdgeInsets.only(right: 6),
                     child: FilterChip(
@@ -525,8 +509,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         : null,
                   ),
                 ],
-              ),
+              ],
             ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
             child: TextField(
