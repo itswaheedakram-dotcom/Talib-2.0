@@ -94,7 +94,7 @@ abstract final class SmartSearchParser {
       'mein': 'in', 'main': 'in', 'me': 'in', 'ke andar': 'in', 'ke qareeb': 'near', 'qareeb': 'near', 'nearby': 'near',
       'achay': 'good', 'achy': 'good', 'acha': 'good', 'achi': 'good', 'ache': 'good', 'behtareen': 'best', 'sab se acha': 'best', 'top rated': 'best rated', 'highly rated': 'best rated',
       'girls': 'female', 'girl': 'female', 'ladies': 'female', 'women': 'female', 'larkiyon': 'female', 'larkio': 'female', 'larki': 'female', 'boys': 'male', 'boy': 'male', 'men': 'male', 'larkon': 'male', 'larko': 'male', 'larka': 'male',
-      'admissions': 'admission', 'dakhla': 'admission', 'dakhle': 'admission', 'scholarships': 'scholarship', 'wazifa': 'scholarship', 'wazaif': 'scholarship', 'financial support': 'financial aid',
+      'hostels': 'hostel', 'residences': 'residence', 'accommodations': 'accommodation', 'institutes': 'institute', 'profiles': 'profile', 'users': 'user', 'posts': 'post', 'discussions': 'discussion', 'admissions': 'admission', 'dakhla': 'admission', 'dakhle': 'admission', 'scholarships': 'scholarship', 'wazifa': 'scholarship', 'wazaif': 'scholarship', 'financial support': 'financial aid',
       'universities': 'university', 'colleges': 'college', 'schools': 'school', 'idaray': 'institute', 'institute': 'institute', 'madaris': 'school',
       'last date': 'deadline', 'akhri tareekh': 'deadline', 'aakhri tareekh': 'deadline', 'kab tak': 'deadline', 'closing date': 'deadline',
       'open hain': 'open', 'open hai': 'open', 'khulay': 'open', 'khula hai': 'open', 'apply ho raha': 'open', 'apply ho rahi': 'open', 'applications open': 'open',

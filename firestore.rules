@@ -175,6 +175,37 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/accountVerificationAudits/$(request.resource.data.auditId)).data.action == (request.resource.data.status == 'verified' ? 'verify' : 'revoke');
       allow delete: if false;
     }
+    match /searchCatalogs/{catalogId} {
+      allow read: if admin() || resource.data.enabled == true;
+      allow create, update: if admin()
+        && catalogId.matches('^[a-z][a-z0-9_-]{1,39}$')
+        && request.resource.data.keys().hasOnly(['label','icon','aliases','facets','enabled','updatedAt'])
+        && request.resource.data.label is string
+        && request.resource.data.label.size() > 0 && request.resource.data.label.size() <= 80
+        && request.resource.data.icon is string
+        && request.resource.data.aliases is list && request.resource.data.aliases.size() <= 30
+        && request.resource.data.facets is list && request.resource.data.facets.size() <= 12
+        && request.resource.data.enabled is bool
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if admin();
+    }
+    match /catalogItems/{itemId} {
+      allow read: if admin() || (resource.data.published == true
+        && get(/databases/$(database)/documents/searchCatalogs/$(resource.data.catalogId)).data.enabled == true);
+      allow create, update: if admin()
+        && request.resource.data.keys().hasOnly(['catalogId','title','description','city','area','tags','attributes','published','updatedAt'])
+        && request.resource.data.catalogId is string
+        && exists(/databases/$(database)/documents/searchCatalogs/$(request.resource.data.catalogId))
+        && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 200
+        && request.resource.data.description is string && request.resource.data.description.size() <= 6000
+        && request.resource.data.city is string && request.resource.data.area is string
+        && request.resource.data.tags is list && request.resource.data.tags.size() <= 50
+        && request.resource.data.attributes is map && request.resource.data.attributes.size() <= 100
+        && request.resource.data.published is bool
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if admin();
+    }
+
     match /accountVerificationAudits/{auditId} {
       allow read: if admin();
       allow create: if admin()

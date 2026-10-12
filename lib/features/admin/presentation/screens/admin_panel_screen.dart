@@ -379,6 +379,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   const Text('Platform administration', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 6),
                   _section('Manager Admins', 'Create, suspend or revoke manager access', Icons.admin_panel_settings_outlined, _showCreateManagerDialog),
+                  _section('Catalogue registry', 'Register and publish searchable catalogues', Icons.category_outlined, () => context.push('/admin/catalogues')),
                   _section('Account verification', 'Verify or revoke green account ticks', Icons.verified_rounded, () => context.push('/admin/account-verification')),
                   _managerSection(),
                 ],

@@ -1,3 +1,4 @@
+import '../features/search/presentation/screens/catalog_admin_screen.dart';
 import '../core/models/user_profile.dart';
 import '../features/institutes/presentation/widgets/institute_record_scope.dart';
 import 'package:go_router/go_router.dart';
@@ -76,6 +77,7 @@ final appRouter=GoRouter(initialLocation:'/',routes:[
   GoRoute(path:'/institute-dashboard',builder:(_,__)=>InstituteModeScope(builder:()=>const InstituteDashboardScreen())),
   GoRoute(path:'/institute/:id/student-verifications',builder:(_,s)=>InstituteRecordScope(id:s.pathParameters['id']!,builder:()=>StudentVerificationsScreen(instituteId:s.pathParameters['id']!))),
   GoRoute(path:'/institute-admin/:claimId',builder:(_,s)=>InstituteModeScope(builder:()=>InstituteAdminScreen(claimId:s.pathParameters['claimId']!))),
+  GoRoute(path:'/admin/catalogues',builder:(_,__)=>const CatalogAdminScreen()),
   GoRoute(path:'/admin/account-verification',builder:(_,__)=>const AccountVerificationScreen()),
   GoRoute(path:'/admin',builder:(_,__)=>const AdminPanelScreen()),
   GoRoute(path:'/admin/institute-claims',builder:(_,__)=>InstituteModeScope(builder:()=>const AdminInstituteClaimsScreen())),
